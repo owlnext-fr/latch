@@ -2,9 +2,9 @@
 //! manuellement (open + on_close). Code = toggle + explication ; PIN généré côté SPA.
 
 use shadcn_rs::{
-    Button, Input, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Switch,
-    Variant,
+    Button, Input, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
 };
+use crate::components::toggle::Toggle;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -219,7 +219,7 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
 
             <Label html_for="pf-code">{ "Code d'accès" }</Label>
             <div class="toggle-row">
-                <Switch id="pf-code" checked={*code_on} onchange={on_code_toggle} />
+                <Toggle id={AttrValue::from("pf-code")} checked={*code_on} onchange={on_code_toggle.clone()} />
                 <span class="hint">
                     { "Quand activé, les visiteurs saisissent un PIN à 6 chiffres avant d'accéder au prototype. Désactivé = accès libre par l'URL." }
                 </span>

@@ -1,8 +1,9 @@
 //! Side-panel Déployer une version : lit un fichier HTML (gloo-file) et POST /deploy.
 
 use shadcn_rs::{
-    Button, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Switch, Variant,
+    Button, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
 };
+use crate::components::toggle::Toggle;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -122,7 +123,7 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
             if let Some(n) = (*filename).clone() { <p class="hint">{ n }</p> }
 
             <div class="toggle-row">
-                <Switch id="dp-activate" checked={*activate} onchange={on_toggle} />
+                <Toggle id={AttrValue::from("dp-activate")} checked={*activate} onchange={on_toggle.clone()} />
                 <span class="hint">{ "Activer immédiatement : la nouvelle version devient l'active servie sur l'URL publique." }</span>
             </div>
 
