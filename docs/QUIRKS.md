@@ -212,3 +212,16 @@ Le `<Switch>` shadcn-rs 0.1 a un état contrôlé cassé (`is_checked = if check
 vivent sur la classe `.switch.size-md` de `components.css` (le `.switch` seul n'a NI hauteur NI
 largeur). Le `Toggle` doit émettre `class="switch size-md"` (+ `switch-checked`/`switch-disabled`),
 sinon le contrôle est invisible (taille nulle).
+
+## Thème de marque : export générateur shadcn (oklch) → triplets HSL (2026-06-25)
+La CSS vendorisée de `shadcn-rs` consomme les couleurs en **`hsl(var(--color-X))`** avec des
+**triplets HSL** `H S% L%` (y compris des compositions alpha `hsl(var(--color-X) / 0.2)`). Les
+générateurs de thème shadcn récents exportent en **`oklch()`** avec des noms `--background`
+(sans préfixe `--color-`). On **ne peut pas** coller l'oklch tel quel (casse tous les `hsl(...)`).
+**Méthode** : convertir oklch → sRGB → HSL et remplacer **uniquement les valeurs** dans
+`variables.css` (`:root` + `.dark`), en gardant les noms `--color-*` et l'usage `hsl(...)` — blast
+radius minimal, aucun call-site à toucher dans les 5 fichiers vendorisés, compositions alpha
+préservées. Script de conversion : `scratchpad/oklch2hsl.mjs` (implémente oklab→linear-sRGB→HSL ;
+gère l'alpha en compositant sur le fond). Cas particuliers : `destructive-foreground` absent de
+l'export shadcn récent → quasi-blanc ; bordures/inputs dark = blanc 10%/15% **compositionné** sur
+le fond sombre (l'usage `hsl(var(--color-border))` est opaque, pas d'alpha possible dans le triplet).
