@@ -75,3 +75,12 @@ La SPA page détail (`pages/detail.rs`) active une version via `POST /api/projec
 
 ## Polish UI login.rs — effacer l'erreur au re-submit (Phase 3 – 2026-06-24)
 Dans `pages/login.rs`, si l'utilisateur soumet le formulaire une seconde fois après une erreur, l'ancienne erreur reste affichée pendant la requête en cours. À corriger : `error.set(None)` avant `busy.set(true)` dans le handler `onsubmit`, pour effacer le message d'erreur précédent dès le nouveau submit.
+
+## Chantier polish produit + i18n avant distribution (Phase 3 – 2026-06-24, test live)
+Retours du test manuel (Playwright) avec l'humain. **Détail complet + patchs UX prioritaires : `docs/superpowers/specs/2026-06-24-phase-3-punchlist-ux.md`.** Items « plus gros » (après les patchs UX immédiats) :
+- **Passer toute l'UI en anglais (EN)** — actuellement en français (labels, boutons, messages, explications). Petite couche i18n ou chaînes centralisées.
+- **Explications sur les champs de formulaire** (helper text sous chaque champ) et **sur les pages** (intro/contexte par écran) pour utilisateur non-technique.
+- **Dropzone** pour l'upload HTML (remplacer l'`<input type=file>` brut).
+- **Snackbars/toasts** pour tous les retours d'action (recoupe « couche de toast globale » ci-dessus).
+- **Revue UX d'ensemble pour distribution** : états de chargement, messages d'erreur, accessibilité (`<a>`-sans-href → `<button>`, focus, labels), cohérence.
+- **Self-review produit** (pas seulement code) après les patchs.

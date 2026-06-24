@@ -4,6 +4,53 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Test live de la SPA (Playwright) : 3 bugs corrigés + punch-list UX
+
+### Dernière chose faite
+- Test manuel de la SPA avec l'humain via Playwright. **3 bugs corrigés ce jour**
+  (invisibles aux reviews SDD/smoke curl car ils n'exercent pas le wasm rendu) :
+  1. **Routing 404** — `BrowserRouter basename="/admin"` cassait tout (bug
+     `strip_basename` de yew-router 0.18 sur l'URL racine → `//admin`). Fix : **pas
+     de basename**, `#[at("/admin/...")]` absolus (`routes.rs`, `main.rs`).
+  2. **CSS de layout absente** — seule la CSS des composants shadcn était vendorisée.
+     Fix : `frontend/styles/app.css` (classes `.admin-page`/`.topbar`/`.kv`/… + liée
+     dans `index.html`, copiée par Trunk).
+  3. **Animation Sheet buggée** — `slide-in-*` laisse un transform résiduel qui pousse
+     le drawer hors écran (contenu invisible). Fix : override `.sheet-content` dans
+     `app.css` (animation/transform none, flex column, footer en bas).
+- Parcours re-validé au navigateur : login centré, liste, **side-panel de création OK**,
+  création d'un projet, page détail (cards Accès public / Configuration / Versions,
+  actions Éditer/Déployer/Supprimer).
+- **Punch-list des retours UX rangée dans** `docs/superpowers/specs/2026-06-24-phase-3-punchlist-ux.md`
+  (source de vérité prochaine session). BACKLOG + QUIRKS + contrat §4 mis à jour
+  (note `basename` erronée corrigée).
+
+### Trucs en suspens (patchs prochaine session — voir la punch-list)
+- Login : espace manquant entre mot de passe et bouton.
+- Liste : badge code activé → vert, libre → orange.
+- Form : **le toggle `Switch` ne bascule pas visuellement** (quirk shadcn) ; PIN à
+  passer en `disabled` (pas masqué) quand code off ; **slug à passer en `disabled`**
+  en édition (éditable aujourd'hui).
+- Déploiement : **dropzone** (input file moche) + même bug de toggle.
+- Général : **snackbars/toasts** succès/échec.
+- Chantier plus large (après patchs) : explications champs + pages, **UI en anglais (EN)**,
+  revue UX distribution, self-review produit.
+
+### Prochaine chose à creuser
+- Prochaine session : appliquer les patchs de la punch-list → **tout valider avec
+  Playwright** → self-review produit (i18n EN, explications, distribution). Puis
+  reprendre le choix merge/PR de la branche `feat/phase-3-spa-yew-admin`.
+
+### Notes pour future Claude
+- Dev : `cd frontend && trunk build` puis backend depuis `backend/` avec env
+  (`LATCH_SPA_DIST=../frontend/dist`, `ADMIN_USER`/`ADMIN_PASS`/`SESSION_SECRET`/`DATABASE_URL`).
+  SPA sur `http://127.0.0.1:5150/admin`. Itération CSS pure = `trunk build` + hard refresh
+  (ServeDir lit `dist/` à chaque requête, pas besoin de relancer le backend).
+- Deux pièges shadcn-rs à garder en tête : `Switch` (contrôle visuel) et animation
+  `Sheet` — cf. QUIRKS.
+
+---
+
 ## 2026-06-24 — Phase 3 TERMINÉE (SPA Yew admin)
 
 ### Dernière chose faite

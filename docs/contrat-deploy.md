@@ -122,8 +122,10 @@ latch/                 # workspace
 - **Préfixage des routes** : l'API JSON est servie sous le préfixe **`/api/*`**
   (re-préfixée depuis `/admin/*`) ; la SPA Yew est servie en statique sous **`/admin/*`**
   via `nest_service("/admin", ServeDir + fallback index.html)` câblé dans `after_routes`,
-  avec un routeur client `BrowserRouter basename="/admin"` côté Yew. **`/admin`** et
-  **`/api`** coexistent sur le même binaire Loco sans conflit.
+  avec un routeur client `BrowserRouter` **sans `basename`** + des routes `#[at("/admin/...")]`
+  **absolues** côté Yew (le `basename` est inutilisable : bug `strip_basename` de yew-router 0.18
+  sur l'URL racine — cf. QUIRKS). **`/admin`** et **`/api`** coexistent sur le même binaire Loco
+  sans conflit.
 - **Contrat de fil (DTO partagé)** : les types sérialisés échangés entre backend et frontend
   sont définis dans la crate **`latch-dto`** (membre du workspace, cible native + wasm32),
   source unique de vérité. Les conversions `Model → DTO` sont des **fonctions libres**

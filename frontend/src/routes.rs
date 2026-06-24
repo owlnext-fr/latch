@@ -3,8 +3,10 @@ use yew_router::prelude::*;
 
 use crate::auth::Protected;
 
-/// Routes client. `basename="/admin"` est posé sur le `<BrowserRouter>` ; les
-/// chemins ci-dessous sont ABSOLUS (incluent /admin) — combo robuste en yew-router 0.18.
+/// Routes client. PAS de `basename` sur le `<BrowserRouter>` : yew-router 0.18 a un
+/// bug dans `strip_basename` qui transforme l'URL racine exacte `/admin` en `//admin`
+/// (jamais matchée). On utilise donc des `#[at]` ABSOLUS incluant `/admin`, sans
+/// basename. Trunk n'injecte pas de `<base>` (public_url réécrit les assets en absolu).
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
     #[at("/admin")]

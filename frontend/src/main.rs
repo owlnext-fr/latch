@@ -15,7 +15,7 @@ use routes::{switch, Route};
 #[function_component(App)]
 fn app() -> Html {
     html! {
-        <BrowserRouter basename="/admin">
+        <BrowserRouter>
             <AuthProvider>
                 <Switch<Route> render={switch} />
             </AuthProvider>
