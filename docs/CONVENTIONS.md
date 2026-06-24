@@ -201,6 +201,44 @@ async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter
 - Les helpers de résolution (session store, storage) vivent dans `src/web/`, jamais dans `src/services/`.
 - `build_session_store` retourne `loco_rs::Result<_>` — propager via `?`.
 
+## Test d'intégration Loco type (harness HTTP réel)
+
+Tests d'intégration sur les routes Loco utilisant le harness `request_with_config`.
+Réf. `backend/tests/admin_api.rs`, `backend/tests/security_invariants.rs`.
+
+```rust
+// Pattern : login puis accès protégé — save_cookies OBLIGATOIRE
+#[tokio::test]
+#[serial]  // tests Loco partagent la même base SQLite de test → sérialiser
+async fn login_then_access_protected_route() {
+    request::<App, _, _>(|request, _ctx| async move {
+        // save_cookies(true) propagate les Set-Cookie entre requêtes
+        let request = request.with_config(
+            RequestConfigBuilder::new().save_cookies(true).build()
+        );
+        let _ = request
+            .post("/admin/login")
+            .json(&serde_json::json!({"username": "admin", "password": "secret"}))
+            .await;
+
+        // Origin = http://127.0.0.1 (pas localhost) — harness Loco utilise Host: 127.0.0.1:PORT
+        let res = request
+            .get("/admin/projects")
+            .add_header(header::ORIGIN, "http://127.0.0.1")
+            .await;
+        res.assert_status_ok();
+    })
+    .await;
+}
+```
+
+**Règles :**
+- `#[serial]` sur tout test qui touche la DB partagée (évite les races entre tests Loco).
+- `save_cookies(true)` dans `RequestConfigBuilder` pour tout test login + accès protégé.
+- `Origin: http://127.0.0.1` (sans port) dans les tests de mutation (garde `require_same_origin`).
+- `LATCH_STORAGE_ROOT` : utiliser `tempfile::tempdir()` + variable vivante jusqu'à la fin du test.
+- `X-Forwarded-For: 1.2.3.4` pour déclencher le rate-limit `tower_governor` (garantit l'extraction de clé IP).
+
 ## Tool MCP type
 _(à remplir : un tool qui valide `deploy_token` en premier, puis appelle le service,
 puis mappe l'erreur en tool error.)_

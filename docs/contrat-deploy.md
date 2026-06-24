@@ -95,9 +95,22 @@ latch/                 # workspace
 - **Pourquoi cookie et pas JWT :** client unique, same-origin. Cookie `HttpOnly`
   (non lisible en JS → pas de vol par XSS), part seul, révocation immédiate côté
   serveur. JWT n'apporterait que de la plomberie ici.
-- **Cookie admin** : `HttpOnly` + `Secure` + `SameSite=Lax`.
-- **CSRF** : tout endpoint **mutant** vérifie l'en-tête `Origin`/`Referer` (same-origin),
-  en complément du `SameSite`. Le login est rate-limité (porte publique).
+- **Cookie admin** : `HttpOnly` toujours. `Secure` + préfixe `__Host-` activés en
+  production uniquement (désactivés en `Development` et `Test` pour les tests HTTP
+  locaux — fail-secure : tout env inconnu futur reçoit `Secure=true` par défaut).
+  `SameSite=Lax`. Cookie signé via `SESSION_SECRET` (≥ 64 bytes aléatoires, panique
+  au démarrage si absent en prod).
+- **Store de session** : table `sessions` dédiée, créée via une **migration SeaORM**
+  (`m20260101_create_sessions_table`) pour rester cohérent avec le versioning du
+  schéma. Schéma : `id TEXT PK`, `expires INTEGER NULL`, `session TEXT`.
+- **Logout** : appelle `session.destroy()` (révocation immédiate côté serveur +
+  invalidation du cookie — pas `session.clear()` qui laisse la ligne DB active).
+- **CSRF** : tout endpoint **mutant** vérifie l'en-tête `Origin` (same-origin) via
+  le middleware `require_same_origin` (`axum::from_fn`), producant un 403 sur
+  cross-origin. En complément du `SameSite`. Le login est rate-limité (porte publique).
+- **Login rate-limit** : `tower_governor 0.7` avec `SmartIpKeyExtractor` (lit
+  `X-Forwarded-For` / `X-Real-IP` derrière Caddy), appliqué uniquement sur
+  `POST /admin/login` via un layer par route.
 - **Rendu** : la SPA Yew est buildée par Trunk et servie en **statique** par Loco,
   avec **fallback SPA** (toute route admin inconnue → `index.html`). Les opérations
   passent par l'**API JSON** de `controllers/admin.rs`.
@@ -187,15 +200,20 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
 
 ## 9. Invariants de sécurité (non négociables, testés)
 
-1. **Aucune réponse ne renvoie de hash**, jamais (ni web, ni MCP).
+1. **Aucune réponse ne renvoie de hash**, jamais (ni web, ni MCP). Garanti
+   structurellement : aucun DTO admin n'expose de champ hash.
 2. Le **PIN en clair** n'apparaît **que sur le détail d'un projet** — jamais dans une
-   liste, jamais via MCP.
+   liste, jamais via MCP. Garanti structurellement : `ProjectListItem` n'a pas de
+   champ `pin` (pas de `#[serde(skip)]` — le champ est absent du type).
 3. **`deploy_token` validé sur TOUS les tools MCP**, lecture comprise.
 4. **L'auth vit dans l'adaptateur, jamais dans le cœur.** Un service suppose
-   l'appelant autorisé.
+   l'appelant autorisé. Vérifiée par la garde d'architecture `backend/tests/architecture.rs`
+   (échoue si `use axum::` ou `use loco_rs::` apparaît dans `src/services/`).
 5. **Rate-limit *load-bearing*** sur le déverrouillage `/c/<slug>/unlock` (un PIN à
    6 chiffres = 10⁶ combinaisons, brute-forçable en secondes sans garde-fou) et sur
-   le login admin. Backoff par `IP+slug`, plafond global par slug (au prix d'un petit
+   le login admin (`tower_governor` + `SmartIpKeyExtractor`, lit `X-Forwarded-For`
+   derrière Caddy). Backoff par `IP+slug`, plafond global par slug (au prix d'un petit
    risque de DoS sur un client légitime — accepté à cet enjeu).
 6. Cookie de déverrouillage **signé** et **scopé par projet** ; cookie admin
-   `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin.
+   `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin via
+   `require_same_origin` (middleware `axum::from_fn`, 403 cross-origin).

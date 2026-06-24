@@ -4,6 +4,42 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Phase 2 TERMINÉE (Task 9 : vérification, env, contrat, clôture mémoire)
+
+### Dernière chose faite
+- Phase 2 (adaptateur web admin) complète et clôturée. Suite : **77/77 verts, 0 ignorés**.
+- Garde d'architecture (`backend/tests/architecture.rs`) verte — le cœur `src/services/`
+  ne contient aucun `use axum::` ni `use loco_rs::`.
+- `cargo fmt --all` propre, `cargo clippy --all-targets -- -D warnings` : 0 warning.
+- Décisions Phase 2 reportées dans `docs/contrat-deploy.md` (§4 session/cookie/CSRF/rate-limit,
+  §9 invariants structurels).
+- `.env.example` complété : `SESSION_SECRET` + `LATCH_STORAGE_ROOT`.
+- Branche : `feat/phase-2-admin-web`, prête pour review / merge sur `main`.
+
+### Trucs en suspens
+- `cargo deny check licenses advisories` non exécutable localement (binaire absent).
+  Vérification déléguée à la CI GitHub Actions — toutes les licences des nouvelles deps
+  Phase 2 (axum_session, axum_session_sqlx, tower_governor, tower, time) sont MIT/Apache-2.0,
+  couvertes par `deny.toml allow = [...]`.
+- BACKLOG : nettoyage du fichier HTML sur `delete_version` (storage.delete non encore déclaré).
+- BACKLOG : `same_host` — port par défaut/IPv6 non géré (acceptable derrière Caddy, cf. BACKLOG).
+
+### Prochaine chose à creuser
+- **Phase 3** : SPA Yew admin (login screen, liste projets, détail, side-panel création/édition,
+  upload HTML + deploy depuis l'interface).
+
+### Notes pour future Claude
+- Les 77 tests incluent : 13 tests unitaires (middleware Origin), tests d'intégration Loco
+  (admin CRUD, auth, deploy, versions, security_invariants), tests service (ProjectsService,
+  DeployService), garde d'archi — tout dans `cargo test -p latch`.
+- Pattern `request_with_config(RequestConfigBuilder::new().save_cookies(true).build(), ...)`
+  obligatoire pour tout test qui enchaîne login + accès protégé (cf. QUIRKS).
+- `is_prod = !matches!(env, Development | Test)` dans `web/mod.rs` — fail-secure,
+  ne pas inverser en `matches!(..., Production)` (cf. QUIRKS).
+- `session.destroy()` au logout (révocation serveur immédiate), pas `session.clear()`.
+
+---
+
 ## 2026-06-24 — Task 8 Phase 2 : déploiement + versions (activate/delete/preview)
 
 ### Dernière chose faite
