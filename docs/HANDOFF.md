@@ -4,6 +4,35 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 6 Phase 2 : API admin lecture (liste + détail projets)
+
+### Dernière chose faite
+- `controllers/admin.rs` créé : `GET /admin/projects` (liste sans PIN) + `GET /admin/projects/{id}` (détail avec PIN + versions), protégés par `AdminAuth`.
+- `controllers/mod.rs` mis à jour : déclare `pub mod admin`.
+- `app.rs` mis à jour : monte `controllers::admin::routes()`.
+- Les 2 tests ignorés de Task 4 (`protected_route_is_401_without_session`, `login_then_access_protected_route`) **re-activés et verts**.
+- Nouveaux tests actifs : `list_projects_returns_empty_array_when_none`, `detail_returns_404_for_unknown_id`.
+- `backend/tests/security_invariants.rs` créé avec `pin_never_appears_in_project_list` et `pin_appears_on_project_detail` (ignorés — attendent Task 7).
+- **Bug corrigé dans `web/mod.rs`** : `is_prod` était `true` en environment `Test` (car `!Development`), activant `cookie_secure = true` et empêchant la propagation des cookies de session dans les tests. Corrigé : `is_prod` vrai uniquement en `Production`.
+- Suite complète 67/67 verts, 3 ignorés. fmt + clippy clean.
+
+### Trucs en suspens
+- Les 3 tests ignorés :
+  - `mutation_rejected_on_cross_origin` (admin_api.rs) — attend Task 7.
+  - `pin_never_appears_in_project_list` (security_invariants.rs) — attend Task 7.
+  - `pin_appears_on_project_detail` (security_invariants.rs) — attend Task 7.
+
+### Prochaine chose à creuser
+- Task 7 : `POST /admin/projects` (création) + mutations CRUD + `require_same_origin` câblé sur mutations. Activera les 3 tests ignorés.
+
+### Notes pour future Claude
+- `request_with_config(RequestConfigBuilder::new().save_cookies(true).build(), ...)` est requis pour tout test intégration qui fait login puis accès protégé — `request(...)` ne propage pas les cookies.
+- `is_prod` dans `web/mod.rs` doit être `matches!(..., Production)`, pas `!matches!(..., Development)` — l'environnement de test est `Test`, pas `Development`.
+- `save_cookies` de `axum-test` stocke les `Set-Cookie` response headers dans un `CookieJar` interne, et les réémet sur les requêtes suivantes. Fonctionne en mode Mock ET HTTP.
+- Context7 a confirmé : Loco 0.16/axum 0.8 utilise `{id}` (pas `:id`) pour les path params.
+
+---
+
 ## 2026-06-24 — Task 5 Phase 2 : middleware same-origin (CSRF guard)
 
 ### Dernière chose faite

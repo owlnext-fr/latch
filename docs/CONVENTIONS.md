@@ -52,8 +52,43 @@ impl ProjectsService {
 - Les erreurs DB (`sea_orm::DbErr`) se mappe via `impl From<DbErr> for CoreError`.
 
 ## Endpoint admin (adaptateur web) type
-_(à remplir : un handler JSON qui extrait, appelle un service, mappe `CoreError` →
-status + JSON, avec la vérif `Origin` sur mutation.)_
+
+Un handler admin lit l'état via `AdminAuth` + `State(ctx)`, appelle le service du cœur,
+mappe `CoreError` → `loco_rs::Error` via `error::into_response`, et sérialise avec `format::json`.
+
+```rust
+// Exemple réel : backend/src/controllers/admin.rs
+#[debug_handler]
+async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    let items: Vec<ProjectListItem> = svc.list().await.map_err(into_response)?
+        .iter().map(ProjectListItem::from).collect();
+    format::json(items)
+}
+
+#[debug_handler]
+async fn detail(_auth: AdminAuth, State(ctx): State<AppContext>, Path(id): Path<i32>) -> Result<Response> {
+    let project = projects::Entity::find_by_id(id)
+        .one(&ctx.db).await.map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+    // ...
+    format::json(ProjectDetail::from_model(project, vers))
+}
+
+pub fn routes() -> Routes {
+    Routes::new()
+        .prefix("/admin")
+        .add("/projects", get(list))
+        .add("/projects/{id}", get(detail))  // axum 0.8 : {id}, pas :id
+}
+```
+
+**Règles :**
+- `AdminAuth` en premier argument (FromRequestParts) ; `State`/`Path` ensuite.
+- `#[debug_handler]` sur chaque handler pour un diagnostic de type complet.
+- Path params : syntaxe `{id}` (axum 0.8) dans les routes, `Path(id): Path<i32>` dans le handler.
+- Erreurs DB : `.map_err(|e| into_response(e.into()))` (CoreError::Db via From<DbErr>).
+- Not found : `.ok_or(loco_rs::Error::NotFound)` directement (pas via into_response).
 
 ## Extracteur d'auth axum (FromRequestParts, axum 0.8)
 

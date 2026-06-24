@@ -32,12 +32,8 @@ async fn login_rejects_bad_credentials() {
 }
 
 /// Une route protégée par `AdminAuth` doit renvoyer 401 sans session active.
-/// La route `/admin/projects` n'est pas encore implémentée (Task 6),
-/// mais l'extracteur AdminAuth est testé via un 404 (route absente) ≠ 401.
-/// Ce test sera pleinement significatif après Task 6.
 #[tokio::test]
 #[serial]
-#[ignore = "needs /admin/projects (Task 6)"]
 async fn protected_route_is_401_without_session() {
     request::<App, _, _>(|request, _ctx| async move {
         let res = request.get("/admin/projects").await;
@@ -47,20 +43,20 @@ async fn protected_route_is_401_without_session() {
 }
 
 /// Login correct puis accès à une route protégée doit retourner 200.
-/// Dépend de `/admin/projects` (Task 6).
+/// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
 #[tokio::test]
 #[serial]
-#[ignore = "needs /admin/projects (Task 6)"]
 async fn login_then_access_protected_route() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
-    request::<App, _, _>(|request, _ctx| async move {
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
         let login = request
             .post("/admin/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         assert_eq!(login.status_code(), 200);
-        // axum-test propage le cookie de session entre requêtes du même `request`.
+        // axum-test propage le cookie de session grâce à save_cookies(true).
         let listed = request.get("/admin/projects").await;
         assert_eq!(listed.status_code(), 200);
     })
@@ -76,7 +72,8 @@ async fn login_then_access_protected_route() {
 async fn mutation_rejected_on_cross_origin() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
-    request::<App, _, _>(|request, _ctx| async move {
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
         // login d'abord (sinon 401 masquerait le 403)
         request
             .post("/admin/login")
@@ -123,6 +120,45 @@ async fn login_is_rate_limited() {
             saw_429,
             "le login doit finir par renvoyer 429 (rate-limit load-bearing)"
         );
+    })
+    .await;
+}
+
+/// GET /admin/projects avec session active et base vide doit renvoyer 200 + tableau vide.
+/// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
+#[tokio::test]
+#[serial]
+async fn list_projects_returns_empty_array_when_none() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let res = request.get("/admin/projects").await;
+        assert_eq!(res.status_code(), 200);
+        assert_eq!(res.json::<serde_json::Value>(), serde_json::json!([]));
+    })
+    .await;
+}
+
+/// GET /admin/projects/{id} sur un id inexistant doit renvoyer 404.
+/// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
+#[tokio::test]
+#[serial]
+async fn detail_returns_404_for_unknown_id() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let res = request.get("/admin/projects/999999").await;
+        assert_eq!(res.status_code(), 404);
     })
     .await;
 }
