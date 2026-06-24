@@ -2,6 +2,7 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 mod routes;
+mod util;
 
 use routes::{switch, Route};
 
