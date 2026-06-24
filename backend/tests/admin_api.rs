@@ -260,6 +260,159 @@ async fn update_project_changes_name_and_rejects_empty() {
     .await;
 }
 
+/// POST /admin/projects/{id}/deploy puis GET /admin/projects/{id}/versions/1/preview.
+/// Vérifie : la version est créée, preview sert le HTML brut avec Cache-Control: no-store.
+/// Le storage est redirigé vers un tempdir (jamais le volume de prod).
+#[tokio::test]
+#[serial]
+async fn deploy_creates_version_and_preview_serves_html() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        let deployed = request
+            .post(&format!("/admin/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": "<h1>v1</h1>", "activate": true}))
+            .await;
+        assert_eq!(deployed.status_code(), 200);
+        let v = deployed.json::<serde_json::Value>();
+        assert_eq!(v["n"], 1);
+
+        let preview = request
+            .get(&format!("/admin/projects/{id}/versions/1/preview"))
+            .await;
+        assert_eq!(preview.status_code(), 200);
+        assert!(preview.text().contains("<h1>v1</h1>"));
+        assert_eq!(preview.header("cache-control"), "no-store");
+    })
+    .await;
+    // Garder `tmp` vivant jusqu'ici (drop après le test, pas avant).
+    drop(tmp);
+}
+
+/// Bascule de version active via POST /versions/{n}/activate.
+/// Vérifie que le pointeur active_version_id est bien mis à jour.
+#[tokio::test]
+#[serial]
+async fn activate_switches_active_version() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        // Déployer v1 active, puis v2 inactive.
+        request
+            .post(&format!("/admin/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": "a", "activate": true}))
+            .await;
+        request
+            .post(&format!("/admin/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": "b", "activate": false}))
+            .await;
+
+        // Basculer vers v2.
+        let act = request
+            .post(&format!("/admin/projects/{id}/versions/2/activate"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(act.status_code(), 200);
+
+        // Vérifier que le détail reflète le changement de pointeur.
+        let detail = request.get(&format!("/admin/projects/{id}")).await;
+        let v = detail.json::<serde_json::Value>();
+        let active_id = v["active_version_id"].as_i64().unwrap();
+        let v2 = v["versions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|x| x["n"] == 2)
+            .unwrap();
+        assert_eq!(v2["id"].as_i64().unwrap(), active_id);
+        assert_eq!(v2["is_active"], true);
+    })
+    .await;
+    drop(tmp);
+}
+
+/// DELETE /versions/{n} doit supprimer une version inactive, et refuser la version active (400).
+#[tokio::test]
+#[serial]
+async fn delete_version_refuses_active_and_removes_inactive() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        // v1 active, v2 inactive.
+        request
+            .post(&format!("/admin/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": "a", "activate": true}))
+            .await;
+        request
+            .post(&format!("/admin/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": "b", "activate": false}))
+            .await;
+
+        // Refus de supprimer la version active (v1).
+        let refused = request
+            .delete(&format!("/admin/projects/{id}/versions/1"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(refused.status_code(), 400);
+
+        // Suppression de la version inactive (v2) : 200.
+        let deleted = request
+            .delete(&format!("/admin/projects/{id}/versions/2"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(deleted.status_code(), 200);
+    })
+    .await;
+    drop(tmp);
+}
+
 /// GET /admin/projects/{id} sur un id inexistant doit renvoyer 404.
 /// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
 #[tokio::test]

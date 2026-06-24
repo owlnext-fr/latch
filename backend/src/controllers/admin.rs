@@ -3,6 +3,7 @@
 //! sérialise un DTO. Aucune logique métier ici.
 
 use axum::middleware::from_fn;
+use axum::response::IntoResponse;
 use loco_rs::prelude::*;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait,
@@ -10,11 +11,12 @@ use sea_orm::{
 
 use crate::controllers::auth::AdminAuth;
 use crate::controllers::dto::{
-    CreateProjectReq, ProjectDetail, ProjectListItem, SetCodeReq, UpdateProjectReq,
+    CreateProjectReq, DeployReq, ProjectDetail, ProjectListItem, SetCodeReq, UpdateProjectReq,
 };
 use crate::controllers::error::into_response;
 use crate::controllers::middleware::origin::require_same_origin;
 use crate::models::_entities::versions;
+use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
 
 /// GET /admin/projects — liste tous les projets (sans PIN, invariant §9.2).
@@ -182,6 +184,144 @@ async fn clear_code(
     format::json(ProjectDetail::from_model(project, vec![]))
 }
 
+/// POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
+/// Si `activate=true`, repointe `active_version_id`. Répond `{id, n}`.
+#[debug_handler]
+async fn deploy(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i32>,
+    Json(body): Json<DeployReq>,
+) -> Result<Response> {
+    let storage = crate::web::storage_from_ctx(&ctx);
+    let svc = DeployService::new(ctx.db.clone(), storage);
+    let version = svc
+        .deploy(id, &body.html, body.activate)
+        .await
+        .map_err(into_response)?;
+    format::json(serde_json::json!({"id": version.id, "n": version.n}))
+}
+
+/// POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.
+/// Charge la version par (project_id, n) → 404 si absente. Met à jour le projet.
+#[debug_handler]
+async fn activate_version(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, n)): Path<(i32, i32)>,
+) -> Result<Response> {
+    use crate::models::_entities::projects;
+
+    let version = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .filter(versions::Column::N.eq(n))
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+
+    let project = projects::Entity::find_by_id(id)
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+
+    let mut active: projects::ActiveModel = project.into();
+    active.active_version_id = Set(Some(version.id));
+    // updated_at posé manuellement (cf. QUIRKS hook before_save).
+    active.updated_at = Set(chrono::Utc::now().into());
+    active
+        .update(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?;
+
+    format::json(serde_json::json!({"ok": true, "active_version_id": version.id}))
+}
+
+/// DELETE /admin/projects/{id}/versions/{n} — supprime une version NON active.
+/// Charge la version par (project_id, n) → 404 si absente.
+/// Refuse la suppression si elle est la version active du projet → 400.
+/// Nettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).
+#[debug_handler]
+async fn delete_version(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, n)): Path<(i32, i32)>,
+) -> Result<Response> {
+    use crate::models::_entities::projects;
+
+    let version = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .filter(versions::Column::N.eq(n))
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+
+    let project = projects::Entity::find_by_id(id)
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+
+    // Invariant : ne jamais supprimer la version active (laisserait un pointeur orphelin).
+    if project.active_version_id == Some(version.id) {
+        return Err(loco_rs::Error::BadRequest(
+            "cannot delete the active version".to_string(),
+        ));
+    }
+
+    versions::Entity::delete_by_id(version.id)
+        .exec(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?;
+
+    format::json(serde_json::json!({"ok": true}))
+}
+
+/// GET /admin/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.
+/// Répond avec `Cache-Control: no-store` pour éviter tout cache navigateur en admin.
+/// Protégé par `AdminAuth` (pas de garde Origin : GET est idempotent).
+/// Confirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;
+/// le tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.
+#[debug_handler]
+async fn preview_version(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, n)): Path<(i32, i32)>,
+) -> Result<Response> {
+    let version = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .filter(versions::Column::N.eq(n))
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+
+    let storage = crate::web::storage_from_ctx(&ctx);
+    let html = storage
+        .read(&version.html_path)
+        .await
+        .map_err(into_response)?;
+
+    // Réponse brute axum : (tableau de headers, body) → IntoResponse.
+    // `axum::response::IntoResponse` est importé en tête de fichier.
+    Ok((
+        [
+            (
+                axum::http::header::CACHE_CONTROL,
+                axum::http::HeaderValue::from_static("no-store"),
+            ),
+            (
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+        ],
+        html,
+    )
+        .into_response())
+}
+
 /// Routes de l'adaptateur admin. Les endpoints de lecture (GET) sont publics après
 /// auth ; les mutations (POST/PUT/DELETE) sont également protégées par la garde
 /// `require_same_origin` (contrat §4/§9.6 — CSRF complémentaire au SameSite).
@@ -216,4 +356,20 @@ pub fn routes() -> Routes {
             "/projects/{id}/code",
             axum::routing::delete(clear_code).layer(from_fn(require_same_origin)),
         )
+        // Déploiement + gestion de versions (Task 8).
+        // Mutations : garde Origin obligatoire.
+        .add(
+            "/projects/{id}/deploy",
+            post(deploy).layer(from_fn(require_same_origin)),
+        )
+        .add(
+            "/projects/{id}/versions/{n}/activate",
+            post(activate_version).layer(from_fn(require_same_origin)),
+        )
+        .add(
+            "/projects/{id}/versions/{n}",
+            axum::routing::delete(delete_version).layer(from_fn(require_same_origin)),
+        )
+        // Preview : GET idempotent, pas de garde Origin, mais derrière AdminAuth.
+        .add("/projects/{id}/versions/{n}/preview", get(preview_version))
 }
