@@ -58,3 +58,18 @@ async fn api_is_not_shadowed_by_spa() {
     })
     .await;
 }
+
+#[tokio::test]
+#[serial]
+async fn admin_serves_existing_asset_directly() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, _ctx| async move {
+        let res = request.get("/admin/app.js").await;
+        res.assert_status_ok();
+        assert!(
+            res.text().contains("spa asset"),
+            "GET /admin/app.js doit servir le fichier réel (pas le fallback index.html)"
+        );
+    })
+    .await;
+}
