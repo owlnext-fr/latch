@@ -26,6 +26,86 @@ impl Locale {
     }
 }
 
+use yew::prelude::*;
+
+const LS_KEY: &str = "latch.locale";
+
+fn read_stored() -> Option<String> {
+    let win = web_sys::window()?;
+    let store = win.local_storage().ok()??;
+    store.get_item(LS_KEY).ok()?
+}
+
+fn write_stored(code: &str) {
+    if let Some(win) = web_sys::window() {
+        if let Ok(Some(store)) = win.local_storage() {
+            let _ = store.set_item(LS_KEY, code);
+        }
+    }
+}
+
+fn browser_lang() -> Option<String> {
+    web_sys::window()?.navigator().language()
+}
+
+/// Locale au démarrage : localStorage → navigator.language → EN.
+fn detect_initial() -> Locale {
+    if let Some(stored) = read_stored() {
+        return Locale::from_code(&stored);
+    }
+    if let Some(lang) = browser_lang() {
+        return Locale::from_code(&lang);
+    }
+    Locale::En
+}
+
+#[derive(Clone, PartialEq)]
+pub struct LocaleContext {
+    pub locale: Locale,
+    pub set_locale: Callback<Locale>,
+}
+
+#[hook]
+pub fn use_locale() -> LocaleContext {
+    use_context::<LocaleContext>().expect("LocaleProvider manquant au-dessus de l'arbre")
+}
+
+#[derive(Properties, PartialEq)]
+pub struct LocaleProviderProps {
+    pub children: Html,
+}
+
+#[function_component(LocaleProvider)]
+pub fn locale_provider(props: &LocaleProviderProps) -> Html {
+    // Initialise une seule fois : détecte la locale et applique la locale globale
+    // rust-i18n de façon synchrone (avant le premier rendu des enfants → pas de flash).
+    let locale = use_state(|| {
+        let l = detect_initial();
+        rust_i18n::set_locale(l.as_str());
+        l
+    });
+
+    let set_locale = {
+        let locale = locale.clone();
+        Callback::from(move |l: Locale| {
+            rust_i18n::set_locale(l.as_str());
+            write_stored(l.as_str());
+            locale.set(l);
+        })
+    };
+
+    let ctx = LocaleContext {
+        locale: *locale,
+        set_locale,
+    };
+
+    html! {
+        <ContextProvider<LocaleContext> context={ctx}>
+            { props.children.clone() }
+        </ContextProvider<LocaleContext>>
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

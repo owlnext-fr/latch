@@ -21,7 +21,7 @@ rust-i18n = "3"
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["Window", "Location", "Document", "Navigator", "Clipboard", "HtmlInputElement", "File", "FileList", "Crypto"]
+features = ["Window", "Location", "Document", "Navigator", "Clipboard", "HtmlInputElement", "File", "FileList", "Crypto", "Storage"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

@@ -23,9 +23,11 @@ rust_i18n::i18n!("locales");
 fn app() -> Html {
     html! {
         <BrowserRouter>
-            <AuthProvider>
-                <Switch<Route> render={switch} />
-            </AuthProvider>
+            <i18n::LocaleProvider>
+                <AuthProvider>
+                    <Switch<Route> render={switch} />
+                </AuthProvider>
+            </i18n::LocaleProvider>
         </BrowserRouter>
     }
 }
