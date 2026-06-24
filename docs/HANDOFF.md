@@ -4,6 +4,30 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 2 Phase 2 : câblage axum-session (after_routes + helpers web)
+
+### Dernière chose faite
+- `axum_session 0.16.0` + `axum_session_sqlx 0.5.0` + `tower_governor 0.7.0` + `tower 0.5` + `time 0.3` ajoutés — sqlx 0.8.6 partagé sans conflit.
+- `backend/src/web/mod.rs` créé : `SessionPool` / `AdminSession` type aliases, `storage_from_ctx` (LATCH_STORAGE_ROOT → FsStorage), `build_session_store` (pool SQLite Loco → SessionLayer).
+- `after_routes` câblé dans `backend/src/app.rs` : monte `SessionLayer` au démarrage.
+- Smoke test `backend/tests/admin_api.rs` : vérifie que l'app boote avec la session layer + répond `/_ping` 200.
+- Suite 35/35 verte, fmt + clippy clean. Commit `d1e9507`.
+
+### Trucs en suspens
+- Task 3 (controllers/auth.rs : login/logout session) est la prochaine étape de Phase 2.
+- `cargo-deny` non installé localement — tourne en CI uniquement. Licences des nouvelles dépendances toutes MIT/Apache.
+
+### Prochaine chose à creuser
+- Task 3 : `controllers/auth.rs` — POST `/admin/login` (compare ADMIN_USER/ADMIN_PASS à temps constant, pose session, rate-limit), GET `/admin/logout` (détruit la session). Utilise `AdminSession` from `web::AdminSession`.
+
+### Notes pour future Claude
+- `with_session_name` (pas `with_cookie_name`) dans `SessionConfig` 0.16 — cf. QUIRKS.
+- `SessionSqlitePool::from(pool)` (pas `::new`) — cf. QUIRKS.
+- `SESSION_SECRET` doit faire ≥ 64 bytes en prod — cf. QUIRKS.
+- `LATCH_STORAGE_ROOT` (défaut `data`) : racine du volume HTML — non encore utilisé en Phase 2, câblé ici pour Tasks suivantes.
+
+---
+
 ## 2026-06-24 — Phase 1 mergée sur `main` + scrub d'historique (nom client)
 
 ### Dernière chose faite

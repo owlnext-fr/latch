@@ -55,6 +55,25 @@ impl ProjectsService {
 _(à remplir : un handler JSON qui extrait, appelle un service, mappe `CoreError` →
 status + JSON, avec la vérif `Origin` sur mutation.)_
 
+## Câblage d'un layer axum dans after_routes (Phase 2)
+
+`after_routes` est le hook Loco pour enrichir le routeur axum avant le démarrage.
+Les helpers de session vivent dans `src/web/mod.rs` (séparation adaptateur / cœur).
+
+```rust
+// Dans backend/src/app.rs — ajout d'un layer session
+async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter> {
+    let store = crate::web::build_session_store(ctx).await?;
+    let router = router.layer(axum_session::SessionLayer::new(store));
+    Ok(router)
+}
+```
+
+**Règles :**
+- La signature exacte est `(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter>` où `AxumRouter = axum::Router` (importer en tête avec `use axum::Router as AxumRouter`).
+- Les helpers de résolution (session store, storage) vivent dans `src/web/`, jamais dans `src/services/`.
+- `build_session_store` retourne `loco_rs::Result<_>` — propager via `?`.
+
 ## Tool MCP type
 _(à remplir : un tool qui valide `deploy_token` en premier, puis appelle le service,
 puis mappe l'erreur en tool error.)_

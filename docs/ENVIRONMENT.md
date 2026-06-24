@@ -9,6 +9,8 @@
 - `ADMIN_PASS` — mot de passe admin (comparé à temps constant, non hashé).
 - `DEPLOY_TOKEN` — secret applicatif validé par les tools MCP.
 - `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client.
+- `SESSION_SECRET` — clé HMAC de signature du cookie de session admin (≥ 64 bytes). En dev : clé de secours déterministe (voir `web/mod.rs`). **Obligatoire en prod.**
+- `LATCH_STORAGE_ROOT` — racine du volume HTML des versions. Défaut : `data`. En prod : `/data` (volume Docker). Utilisé par `storage_from_ctx`.
 - `DATABASE_URL` — URI SQLite. Dev (défaut) : `sqlite://latch_development.sqlite?mode=rwc`.
   Prod (image) : `sqlite:///data/latch.sqlite?mode=rwc` (volume monté). Modèle : `.env.example`.
 - `PORT` — port d'écoute backend (défaut `5150`).
