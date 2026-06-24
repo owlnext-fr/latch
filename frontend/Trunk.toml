@@ -1,10 +1,12 @@
-# Build SPA Yew. La sortie `dist/` sert d'input à l'étape Docker (servie en
-# statique par Loco). Cf. docs/BOOTSTRAP.md §3 et §7.
 [build]
 target = "index.html"
 dist = "dist"
+# La SPA est servie sous /admin → les assets doivent être référencés sous ce préfixe.
+public_url = "/admin/"
 
 [serve]
-# Dev server : proxy de l'API backend pendant `trunk serve` (Phase 3).
-# address = "127.0.0.1"
-# port = 8080
+# Dev : proxy de l'API backend pendant `trunk serve`.
+address = "127.0.0.1"
+port = 8080
+[[proxy]]
+backend = "http://127.0.0.1:5150/api"
