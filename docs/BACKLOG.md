@@ -42,5 +42,8 @@ L'image distroless tourne en `root` (le `latch.sqlite` du volume est créé root
 à `gcr.io/distroless/cc-debian12:nonroot` + ownership du volume `/data` durcirait le
 runtime. Reporté : friction d'ownership du volume à régler, faible enjeu derrière Caddy.
 
+## same_host — port par défaut et IPv6 sans crochets (Phase 2 – 2026-06-24)
+`same_host` accepte `("example.com:80", "example.com")` car l'un n'a pas de port explicite — sans connaître le schéma (http/https), on ne peut pas résoudre le port par défaut. Caveat acceptable en v1 (le proxy Caddy normalise le Host avant de transmettre). IPv6 sans crochets (`::1` au lieu de `[::1]`) serait mal découpé par `rsplit_once(':')` — mais les navigateurs émettent toujours `[::1]` dans Origin/Host. Les deux cas sont documentés dans QUIRKS.
+
 ## Validation de longueur sur `name` et `brand_name` (Phase 1 – 2026-06-24)
 Aujourd'hui, `name` et `brand_name` n'ont aucune contrainte de longueur ni en DB (SQLite `TEXT` = illimité) ni dans le service (`ProjectsService::create` valide uniquement la présence de `name`). Une valeur absurdement longue passerait sans erreur. À ajouter : validation applicative (ex. `name.len() <= 128`) + contrainte DB `VARCHAR(128)` via migration, pour éviter les surprises à l'affichage en Phase 3 (SPA Yew).
