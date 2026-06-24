@@ -3,6 +3,22 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Loco lit `config/` depuis le CWD → lancer le serveur depuis `backend/` (2026-06-24)
+**Symptôme** : `cargo loco start` depuis la racine du repo → `Error: no configuration
+file found in folder: config`. **Cause** : Loco résout `./config/<env>.yaml` relativement
+au répertoire courant, et le `config/` vit dans `backend/` (workspace 2 membres).
+**Workaround** : lancer les commandes serveur depuis `backend/` (`cd backend && cargo
+loco start`). L'alias `cargo loco` est à la racine (`.cargo/config.toml`, `run -p latch --`)
+et reste trouvé depuis `backend/` par recherche ascendante. Les commandes `fmt`/`clippy`/
+`test` n'ont pas ce souci (pas de config) et tournent depuis la racine.
+
+## Crate wasm (frontend) dans un workspace → `default-members` (2026-06-24)
+**Symptôme** : `cargo build`/`clippy --workspace` tente de compiler `latch-ui` (Yew) pour
+la cible hôte native → échoue (web-sys/wasm-only). **Cause** : un membre wasm dans un
+workspace mixte. **Workaround** : `default-members = ["backend", "backend/migration"]`
+dans le `Cargo.toml` racine → les commandes sans `--workspace` ignorent le frontend.
+Le frontend se build via `trunk` ou `cargo … -p latch-ui --target wasm32-unknown-unknown`.
+
 ## rmcp < 1.4.0 — DNS rebinding (CVE-2026-42559)
 Le transport Streamable HTTP ne validait pas le `Host` avant la 1.4.0. **Épingler
 ≥ 1.4.0** et configurer `allowed_hosts` (inclure `latch.owlnext.fr`). Caddy valide

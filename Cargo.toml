@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["backend", "backend/migration", "frontend"]
+# Le frontend cible wasm32 et ne compile pas pour l'hôte natif. On l'exclut des
+# membres par défaut : `cargo build`/`clippy`/`test` (sans --workspace) ne touchent
+# que le backend natif. Le frontend se build via `trunk` / `--target wasm32`.
+default-members = ["backend", "backend/migration"]
+
+[workspace.dependencies]
+loco-rs = { version = "0.16" }

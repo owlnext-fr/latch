@@ -1,2 +1,24 @@
 # Claude Code — secrets et overrides locaux (hors git)
 .claude/settings.local.json
+
+# Rust / Cargo
+/target
+**/target
+Cargo.lock.bak
+
+# Trunk / wasm (frontend) — artefacts de build
+/frontend/dist
+**/dist
+
+# Données runtime (volume : .sqlite + HTML des versions) — jamais commitées
+/data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Secrets d'exécution
+.env
+.env.local
+
+# Divers
+.DS_Store

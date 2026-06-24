@@ -1,0 +1,29 @@
+# Configuration Loco — environnement production (image Docker, LOCO_ENV=production).
+# Aucun secret ici : tout secret arrive par variable d'environnement au runtime.
+
+logger:
+  enable: true
+  pretty_backtrace: false
+  level: info
+  format: json
+
+server:
+  # Port d'écoute. Caddy (façade) reverse-proxie vers ce port.
+  port: {{ get_env(name="PORT", default="5150") }}
+  # 0.0.0.0 : joignable depuis le réseau Docker / la façade Caddy.
+  binding: 0.0.0.0
+  host: https://latch.owlnext.fr
+
+database:
+  # Volume monté : la base et les HTML des versions vivent sous /data.
+  uri: {{ get_env(name="DATABASE_URL", default="sqlite:///data/latch.sqlite?mode=rwc") }}
+  enable_logging: false
+  connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="500") }}
+  idle_timeout: {{ get_env(name="DB_IDLE_TIMEOUT", default="500") }}
+  min_connections: {{ get_env(name="DB_MIN_CONNECTIONS", default="1") }}
+  max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="5") }}
+  # Joue les migrations au boot → l'image distroless n'a pas besoin de shell pour
+  # enchaîner `migrate && start`. Cf. docs/QUIRKS.md « Migrations au démarrage ».
+  auto_migrate: true
+  dangerously_truncate: false
+  dangerously_recreate: false

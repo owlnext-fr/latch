@@ -31,3 +31,13 @@ retenu en v1 pour ne pas complexifier le branchement.
 ## Provisioning du connecteur MCP aux designers
 Dépend de la formule OWLNEXT (Owner provisionne en Team/Ent vs chacune ajoute l'URL
 en Pro/Max). Hors périmètre build — à traiter au branchement, pas au code.
+
+## Cache de build Docker (cargo-chef)
+Le Dockerfile Phase 0 fait un `COPY . . && cargo build` simple : chaque build recompile
+toutes les deps. Passer à `cargo-chef` (recipe deps en couche cachée) accélérerait
+fortement la CI/les rebuilds. Non-breaking, purement perf de build.
+
+## Conteneur en utilisateur non-root
+L'image distroless tourne en `root` (le `latch.sqlite` du volume est créé root). Passer
+à `gcr.io/distroless/cc-debian12:nonroot` + ownership du volume `/data` durcirait le
+runtime. Reporté : friction d'ownership du volume à régler, faible enjeu derrière Caddy.

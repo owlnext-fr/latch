@@ -4,6 +4,44 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Phase 0 livrée (scaffold & squelette CI/Docker)
+
+### Dernière chose faite
+- **Phase 0 du ROADMAP terminée, tous critères de sortie verts** (vérifiés réellement,
+  pas sur parole) :
+  - Workspace 2 membres : `backend/` (Loco 0.16.4, crate `latch`, bin `latch-cli`) +
+    `frontend/` (crate `latch-ui`, Yew 0.21) + sous-crate `backend/migration`.
+  - Scaffold généré via `loco new --db sqlite --bg none --assets none` → starter minimal
+    **sans users/JWT** (rien à retirer), **sans worker/Redis**.
+  - `libsqlite3-sys` en `bundled` (unifié avec sqlx 0.8 → `libsqlite3-sys 0.30.1`).
+  - `cargo loco start` boote (depuis `backend/`), `trunk build` produit le bundle wasm.
+  - fmt + clippy `-D warnings` verts (backend ET frontend wasm) ; `cargo test` vert.
+  - Image Docker multi-stage construite (~85 Mo) + **smoke test conteneur** : `/_health`
+    = `{"ok":true}`, auto-migrate au boot, `latch.sqlite` créé dans le volume.
+  - Écrits : Dockerfile, `docker-compose.yml`, `deploy.sh`, `.env.example`, deny.toml,
+    CI `.github/workflows/ci.yml`, dual-license MIT/Apache, README + badge.
+
+### Versions épinglées (résolues via Context7 + crates.io)
+- loco `0.16` (lock 0.16.4) · rmcp **pin 1.8.0** (≥1.4 CVE, pas encore dep → Phase 5) ·
+  yew **0.21** (imposé par `shadcn-rs 0.1.0` qui requiert `yew ^0.21`) · shadcn-rs 0.1.0
+  (compile en wasm, OK) · sea-orm 1.1 (aligné Loco).
+
+### Trucs en suspens / à savoir
+- **Lancer le serveur depuis `backend/`** (Loco lit `./config` au CWD) — cf. QUIRKS.
+- `default-members = [backend, backend/migration]` : le frontend wasm est exclu des
+  commandes natives (sinon `cargo build` tente de le compiler pour l'hôte) — cf. QUIRKS.
+- CI **non exécutée** dans cet environnement (pas de runner) : YAML à confirmer au 1ᵉʳ push.
+  Job `cargo-deny` en `continue-on-error` (à durcir Phase 6).
+- `Cargo.lock` est commité (pin réel). `.vscode/` toujours hors commit.
+
+### Prochaine chose à creuser
+- **Phase 1** : cœur `services/` (projects, deploy tx, slug, Storage, CoreError) +
+  migrations `projects`/`versions`/`sessions` + tests unit. Agnostique HTTP.
+
+### Notes pour future Claude
+- Avant de coder une API Loco/sea-orm/rmcp/yew : **Context7** (versions épinglées).
+- Le smoke test conteneur est reproductible : `docker run -p 5151:5150 -v <data>:/data ghcr.io/owlnext-fr/latch:dev`.
+
 ## 2026-06-24 — Bootstrap mémoire projet livré
 
 ### Dernière chose faite

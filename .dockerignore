@@ -1,0 +1,16 @@
+# Garde le contexte de build léger et reproductible.
+/target
+**/target
+**/dist
+/data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.git
+.github
+.env
+.env.local
+.claude
+.rtk
+.vscode
+docs

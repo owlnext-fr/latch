@@ -1,0 +1,4 @@
+# Alias projet : `cargo loco <cmd>` depuis la racine du repo cible le binaire backend.
+# Ex. `cargo loco start`, `cargo loco db migrate`.
+[alias]
+loco = "run -p latch --"

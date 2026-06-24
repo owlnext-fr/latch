@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 1. Format + lint (backend natif ; warnings = erreurs)
+  fmt-clippy:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      # default-members = backend uniquement ; le frontend wasm a son propre job.
+      - run: cargo clippy --all-targets -- -D warnings
+
+  # 2. Tests backend (Loco + SQLite de test)
+  test-backend:
+    name: tests backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - run: cargo nextest run
+
+  # 3. Frontend : lint wasm + build Trunk (produit le bundle servi en statique)
+  frontend:
+    name: build SPA Yew
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: jetli/trunk-action@v0.5.0
+      - run: cargo clippy -p latch-ui --target wasm32-unknown-unknown -- -D warnings
+      - run: cd frontend && trunk build --release
+
+  # 4. Supply-chain : licences + advisories (aurait levé le CVE rmcp)
+  supply-chain:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    # Non bloquant tant que le squelette se stabilise (Phase 0). À durcir en Phase 6.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses advisories
+
+  # 5. Build de l'image (push GHCR public seulement sur main / tag)
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    needs: [fmt-clippy, test-backend, frontend]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Login GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: ghcr.io/owlnext-fr/latch:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

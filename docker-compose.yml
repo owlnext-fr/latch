@@ -1,0 +1,17 @@
+# Déploiement manuel sur la box (cf. docs/BOOTSTRAP.md §8 et deploy.sh).
+# L'image vient de GHCR (publique → pas de `docker login` au pull).
+# Caddy (TLS + reverse proxy + en-têtes noindex) est en façade, géré à part.
+
+services:
+  latch:
+    image: ghcr.io/owlnext-fr/latch:latest
+    container_name: latch
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # La base SQLite ET les HTML des versions vivent ensemble sous /data.
+      - ./data:/data
+    ports:
+      # Exposé sur loopback uniquement : Caddy reverse-proxie vers ce port.
+      - "127.0.0.1:5150:5150"
