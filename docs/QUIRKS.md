@@ -67,6 +67,14 @@ façon on le stocke récupérable, choix (b), pour pouvoir le copier en admin).
 Le « pas de Node » ne vaut que pour le **runtime**. L'e2e tire un toolchain Node ;
 c'est assumé.
 
+## `cargo loco db entities` requiert `sea-orm-cli` installé séparément (2026-06-24)
+**Symptôme** : `cargo loco db entities` → `Error: Message("SeaORM CLI was not found To fix, run: $ cargo install sea-orm-cli")`.
+**Cause** : Loco délègue la génération d'entités à `sea-orm-cli` (binaire externe), non inclus dans les dépendances Cargo.
+**Workaround** : `cargo install sea-orm-cli` (une seule fois par machine). Vérifier que la version correspond à celle de `sea-orm` du workspace (1.1.x → `sea-orm-cli 1.1.20` installé automatiquement).
+
+## SQLite in-memory — `max_connections(1)` LOAD-BEARING dans les tests (2026-06-24)
+**Symptôme** : pool > 1 en SQLite `:memory:` → chaque connexion est une base distincte → tables vides pour la 2e connexion. **Cause** : `sqlite::memory:` crée une nouvelle base par connexion (comportement SQLite). **Workaround** : `ConnectOptions::max_connections(1)` dans `test_db()` — obligatoire, ne jamais l'augmenter pour les in-memory.
+
 ## Page de déverrouillage en 200, pas 401
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on

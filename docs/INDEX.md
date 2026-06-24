@@ -8,6 +8,12 @@
 - [x] Scaffold app Loco (`backend/`, crate `latch`, bin `latch-cli`) — SQLite `bundled`,
   sans users/JWT, sans worker (`--bg none`) — Phase 0 — 2026-06-24
 - [x] Workspace 2 membres + `migration` (sea-orm 1.1 aligné Loco), `auto_migrate` au boot — Phase 0 — 2026-06-24
+- [x] `CoreError` + squelette `services/` (no axum/loco) — Phase 1 — 2026-06-24
+- [x] Service `slug` (génération `<nom>-<8xbase62>`) — Phase 1 — 2026-06-24
+- [x] Service `security` (`secure_compare` timing-safe) — Phase 1 — 2026-06-24
+- [x] Service `pin` (génération 6 chiffres) — Phase 1 — 2026-06-24
+- [x] Trait `Storage` + implémentation `FsStorage` — Phase 1 — 2026-06-24
+- [x] Migrations `projects`/`versions` + entités SeaORM générées + `test_support` (in-memory SQLite) — Phase 1 — 2026-06-24
 
 ## Frontend (SPA Yew)
 - [x] Crate `latch-ui` (Yew 0.21 CSR) buildée par Trunk → bundle wasm `dist/` — Phase 0 — 2026-06-24

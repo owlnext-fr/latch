@@ -4,6 +4,29 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 6 : Migrations + entités + test_support
+
+### Dernière chose faite
+- Migrations `projects` et `versions` écrites et appliquées via `cargo loco db migrate` (depuis `backend/`).
+- Entités SeaORM générées via `cargo loco db entities` : `_entities/projects.rs` + `_entities/versions.rs` + wrappers Loco `models/projects.rs` + `models/versions.rs`.
+- `test_support::test_db()` : SQLite in-memory migrée, `max_connections(1)`.
+- Test `unique_project_n_is_enforced` : GREEN — UNIQUE(project_id,n) rejette le doublon.
+- `sea-orm-cli` installé sur la machine (manquait, nécessaire pour `cargo loco db entities`).
+
+### Trucs en suspens
+- Tasks 7 (ProjectsService) et 8 (DeployService) à implémenter.
+
+### Prochaine chose à creuser
+- Task 7 : `ProjectsService` (create, list, get, update, delete) consommant `_entities::projects`.
+
+### Notes pour future Claude
+- Type date généré : `DateTimeWithTimeZone` — utiliser `chrono::Utc::now().into()` dans les `Set(...)`.
+- Le wrapper `models/projects.rs` auto-met à jour `updated_at` dans `before_save` → pas besoin de le faire manuellement dans les services.
+- `UNIQUE(project_id,n)` sur `versions` est géré par l'index `idx_versions_project_n` (SQLite l'honore correctement en-memory, testé).
+- `sea-orm-cli` doit être présent sur la machine pour `cargo loco db entities`. Cf. QUIRKS.
+
+---
+
 ## 2026-06-24 — Phase 0 livrée (scaffold & squelette CI/Docker)
 
 ### Dernière chose faite
