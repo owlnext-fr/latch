@@ -1,0 +1,819 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "latch admin API",
+    "description": "API JSON de l'admin latch (session cookie same-origin).",
+    "license": {
+      "name": "MIT OR Apache-2.0",
+      "identifier": "MIT OR Apache-2.0"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /admin/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.\nLes deux comparaisons sont TOUJOURS effectuées (pas de court-circuit) pour ne pas\nrévéler quel champ a échoué (contrat §9).",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Authentifié (cookie de session posé)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides"
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).\n`destroy()` marque la session pour suppression en DB à la phase de réponse,\nce qui assure la révocation immédiate côté serveur (contrat §4).",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Session détruite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/projects — liste tous les projets (sans PIN, invariant §9.2).",
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Liste des projets (sans PIN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectListItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /admin/projects — crée un nouveau projet.\nRequiert un Origin same-origin (garde CSRF, contrat §4/§9.6).",
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Projet créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/projects/{id} — détail d'un projet avec ses versions et son PIN.",
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détail du projet (avec PIN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Projet inconnu"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "PUT /admin/projects/{id} — met à jour le nom ou le brand_name d'un projet.\n`UpdateProjectReq.brand_name` est `Option<Option<String>>` :\n  - `None` → ne pas toucher au champ\n  - `Some(None)` → effacer la valeur\n  - `Some(Some(x))` → remplacer par `x`",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Projet mis à jour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Projet inconnu"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "DELETE /admin/projects/{id} — supprime un projet et ses versions.\nSQLite n'enforce pas les FK sans PRAGMA → suppression explicite en transaction (QUIRKS).",
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projet supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Projet inconnu"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/code": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /admin/projects/{id}/code — active le code d'accès avec le PIN fourni.",
+        "operationId": "set_code",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCodeReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Code activé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "DELETE /admin/projects/{id}/code — désactive le code d'accès (PIN effacé).",
+        "operationId": "clear_code",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code désactivé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/deploy": {
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.\nSi `activate=true`, repointe `active_version_id`. Répond `{id, n}`.",
+        "operationId": "deploy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Version déployée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/versions/{n}": {
+      "delete": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "DELETE /admin/projects/{id}/versions/{n} — supprime une version NON active.\nCharge la version par (project_id, n) → 404 si absente.\nRefuse la suppression si elle est la version active du projet → 400.\nNettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).",
+        "operationId": "delete_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "Numéro de version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version supprimée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Version active : suppression refusée"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Version inconnue"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/versions/{n}/activate": {
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.\nCharge la version par (project_id, n) → 404 si absente. Met à jour le projet.",
+        "operationId": "activate_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "Numéro de version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version activée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Version inconnue"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/versions/{n}/preview": {
+      "get": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "GET /admin/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.\nRépond avec `Cache-Control: no-store` pour éviter tout cache navigateur en admin.\nProtégé par `AdminAuth` (pas de garde Origin : GET est idempotent).\nConfirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;\nle tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.",
+        "operationId": "preview_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "Numéro de version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML brut de la version",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Version inconnue"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivateResponse": {
+        "type": "object",
+        "description": "Réponse d'activation : confirme la bascule et renvoie le pointeur actif.",
+        "required": [
+          "ok",
+          "active_version_id"
+        ],
+        "properties": {
+          "active_version_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateProjectReq": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "brand_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code_enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DeployReq": {
+        "type": "object",
+        "required": [
+          "html"
+        ],
+        "properties": {
+          "activate": {
+            "type": "boolean"
+          },
+          "html": {
+            "type": "string"
+          }
+        }
+      },
+      "DeployResponse": {
+        "type": "object",
+        "description": "Réponse de déploiement : identifiant et numéro de la version créée.",
+        "required": [
+          "id",
+          "n"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "n": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "LoginReq": {
+        "type": "object",
+        "required": [
+          "user",
+          "pass"
+        ],
+        "properties": {
+          "pass": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "OkResponse": {
+        "type": "object",
+        "description": "Réponse générique « succès » (`{\"ok\": true}`).",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProjectDetail": {
+        "type": "object",
+        "description": "Détail — expose le PIN (copiable en admin uniquement, invariant §9.2).",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "code_enabled",
+          "versions"
+        ],
+        "properties": {
+          "active_version_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "brand_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code_enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionItem"
+            }
+          }
+        }
+      },
+      "ProjectListItem": {
+        "type": "object",
+        "description": "Item de liste — **sans PIN** (invariant §9.2 : structurellement absent).",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "code_enabled"
+        ],
+        "properties": {
+          "active_version_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "brand_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code_enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "SetCodeReq": {
+        "type": "object",
+        "required": [
+          "pin"
+        ],
+        "properties": {
+          "pin": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateProjectReq": {
+        "type": "object",
+        "properties": {
+          "brand_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`Option<Option<String>>` : absent ⇒ inchangé ; `null` ⇒ effacer ; valeur ⇒ définir.\nVu par OpenAPI comme une string nullable (`value_type` force le schéma)."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "VersionItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "n",
+          "created_at",
+          "is_active"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "n": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Authentification admin"
+    },
+    {
+      "name": "projects",
+      "description": "Gestion des projets"
+    },
+    {
+      "name": "versions",
+      "description": "Déploiement et versions"
+    }
+  ]
+}
