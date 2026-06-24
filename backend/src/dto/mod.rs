@@ -125,6 +125,32 @@ pub struct LoginReq {
     pub pass: String,
 }
 
+/// Réponse générique « succès » (`{"ok": true}`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct OkResponse {
+    pub ok: bool,
+}
+
+impl OkResponse {
+    pub fn ok() -> Self {
+        Self { ok: true }
+    }
+}
+
+/// Réponse de déploiement : identifiant et numéro de la version créée.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct DeployResponse {
+    pub id: i32,
+    pub n: i32,
+}
+
+/// Réponse d'activation : confirme la bascule et renvoie le pointeur actif.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct ActivateResponse {
+    pub ok: bool,
+    pub active_version_id: i32,
+}
+
 /// Projet → item de liste (sans PIN).
 pub fn to_list_item(m: &projects::Model) -> ProjectListItem {
     ProjectListItem {

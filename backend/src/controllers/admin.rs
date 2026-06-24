@@ -154,7 +154,7 @@ async fn delete(
 
     txn.commit().await.map_err(|e| into_response(e.into()))?;
 
-    format::json(serde_json::json!({"ok": true}))
+    format::json(crate::dto::OkResponse::ok())
 }
 
 /// POST /admin/projects/{id}/code — active le code d'accès avec le PIN fourni.
@@ -197,7 +197,10 @@ async fn deploy(
         .deploy(id, &body.html, body.activate)
         .await
         .map_err(into_response)?;
-    format::json(serde_json::json!({"id": version.id, "n": version.n}))
+    format::json(crate::dto::DeployResponse {
+        id: version.id,
+        n: version.n,
+    })
 }
 
 /// POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.
@@ -233,7 +236,10 @@ async fn activate_version(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(serde_json::json!({"ok": true, "active_version_id": version.id}))
+    format::json(crate::dto::ActivateResponse {
+        ok: true,
+        active_version_id: version.id,
+    })
 }
 
 /// DELETE /admin/projects/{id}/versions/{n} — supprime une version NON active.
@@ -274,7 +280,7 @@ async fn delete_version(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(serde_json::json!({"ok": true}))
+    format::json(crate::dto::OkResponse::ok())
 }
 
 /// GET /admin/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.

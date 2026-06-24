@@ -63,7 +63,7 @@ async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Resp
     }
 
     session.set(ADMIN_FLAG, true);
-    format::json(serde_json::json!({"ok": true}))
+    format::json(crate::dto::OkResponse::ok())
 }
 
 /// POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).
@@ -72,7 +72,7 @@ async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Resp
 #[debug_handler]
 async fn logout(session: AdminSession) -> Result<Response> {
     session.destroy();
-    format::json(serde_json::json!({"ok": true}))
+    format::json(crate::dto::OkResponse::ok())
 }
 
 pub fn routes() -> Routes {
