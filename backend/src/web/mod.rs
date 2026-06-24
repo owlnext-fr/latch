@@ -33,11 +33,12 @@ pub async fn build_session_store(
     let pool = ctx.db.get_sqlite_connection_pool().clone();
     let session_pool = SessionPool::from(pool);
 
-    // `Secure` et `__Host-` prefix exigent HTTPS → activer uniquement en Production.
-    // Development et Test utilisent HTTP (tests mock ou serveur local sans TLS).
-    let is_prod = matches!(
+    // `Secure` et `__Host-` prefix exigent HTTPS. Fail-secure : activer pour TOUT
+    // environnement sauf Development et Test (HTTP). Tout env inconnu futur → Secure.
+    // Ne jamais écrire `matches!(..., Production)` (fail-open si un nouvel env est ajouté).
+    let is_prod = !matches!(
         ctx.environment,
-        loco_rs::environment::Environment::Production
+        loco_rs::environment::Environment::Development | loco_rs::environment::Environment::Test
     );
 
     let secret = std::env::var("SESSION_SECRET").unwrap_or_else(|_| {
