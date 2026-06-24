@@ -319,3 +319,33 @@
   cursor: not-allowed;
   background: hsl(var(--color-muted));
 }
+
+/* ---- Dropzone upload HTML ---- */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  border: 2px dashed hsl(var(--color-border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--color-muted) / 0.4);
+  color: hsl(var(--color-muted-foreground));
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.dropzone:hover {
+  border-color: hsl(var(--color-primary));
+}
+.dropzone--over {
+  border-color: hsl(var(--color-primary));
+  background: hsl(var(--color-primary) / 0.08);
+  color: hsl(var(--color-foreground));
+}
+.dropzone__file {
+  font-weight: 600;
+  color: hsl(var(--color-foreground));
+}
