@@ -66,7 +66,12 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
         let (html_content, file_label, error) =
             (html_content.clone(), file_label.clone(), error.clone());
         move |file: web_sys::File| {
-            let label = format!("{} ({})", file.name(), human_size(file.size()));
+            let label = t!(
+                "deploy.file_chosen",
+                name = file.name(),
+                size = human_size(file.size())
+            )
+            .to_string();
             file_label.set(Some(label));
             let gfile = gloo_file::File::from(file);
             let (html_content, error) = (html_content.clone(), error.clone());
@@ -210,6 +215,7 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
             <input ref={input_ref} id="dp-file" type="file" accept="text/html,.html"
                    style="display:none" onchange={on_input_change} />
 
+            <Label html_for="dp-activate">{ t!("deploy.activate") }</Label>
             <div class="toggle-row">
                 <Toggle id={AttrValue::from("dp-activate")} checked={*activate} onchange={on_toggle} />
                 <span class="hint">{ t!("deploy.activate_help") }</span>

@@ -94,6 +94,10 @@ danger.del_version_intro: "This version and its HTML file will be deleted. Irrev
 danger.del_version_confirm: "Yes, delete"
 danger.deleting: "Deleting…"
 
+error.unauthorized: "Session expired — please sign in again."
+error.server: "Server error (%{code})."
+error.network: "Network error — please retry."
+
 toast.project_created: "Project created."
 toast.project_updated: "Project updated."
 toast.project_deleted: "Project deleted."

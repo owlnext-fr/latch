@@ -14,7 +14,6 @@ use crate::components::locale_switcher::LocaleSwitcher;
 use crate::i18n::use_locale;
 use crate::panels::project_form::{FormMode, ProjectForm};
 use crate::routes::Route;
-use crate::toast::use_toast;
 use crate::util::url::public_url;
 use latch_dto::ProjectListItem;
 
@@ -32,7 +31,6 @@ pub fn list_page() -> Html {
     let data = use_state(|| Load::Loading);
     let creating = use_state(|| false);
     let _loc = use_locale();
-    let toast = use_toast();
 
     // Chargement au montage.
     {
@@ -144,9 +142,7 @@ pub fn list_page() -> Html {
                 on_close={{ let c = creating.clone(); Callback::from(move |_| c.set(false)) }}
                 on_saved={{
                     let data = data.clone();
-                    let toast = toast.clone();
                     Callback::from(move |_| {
-                        toast.push_success.emit(t!("toast.project_created").to_string());
                         let data = data.clone();
                         wasm_bindgen_futures::spawn_local(async move {
                             if let Ok(items) = api::client::list_projects().await {

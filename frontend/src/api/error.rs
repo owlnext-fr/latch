@@ -20,9 +20,9 @@ impl ApiError {
     /// Message court présentable à l'utilisateur (inline).
     pub fn user_message(&self) -> String {
         match self {
-            ApiError::Unauthorized => "Session expirée, reconnecte-toi.".into(),
-            ApiError::Status(c) => format!("Erreur serveur ({c})."),
-            ApiError::Network(_) => "Erreur réseau, réessaie.".into(),
+            ApiError::Unauthorized => t!("error.unauthorized").to_string(),
+            ApiError::Status(c) => t!("error.server", code = c).to_string(),
+            ApiError::Network(_) => t!("error.network").to_string(),
         }
     }
 }

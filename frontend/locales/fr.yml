@@ -94,6 +94,10 @@ danger.del_version_intro: "Cette version et son fichier HTML seront supprimés. 
 danger.del_version_confirm: "Oui, supprimer"
 danger.deleting: "Suppression…"
 
+error.unauthorized: "Session expirée, reconnecte-toi."
+error.server: "Erreur serveur (%{code})."
+error.network: "Erreur réseau, réessaie."
+
 toast.project_created: "Projet créé."
 toast.project_updated: "Projet mis à jour."
 toast.project_deleted: "Projet supprimé."
