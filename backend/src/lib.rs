@@ -4,6 +4,7 @@ pub mod data;
 pub mod dto;
 pub mod initializers;
 pub mod models;
+pub mod openapi;
 pub mod services;
 pub mod tasks;
 pub mod views;
