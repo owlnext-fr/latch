@@ -52,5 +52,11 @@ runtime. Reporté : friction d'ownership du volume à régler, faible enjeu derr
 ## same_host — port par défaut et IPv6 sans crochets (Phase 2 – 2026-06-24)
 `same_host` accepte `("example.com:80", "example.com")` car l'un n'a pas de port explicite — sans connaître le schéma (http/https), on ne peut pas résoudre le port par défaut. Caveat acceptable en v1 (le proxy Caddy normalise le Host avant de transmettre). IPv6 sans crochets (`::1` au lieu de `[::1]`) serait mal découpé par `rsplit_once(':')` — mais les navigateurs émettent toujours `[::1]` dans Origin/Host. Les deux cas sont documentés dans QUIRKS.
 
+## Opacification des erreurs 500 dans `controllers/error.rs` (Phase 2 – 2026-06-24)
+`controllers/error.rs::into_response` interpole le texte de `sea_orm::DbErr` / `io::Error`
+directement dans le corps de la réponse 500 — aucun secret n'y transite aujourd'hui (les
+filtres de requête ne portent pas le PIN), mais un durcissement défensif consisterait à
+logger le détail côté serveur et renvoyer un message opaque générique.
+
 ## Validation de longueur sur `name` et `brand_name` (Phase 1 – 2026-06-24)
 Aujourd'hui, `name` et `brand_name` n'ont aucune contrainte de longueur ni en DB (SQLite `TEXT` = illimité) ni dans le service (`ProjectsService::create` valide uniquement la présence de `name`). Une valeur absurdement longue passerait sans erreur. À ajouter : validation applicative (ex. `name.len() <= 128`) + contrainte DB `VARCHAR(128)` via migration, pour éviter les surprises à l'affichage en Phase 3 (SPA Yew).

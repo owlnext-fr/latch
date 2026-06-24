@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
+use axum::middleware::from_fn;
 use loco_rs::prelude::*;
 use serde::Deserialize;
 use tower_governor::{
@@ -99,5 +100,13 @@ pub fn routes() -> Routes {
     Routes::new()
         .prefix("/admin")
         .add("/login", post(login).layer(login_governor))
-        .add("/logout", post(logout))
+        // Garde same-origin sur logout (CSRF, contrat §4/§9.6). Pas d'AdminAuth :
+        // logout reste accessible sans session valide (idempotent/sans effet), mais
+        // doit venir du même Origin pour ne pas permettre un logout CSRF.
+        .add(
+            "/logout",
+            post(logout).layer(from_fn(
+                crate::controllers::middleware::origin::require_same_origin,
+            )),
+        )
 }

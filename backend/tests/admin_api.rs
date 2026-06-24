@@ -123,6 +123,44 @@ async fn login_is_rate_limited() {
     .await;
 }
 
+/// Cross-origin sur `POST /admin/logout` doit retourner 403 (garde same-origin,
+/// contrat §4/§9.6). Même-origin doit laisser passer (200).
+#[tokio::test]
+#[serial]
+async fn logout_rejected_on_cross_origin() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        // Login préalable pour avoir une session valide.
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+
+        // Cross-origin → 403.
+        let cross = request
+            .post("/admin/logout")
+            .add_header(
+                axum::http::HeaderName::from_static("origin"),
+                axum::http::HeaderValue::from_static("https://evil.example"),
+            )
+            .await;
+        assert_eq!(cross.status_code(), 403, "Origin étranger sur logout ⇒ 403");
+
+        // Same-origin → 200 (la garde laisse passer).
+        let same = request
+            .post("/admin/logout")
+            .add_header(
+                axum::http::HeaderName::from_static("origin"),
+                axum::http::HeaderValue::from_static("http://127.0.0.1"),
+            )
+            .await;
+        assert_eq!(same.status_code(), 200, "Same-origin sur logout ⇒ 200");
+    })
+    .await;
+}
+
 /// GET /admin/projects avec session active et base vide doit renvoyer 200 + tableau vide.
 /// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
 #[tokio::test]

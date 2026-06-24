@@ -111,6 +111,11 @@ latch/                 # workspace
 - **Login rate-limit** : `tower_governor 0.7` avec `SmartIpKeyExtractor` (lit
   `X-Forwarded-For` / `X-Real-IP` derrière Caddy), appliqué uniquement sur
   `POST /admin/login` via un layer par route.
+- **Login-CSRF accepté** : `POST /admin/login` n'a intentionnellement pas de garde
+  `require_same_origin` (le login doit rester publiquement accessible) ; le risque de
+  login-CSRF est jugé sans impact significatif car le compte admin est unique et partagé
+  — connecter un visiteur dans la session de l'attaquant ne lui confère aucun privilège
+  supplémentaire.
 - **Rendu** : la SPA Yew est buildée par Trunk et servie en **statique** par Loco,
   avec **fallback SPA** (toute route admin inconnue → `index.html`). Les opérations
   passent par l'**API JSON** de `controllers/admin.rs`.
