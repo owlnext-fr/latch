@@ -20,7 +20,7 @@ pub enum Route {
 
 pub fn switch(route: Route) -> Html {
     match route {
-        Route::Home => html! { <Protected>{ html!{ <h1>{ "Liste (placeholder)" }</h1> } }</Protected> },
+        Route::Home => html! { <Protected>{ html!{ <crate::pages::list::ListPage /> } }</Protected> },
         Route::Login => html! { <crate::pages::login::LoginPage /> },
         Route::Project { id } => html! { <Protected>{ html!{ <h1>{ format!("Détail {id}") }</h1> } }</Protected> },
         Route::NotFound => html! { <h1>{ "404" }</h1> },
