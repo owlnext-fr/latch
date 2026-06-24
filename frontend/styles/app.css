@@ -275,13 +275,16 @@
   color: hsl(var(--color-primary-foreground));
 }
 
-/* ---- Badges accès (vert = PIN requis, orange = libre) ---- */
-.badge--success {
-  background: hsl(var(--color-success));
+/* ---- Badges accès (vert = PIN requis, orange = libre) ----
+   Double classe (.badge.badge--*) pour battre la spécificité de
+   `.badge.variant-secondary` (0,2,0) de shadcn-rs, qui sinon écrase le fond vert.
+   app.css est chargé après shadcn-rs.css → à spécificité égale, on gagne. */
+.badge.badge--success {
+  background-color: hsl(var(--color-success));
   color: hsl(var(--color-success-foreground));
 }
-.badge--warning {
-  background: hsl(var(--color-warning));
+.badge.badge--warning {
+  background-color: hsl(var(--color-warning));
   color: hsl(var(--color-warning-foreground));
 }
 
