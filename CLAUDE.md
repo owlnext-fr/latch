@@ -69,6 +69,17 @@ Avant de renvoyer quoi que ce soit depuis un adaptateur (web, MCP), vérifier :
 détail d'un projet**, jamais dans une liste, jamais via MCP. C'est un invariant du
 contrat, pas une option. Il est couvert par un test qui casse le build s'il est violé.
 
+## Confidentialité — jamais de nom de client (NON-NÉGOCIABLE)
+
+Aucun **nom de client réel** (ni marque, ni projet client identifiable) ne doit
+apparaître **où que ce soit** dans le repo : code, tests, fixtures, exemples, commentaires,
+docs normatifs, docs mémoire (`docs/`), specs/plans, briefs, messages de commit. Pour tout
+exemple, utiliser des placeholders génériques manifestement fictifs (`Mon Projet` /
+`mon-projet`, `ACME`, `demo`, etc.). En cas de doute sur un nom, le traiter comme client
+et le remplacer. Si un nom client est repéré, le purger du working-tree **immédiatement**
+(et signaler s'il subsiste dans l'historique git — la purge d'historique est une décision
+humaine, surtout si la branche/`main` est déjà poussée).
+
 ## Définition de « terminé »
 
 Une tâche n'est terminée que si **tout** ce qui suit est vrai :
