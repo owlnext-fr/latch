@@ -2,7 +2,8 @@
 //! Une seule source de vérité : pas de drift possible. serde uniquement → wasm-safe.
 //! Les dates sont des `String` (RFC 3339). Aucune dépendance sea-orm ici.
 
-use serde::{Deserialize, Serialize};
+use serde::de;
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Item de liste — **sans PIN** (invariant §9.2 : structurellement absent).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,12 +52,56 @@ fn default_true() -> bool {
     true
 }
 
+/// Deserializes an `Option<Option<String>>` field, preserving the distinction between absent and null.
+/// - Absent field → `None` (no change)
+/// - `null` value → `Some(None)` (clear the field)
+/// - String value → `Some(Some(value))` (set the field)
+fn deserialize_optional_optional_string<'de, D>(
+    deserializer: D,
+) -> Result<Option<Option<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct OptionalOptionalString;
+
+    impl<'de> de::Visitor<'de> for OptionalOptionalString {
+        type Value = Option<Option<String>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("null or a string")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(None))
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            String::deserialize(deserializer).map(|s| Some(Some(s)))
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(None))
+        }
+    }
+
+    deserializer.deserialize_option(OptionalOptionalString)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateProjectReq {
     #[serde(default)]
     pub name: Option<String>,
     /// `Option<Option<String>>` : champ absent ⇒ pas de changement ; `null` ⇒ effacer.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_optional_string")]
     pub brand_name: Option<Option<String>>,
 }
 
@@ -131,5 +176,23 @@ mod tests {
         let req: CreateProjectReq = serde_json::from_str(r#"{"name":"X"}"#).unwrap();
         assert!(req.code_enabled, "code_enabled défaut = true (contrat §3)");
         assert_eq!(req.name, "X");
+    }
+
+    #[test]
+    fn update_req_brand_name_absent_vs_null() {
+        let absent: UpdateProjectReq = serde_json::from_str(r#"{}"#).unwrap();
+        assert_eq!(absent.brand_name, None, "champ absent = pas de changement");
+        let cleared: UpdateProjectReq = serde_json::from_str(r#"{"brand_name":null}"#).unwrap();
+        assert_eq!(
+            cleared.brand_name,
+            Some(None),
+            "null = effacer le brand_name"
+        );
+        let set: UpdateProjectReq = serde_json::from_str(r#"{"brand_name":"ACME"}"#).unwrap();
+        assert_eq!(
+            set.brand_name,
+            Some(Some("ACME".to_string())),
+            "valeur = définir"
+        );
     }
 }
