@@ -6,6 +6,10 @@
 :root {
   /* Color palette - Light mode */
   --color-background: 0 0% 100%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 222.2 84% 4.9%;
+  --color-popover: 0 0% 100%;
+  --color-popover-foreground: 222.2 84% 4.9%;
   --color-foreground: 222.2 84% 4.9%;
 
   --color-primary: 222.2 47.4% 11.2%;
@@ -102,6 +106,10 @@
 /* Dark mode */
 .dark {
   --color-background: 222.2 84% 4.9%;
+  --color-card: 222.2 84% 4.9%;
+  --color-card-foreground: 210 40% 98%;
+  --color-popover: 222.2 84% 4.9%;
+  --color-popover-foreground: 210 40% 98%;
   --color-foreground: 210 40% 98%;
 
   --color-primary: 210 40% 98%;
