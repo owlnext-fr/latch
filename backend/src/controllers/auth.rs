@@ -71,10 +71,12 @@ async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Resp
     format::json(serde_json::json!({"ok": true}))
 }
 
-/// POST /admin/logout — détruit la session et redirige vers le login.
+/// POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).
+/// `destroy()` marque la session pour suppression en DB à la phase de réponse,
+/// ce qui assure la révocation immédiate côté serveur (contrat §4).
 #[debug_handler]
 async fn logout(session: AdminSession) -> Result<Response> {
-    session.clear();
+    session.destroy();
     format::json(serde_json::json!({"ok": true}))
 }
 
