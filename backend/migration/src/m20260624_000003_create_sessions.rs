@@ -20,7 +20,7 @@ impl MigrationTrait for Migration {
                     .table(Sessions::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(Sessions::Id).text().not_null().primary_key())
-                    .col(ColumnDef::new(Sessions::Expires).big_integer().null())
+                    .col(ColumnDef::new(Sessions::Expires).integer().null())
                     .col(ColumnDef::new(Sessions::Session).text().not_null())
                     .to_owned(),
             )
