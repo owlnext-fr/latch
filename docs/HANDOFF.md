@@ -4,6 +4,59 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — Polish UX + i18n SPA TERMINÉ (punch-list post-test-live, 10 tâches SDD)
+
+### Dernière chose faite
+- Chantier **polish UX + i18n** clos sur `feat/phase-3-spa-yew-admin` (spec
+  `docs/superpowers/specs/2026-06-24-phase-3-ux-polish-design.md`, plan
+  `docs/superpowers/plans/2026-06-24-phase-3-ux-polish.md`). Déroulé en **Subagent-Driven**
+  (1 implémenteur + 1 reviewer par tâche). Ledger : `.superpowers/sdd/progress.md`.
+- **Livré** : (1) **i18n FR+EN** via `rust-i18n 3` — `LocaleProvider` réactif + `use_locale()`,
+  fichiers `frontend/locales/{en,fr}.yml`, **sélecteur FR/EN** (`LocaleSwitcher`) persistant
+  (localStorage `latch.locale`) + détection `navigator.language` au boot, défaut **EN** ;
+  (2) **couche de toasts maison** (`toast.rs`, `ToastProvider`/`use_toast`, gloo-timers 4 s)
+  câblée sur tous les retours d'action (création/édition/déploiement/activation/suppression/copie) ;
+  (3) **`Toggle` vendorisé** (`components/toggle.rs`, patch du `Switch` shadcn-rs cassé — état
+  contrôlé pur, classe `size-md` load-bearing) ; (4) **badges colorés** (vert PIN requis / orange
+  libre — vars `--color-success`/`--color-warning` ajoutées à `variables.css`) ; (5) **dropzone
+  drag-and-drop** (deploy.rs) ; (6) **PIN disabled** (au lieu de retiré du DOM) + **slug disabled**
+  en édition ; (7) **helper text** + **intros de page** ; (8) **accessibilité** (`<a onclick>` →
+  `<button class="linkish">`, breadcrumb en `<button>`) ; (9) login espacé.
+- **Validé end-to-end au navigateur (Playwright)** : i18n réactif FR↔EN + persistance reload ;
+  login espacé ; badges orange ET **vert** ; toasts (copie/création/déploiement) verts + auto-dismiss ;
+  Toggle bascule visuellement ; PIN grisé quand code off (sans saut de layout) ; **dropzone : drop
+  d'un fichier** lu + `human_size` ; détail EN avec glyphes `✎/⬆/🗑` ; panel danger interpolé
+  (`Delete "…"`, `its N version(s)`).
+- **Bug trouvé en validation live (invisible aux reviews unitaires) + corrigé** : badges
+  `Variant::Secondary + badge--success` s'affichaient **gris** — `.badge.variant-secondary`
+  (spécificité 0,2,0) de shadcn-rs écrasait `.badge--success` (0,1,0). Fix : doubler la classe
+  (`.badge.badge--success/--warning`). Commit `8ff8bb7`. **Leçon : toujours valider les couleurs/CSS
+  au navigateur** (cf. QUIRKS).
+- Qualité finale (checkout réel) : `cargo fmt` clean, `clippy -p latch-ui --target wasm32 -D warnings`
+  **0 issue**, `wasm-pack test` **5/5** (pin×2, url, i18n×2), `trunk build` OK.
+
+### Trucs en suspens
+- Revue finale de branche (opus) à passer avant merge/PR.
+- BACKLOG : flicker `ondragleave` de la dropzone sur les enfants (cosmétique) ; un éventuel
+  vrai i18n multi-locale au-delà de FR/EN (la couche est prête, ajouter une locale = un YAML).
+- `cargo deny` (CI) : `rust-i18n 3.1.5` + 10 deps transitives ajoutées au lockfile (`9b2b3dd`) —
+  vérifier qu'aucune nouvelle licence ne casse `deny.toml` au prochain run CI.
+
+### Prochaine chose à creuser
+- Merge/PR de `feat/phase-3-spa-yew-admin` sur `main` (toute la Phase 3 + le polish). Puis **Phase 4**
+  (serving `/c/<slug>`).
+
+### Notes pour future Claude
+- **Réactivité i18n** : tout composant qui rend du texte traduit DOIT appeler `use_locale()` en
+  tête (même `let _loc = use_locale();` non utilisé) — l'abonnement au contexte force le re-render ;
+  `t!` lit la locale globale rust-i18n déjà mise à jour par `set_locale`. Cf. QUIRKS/CONVENTIONS.
+- **Badges colorés** : utiliser `.badge.badge--success/--warning` (double classe) sinon shadcn écrase.
+- **shadcn-rs cassé → vendoriser** (CSS, puis `Switch`→`Toggle`). Règle de projet (CONVENTIONS).
+- Stack de validation live : `trunk build` (frontend) puis backend depuis `backend/` avec
+  `LATCH_SPA_DIST=../frontend/dist ADMIN_USER=admin ADMIN_PASS=secret DATABASE_URL='sqlite://…'`.
+
+---
+
 ## 2026-06-24 — Task 3 : ToastProvider + use_toast + câblage CopyButton
 
 ### Dernière chose faite

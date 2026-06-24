@@ -211,7 +211,9 @@ origine).
     version, case « activer immédiatement ». Même `services::deploy()` que le tool MCP.
     État vide : ce bloc passe au premier plan.
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
-  titre cliquable + logout. Compte unique → pas de menu utilisateur.
+  titre cliquable + **sélecteur de langue FR/EN** + logout. Compte unique → pas de menu utilisateur.
+  L'UI est **internationalisée (FR + EN, défaut EN)** via `rust-i18n` ; la langue est persistée
+  (localStorage) et détectée du navigateur au premier accès. Détails d'implémentation : CONVENTIONS.
 - **Logout** — action : détruit la session → redirige vers le login.
 
 ## 8. `deploy()` — ordre imposé

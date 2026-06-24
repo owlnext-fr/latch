@@ -180,3 +180,35 @@ Confirmé au test : `<Switch checked={*state} onchange={..}>` **ne reflète pas*
 
 ## Side-panels Yew montés en permanence — réinitialiser à la (ré)ouverture (2026-06-24)
 Les side-panels Yew sont montés en permanence dans le DOM (prop `open` contrôle la visibilité). Les `use_state` internes **persistent** entre ouvertures : si l'utilisateur ouvre un panel, le ferme sans soumettre, puis le rouvre, les champs peuvent contenir des valeurs périmées. Solution : `use_effect_with(props.open, |open| { if *open { /* reset fields */ } })` à l'ouverture du panel. S'applique aussi au re-déploiement (évite qu'un fichier obsolète soit re-soumis).
+
+## Badges colorés shadcn-rs : doubler la classe pour battre `.badge.variant-*` (2026-06-25, test live)
+`.badge.variant-secondary` (et `variant-default`/`variant-destructive`) de `components.css` posent
+`background-color` avec une **spécificité (0,2,0)**. Une classe utilitaire simple `.badge--success`
+(0,1,0) est donc **écrasée** → le badge reste gris au lieu de vert. (Le `variant-outline` ne pose
+PAS de fond, donc `.badge--warning` orange passait, masquant le problème.) **Workaround** : doubler
+la classe — `.badge.badge--success` / `.badge.badge--warning` (0,2,0) ; `app.css` étant chargé
+**après** `shadcn-rs.css`, à spécificité égale il gagne. **Invisible aux reviews unitaires** :
+diagnostiqué uniquement en validant la couleur calculée au navigateur (`getComputedStyle`).
+
+## i18n rust-i18n + Yew : réactivité = abonnement `use_locale()` obligatoire (2026-06-25)
+`rust_i18n::set_locale(...)` change un **état global** qui **ne notifie pas Yew**. La macro `t!`
+lit cette locale globale au render. Pour que l'UI se re-render au changement de langue, le
+`LocaleProvider` bump un `Context` (`LocaleContext`) ET tout composant affichant du texte traduit
+DOIT s'y abonner via `use_locale()` en tête (même `let _loc = use_locale();` inutilisé) — sinon ce
+composant ne se re-render pas et garde l'ancienne langue. `set_locale` est appelé **synchroniquement**
+dans l'initialiseur `use_state` du provider au boot (détection localStorage→navigator→EN) pour éviter
+un flash. La macro `i18n!("locales")` embarque les YAML **à la compilation** (pur Rust → wasm OK).
+
+## rust-i18n locale files `_version: 1` : pas de `"` ASCII nu dans une string double-quote (2026-06-25)
+Les YAML de locale (`frontend/locales/{en,fr}.yml`, format `_version: 1`, clés plates pointées)
+sont parsés par `serde_yaml` dans le proc-macro `i18n!`. Une string en double-quote contenant un `"`
+ASCII nu casse le parse (panic à la compilation). **Workaround** : passer ces lignes en single-quote
+YAML (ex. `key: 'texte avec "guillemets"'`) ou utiliser des guillemets typographiques « … ».
+
+## `Switch` shadcn-rs vendorisé en `Toggle` — classe `size-md` LOAD-BEARING (2026-06-25)
+Le `<Switch>` shadcn-rs 0.1 a un état contrôlé cassé (`is_checked = if checked {..} else {*internal}`
+→ ne revient jamais à off, cf. quirk précédent). Vendorisé en `components/toggle.rs` avec
+`is_checked = checked` (contrôlé pur, zéro état interne). **Piège** : les dimensions du switch
+vivent sur la classe `.switch.size-md` de `components.css` (le `.switch` seul n'a NI hauteur NI
+largeur). Le `Toggle` doit émettre `class="switch size-md"` (+ `switch-checked`/`switch-disabled`),
+sinon le contrôle est invisible (taille nulle).

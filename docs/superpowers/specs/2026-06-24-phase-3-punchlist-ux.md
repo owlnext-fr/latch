@@ -11,43 +11,43 @@
 ## 1. Patchs UX à faire (prochaine session) — PRIORITAIRE
 
 ### Login
-- [ ] **Espacement** : ajouter un espace entre le champ « Mot de passe » et le bouton
+- [x] **Espacement** : ajouter un espace entre le champ « Mot de passe » et le bouton
   « Se connecter » (ils sont collés). (Vérifier le spacing dans `pages/login.rs` /
   `app.css`.)
 
 ### Liste
-- [ ] **Couleurs des badges code** : « code activé » → **vert**, « libre/désactivé »
+- [x] **Couleurs des badges code** : « code activé » → **vert**, « libre/désactivé »
   → **orange**. (Aujourd'hui `Variant::Secondary` / `Variant::Outline` dans
   `pages/list.rs` ; idem cohérence sur le détail. Les variables `--color-success`
   /`--color-warning` existent dans la CSS vendorisée — soit un `Variant` adéquat,
   soit des classes custom dans `app.css`.)
 
 ### Création / Modification (`panels/project_form.rs`)
-- [ ] **Le toggle « Code d'accès » ne bascule pas visuellement** (reste coché même
+- [x] **Le toggle « Code d'accès » ne bascule pas visuellement** (reste coché même
   quand l'état applicatif change correctement). C'est le *quirk* du `Switch`
   shadcn-rs (l'état « contrôlé » retombe sur l'état interne tant que `checked`
   passe par `false` — cf. QUIRKS). À régler : forcer le rendu contrôlé (ex. `key`
   qui change avec l'état, ou piloter autrement le composant, ou remplacer par un
   switch maison stylé).
-- [ ] **Désactivation du code = champ PIN disabled, pas masqué** : aujourd'hui le
+- [x] **Désactivation du code = champ PIN disabled, pas masqué** : aujourd'hui le
   champ PIN est *retiré du DOM* quand le code est off (`if *code_on`), ce qui fait
   sauter le layout. À la place : **toujours afficher** le champ PIN, le passer en
   **`disabled`** (grisé) quand le code est off (et vider / neutraliser sa valeur).
   Plus UX-friendly (pas de saut de mise en page).
 
 ### Modification uniquement
-- [ ] **Slug éditable alors qu'il doit être en lecture seule** : l'input slug est
+- [x] **Slug éditable alors qu'il doit être en lecture seule** : l'input slug est
   modifiable. `readonly` ne suffit visiblement pas — le passer en **`disabled`**
   (grisé, non focusable) en mode édition. (`panels/project_form.rs`.)
 
 ### Déploiement (`panels/deploy.rs`)
-- [ ] **Dropzone** : remplacer l'`<input type="file">` brut (moche) par une vraie
+- [x] **Dropzone** : remplacer l'`<input type="file">` brut (moche) par une vraie
   **zone de drop** (drag-and-drop + clic pour parcourir), stylée.
-- [ ] **Même bug de toggle** que la création (« Activer immédiatement ») → même
+- [x] **Même bug de toggle** que la création (« Activer immédiatement ») → même
   correctif que le Switch ci-dessus.
 
 ### Général
-- [ ] **Snackbars / toasts** pour le retour des actions (succès / échec) :
+- [x] **Snackbars / toasts** pour le retour des actions (succès / échec) :
   création, édition, déploiement, activation, suppression, copie. Aujourd'hui le
   feedback est inline/partiel et `activate_version` est silencieux. shadcn-rs
   `Toast`/`Sonner` sont **déclaratifs et sans auto-dismiss** (cf. QUIRKS) → il faut
@@ -81,18 +81,18 @@ n'exercent pas le wasm rendu — d'où l'importance de l'e2e Playwright, Phase 6
 L'humain estime (à raison) qu'il manque des choses pour un produit distribuable.
 À traiter en self-review/itération dédiée :
 
-- [ ] **Explications sur les champs de formulaire** : helper text / descriptions
+- [x] **Explications sur les champs de formulaire** : helper text / descriptions
   sous chaque champ (au-delà du seul toggle code), pour guider l'utilisateur
   non-technique.
-- [ ] **Explications sur les pages** : courts textes d'intro / de contexte par
+- [x] **Explications sur les pages** : courts textes d'intro / de contexte par
   écran (liste, détail, panels) — ce que fait la page, à quoi sert chaque bloc.
-- [ ] **UX-friendly pour distribution** : revue d'ensemble de l'ergonomie pour un
+- [x] **UX-friendly pour distribution** : revue d'ensemble de l'ergonomie pour un
   livrable « propre » (états de chargement soignés, messages d'erreur clairs,
   cohérence visuelle, accessibilité — `<a>` sans href → `<button>`, focus, labels).
-- [ ] **Passer TOUS les textes en anglais (EN)** : l'UI est actuellement en
+- [x] **Passer TOUS les textes en anglais (EN)** : l'UI est actuellement en
   français. Tout traduire (labels, boutons, messages, explications). Envisager une
   petite couche i18n ou au minimum centraliser les chaînes.
-- [ ] **Self-review** : relire l'ensemble produit (pas seulement le code) après les
+- [x] **Self-review** : relire l'ensemble produit (pas seulement le code) après les
   patchs, traquer ce qui manque encore pour une vraie distribution.
 
 ## 4. Notes de réalisation (pour la prochaine session)

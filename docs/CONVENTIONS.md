@@ -405,3 +405,77 @@ mod tests {
 - `max_connections(1)` est **non-négociable** pour SQLite `:memory:` (chaque connexion = base distincte).
 - Utiliser `tempfile::tempdir()` pour un `FsStorage` isolé dans les tests `DeployService`.
 - Les tests `#[cfg(test)]` inline (dans `src/`) s'appliquent aux services. `backend/tests/` accueille les tests d'intégration cross-couche (ex. garde d'architecture).
+
+## i18n (rust-i18n) — provider, hook, et usage `t!`
+
+Couche i18n FR+EN via `rust-i18n 3`. Source unique des chaînes : `frontend/locales/{en,fr}.yml`
+(format `_version: 1`, clés plates pointées groupées par écran : `login.*`, `list.*`, `detail.*`,
+`form.*`, `deploy.*`, `danger.*`, `common.*`, `toast.*`). Embarquées à la compilation par
+`rust_i18n::i18n!("locales")` au crate root (`main.rs`, avec `#[macro_use] extern crate rust_i18n;`
+→ `t!` disponible crate-wide).
+
+```rust
+// frontend/src/i18n.rs — provider réactif (calqué sur AuthProvider)
+#[function_component(LocaleProvider)]
+pub fn locale_provider(props: &LocaleProviderProps) -> Html {
+    let locale = use_state(|| {
+        let l = detect_initial();           // localStorage "latch.locale" → navigator.language → En
+        rust_i18n::set_locale(l.as_str());  // synchrone, AVANT le 1er rendu (pas de flash)
+        l
+    });
+    let set_locale = { /* set_locale + write localStorage + locale.set(l) */ };
+    html! { <ContextProvider<LocaleContext> context={LocaleContext { locale: *locale, set_locale }}>
+        { props.children.clone() }</ContextProvider<LocaleContext>> }
+}
+
+// Dans CHAQUE composant qui affiche du texte traduit :
+let _loc = use_locale();          // ABONNEMENT obligatoire → re-render au switch de langue
+// ... { t!("login.submit") }     // t! lit la locale globale (déjà à jour)
+// Variables : t!("danger.del_project_title", name = project.name.clone())
+// Attribut/aria : aria_label={AttrValue::from(t!("detail.copy_pin_aria").to_string())}
+```
+
+**Règles :**
+- `use_locale()` en tête de TOUT composant à texte traduit (même inutilisé) — sinon pas de re-render (cf. QUIRKS).
+- `t!` renvoie `Cow<'static, str>` → rendu direct par yew ; pour un attribut, `.to_string()` puis `AttrValue::from`.
+- Ajouter une clé = l'ajouter dans **les deux** YAML. Ajouter une locale = un nouveau YAML `xx.yml` + `available-locales` dans `Cargo.toml`.
+
+## Toasts (couche maison) — provider + hook
+
+`shadcn-rs` `Toast`/`Sonner` sont déclaratifs sans auto-dismiss → couche maison.
+
+```rust
+// frontend/src/toast.rs
+#[derive(Clone, PartialEq)]
+pub struct ToastHandle { pub push_success: Callback<String>, pub push_error: Callback<String> }
+#[hook] pub fn use_toast() -> ToastHandle { use_context::<ToastHandle>().expect("ToastProvider manquant") }
+// ToastProvider : Vec<Toast> en use_state, id via use_mut_ref, auto-dismiss gloo_timers::Timeout(4s),
+// overlay .toast-stack rendu après les children. make_push(...) -> Callback<String> (pas de Rc<Fn>).
+```
+
+Usage : `let toast = use_toast();` puis `toast.push_success.emit(t!("toast.project_created").to_string());`
+sur le bras `Ok`, `toast.push_error.emit(e.user_message());` sur `Err`. Provider monté entre
+`LocaleProvider` et `AuthProvider` dans `main.rs`.
+
+## Vendoriser un composant shadcn-rs cassé (règle de projet)
+
+`shadcn-rs` est en 0.1 (lib jeune, composants à moitié implémentés). **Quand un composant est cassé
+ou bloquant, le vendoriser dans `frontend/src/components/` et le patcher**, plutôt que de le
+contourner par des hacks fragiles (remount par `key`, etc.). Réutiliser les classes CSS déjà
+vendorisées pour un rendu identique. Précédents : la CSS shadcn-rs (5 fichiers patchés), puis le
+`Switch` → `components/toggle.rs` (état contrôlé pur, classe `size-md` load-bearing — cf. QUIRKS).
+
+```rust
+// Toggle vendorisé : controlled-only, réutilise .switch/.size-md/.switch-checked/.switch-disabled
+let classes = classes!("switch", "size-md",
+    checked.then_some("switch-checked"), disabled.then_some("switch-disabled"));
+// is_checked = checked  (PAS d'état interne — c'est le bug d'origine du Switch)
+```
+
+## Accessibilité : `<a onclick>` sans href → `<button class="linkish">`
+
+Une cellule/élément cliquable qui navigue via le router (pas une vraie URL) doit être un
+`<button class="linkish" onclick=...>`, pas un `<a onclick style="cursor:pointer">` (lien sans
+`href` = non focusable, non actionnable au clavier). La classe `.linkish` (app.css) neutralise le
+style bouton et imite un lien. **Garder les vrais `<a href target="_blank">`** (ex. preview de
+version) tels quels — seul leur `aria-label` passe par `t!`.

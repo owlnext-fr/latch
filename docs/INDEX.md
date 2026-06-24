@@ -49,6 +49,14 @@
 - [x] Tests wasm-bindgen-test (3 tests T5 : pin, url, clipboard) verts — Phase 3 — 2026-06-24
 - [x] `ToastProvider` + `use_toast()` + `ToastHandle` maison (gloo-timers, auto-dismiss 4 s) — SDD Task 3 — 2026-06-24
 - [x] `CopyButton` rewired : toast + i18n `t!("toast.copied")` + `t!("common.copied")` — SDD Task 3 — 2026-06-24
+- [x] **i18n FR+EN** (`rust-i18n 3`) : `LocaleProvider` réactif + `use_locale()`, `frontend/locales/{en,fr}.yml`, macro `t!` crate-wide — Polish UX — 2026-06-25
+- [x] `LocaleSwitcher` (boutons FR/EN) : persistance localStorage `latch.locale` + détection `navigator.language` au boot, défaut EN — Polish UX — 2026-06-25
+- [x] `components/toggle.rs` : `Toggle` vendorisé (patch du `Switch` shadcn-rs, état contrôlé pur, classe `size-md`) — remplace `<Switch>` dans ProjectForm + DeployPanel — Polish UX — 2026-06-25
+- [x] Badges d'accès colorés (vert PIN requis / orange libre) : vars `--color-success`/`--color-warning` (`:root`+`.dark`), sélecteurs `.badge.badge--success/--warning` — Polish UX — 2026-06-25
+- [x] `DeployPanel` dropzone drag-and-drop (dragover/drop + input caché via NodeRef, `human_size`) — Polish UX — 2026-06-25
+- [x] `ProjectForm` : PIN toujours affiché + `disabled` quand code off (plus de saut de layout), slug `disabled` en édition, helper text par champ — Polish UX — 2026-06-25
+- [x] Toasts câblés sur tous les retours d'action (création/édition/déploiement/activation/suppression/copie) + erreurs — Polish UX — 2026-06-25
+- [x] i18n complet + intros de page + accessibilité (`<a onclick>` → `<button class="linkish">`, breadcrumb `<button>`) sur Login/List/Detail/panels — Polish UX — 2026-06-25
 
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24
