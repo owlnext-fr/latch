@@ -47,6 +47,8 @@
 - [x] Page `Detail` (`/admin/projects/:id`) : accès public (URL + PIN via PinField), actions haut-droite (Modifier/Déployer/Supprimer), liste versions (activer/prévisualiser/supprimer), état vide premier déploiement — Phase 3 — 2026-06-24
 - [x] CSS shadcn-rs vendorisée (5 fichiers `frontend/styles/`, patch `--color-card*`/`--color-popover*` manquants, dark-mode via `.dark`) — Phase 3 — 2026-06-24
 - [x] Tests wasm-bindgen-test (3 tests T5 : pin, url, clipboard) verts — Phase 3 — 2026-06-24
+- [x] `ToastProvider` + `use_toast()` + `ToastHandle` maison (gloo-timers, auto-dismiss 4 s) — SDD Task 3 — 2026-06-24
+- [x] `CopyButton` rewired : toast + i18n `t!("toast.copied")` + `t!("common.copied")` — SDD Task 3 — 2026-06-24
 
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24

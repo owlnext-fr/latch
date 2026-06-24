@@ -4,6 +4,33 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 3 : ToastProvider + use_toast + câblage CopyButton
+
+### Dernière chose faite
+- Implémenté `frontend/src/toast.rs` (remplace le stub) : `ToastProvider`, `use_toast()`,
+  `ToastHandle { push_success, push_error }`, auto-dismiss 4 s via `gloo_timers::Timeout`.
+- Monté `<ToastProvider>` entre `<LocaleProvider>` et `<AuthProvider>` dans `main.rs`.
+- Ajouté styles `.toast-stack`/`.toast`/`.toast--success`/`.toast--error` dans `app.css`.
+- Rewired `copy_button.rs` : `use_toast()` + `t!("toast.copied")` + `t!("common.copied")`
+  (les deux bras `Cow<'static, str>`). Warning `#[macro_use]` résolu.
+- Build trunk : ✅. wasm-pack test 5/5 verts.
+- Commit : `96bca80` — `✨ feat(toast): ToastProvider maison (gloo-timers) + câblage copie`
+
+### Trucs en suspens
+- `--color-success` non défini jusqu'à Task 6 → `.toast--success` sans fond coloré (attendu).
+- Validation visuelle du toast (Playwright) déléguée au contrôleur (step 5 du brief).
+- Prochaine tâche dans la SDD : **Task 4** (Toggle vendorisé — patch Switch shadcn-rs).
+
+### Prochaine chose à creuser
+- Task 4 : patch du `Switch` shadcn-rs (toggle visuel qui ne bascule pas).
+
+### Notes pour future Claude
+- Pattern toast : `use_toast()` dans tout composant sous `<ToastProvider>`.
+- `make_push` retourne `Callback<String>` — pas de `Rc<Fn>` (évite les pitfalls de capture).
+- `Timeout::forget()` : timer non trackable, no-op si composant démonté. Sûr.
+
+---
+
 ## 2026-06-24 — Test live de la SPA (Playwright) : 3 bugs corrigés + punch-list UX
 
 ### Dernière chose faite
