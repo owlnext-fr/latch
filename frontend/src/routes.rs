@@ -1,6 +1,8 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+use crate::auth::Protected;
+
 /// Routes client. `basename="/admin"` est posé sur le `<BrowserRouter>` ; les
 /// chemins ci-dessous sont ABSOLUS (incluent /admin) — combo robuste en yew-router 0.18.
 #[derive(Clone, Routable, PartialEq)]
@@ -18,9 +20,9 @@ pub enum Route {
 
 pub fn switch(route: Route) -> Html {
     match route {
-        Route::Home => html! { <h1>{ "Liste (placeholder)" }</h1> },
+        Route::Home => html! { <Protected>{ html!{ <h1>{ "Liste (placeholder)" }</h1> } }</Protected> },
         Route::Login => html! { <h1>{ "Login (placeholder)" }</h1> },
-        Route::Project { id } => html! { <h1>{ format!("Détail {} (placeholder)", id) }</h1> },
+        Route::Project { id } => html! { <Protected>{ html!{ <h1>{ format!("Détail {id}") }</h1> } }</Protected> },
         Route::NotFound => html! { <h1>{ "404" }</h1> },
     }
 }
