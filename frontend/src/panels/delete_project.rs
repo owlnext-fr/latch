@@ -4,6 +4,8 @@ use shadcn_rs::{Button, Position, SheetContent, SheetFooter, SheetHeader, SheetT
 use yew::prelude::*;
 
 use crate::api;
+use crate::i18n::use_locale;
+use crate::toast::use_toast;
 use latch_dto::ProjectDetail;
 
 #[derive(Properties, PartialEq)]
@@ -16,6 +18,8 @@ pub struct DeleteProjectPanelProps {
 
 #[function_component(DeleteProjectPanel)]
 pub fn delete_project_panel(props: &DeleteProjectPanelProps) -> Html {
+    let _loc = use_locale();
+    let toast = use_toast();
     let error = use_state(|| Option::<String>::None);
     let busy = use_state(|| false);
     let n_versions = props.project.versions.len();
@@ -31,24 +35,27 @@ pub fn delete_project_panel(props: &DeleteProjectPanelProps) -> Html {
     }
 
     let on_confirm = {
-        let (on_close, on_deleted, error, busy, id) = (
+        let (on_close, on_deleted, error, busy, id, toast) = (
             props.on_close.clone(),
             props.on_deleted.clone(),
             error.clone(),
             busy.clone(),
             props.project.id,
+            toast.clone(),
         );
         Callback::from(move |_| {
-            let (on_close, on_deleted, error, busy) = (
+            let (on_close, on_deleted, error, busy, toast) = (
                 on_close.clone(),
                 on_deleted.clone(),
                 error.clone(),
                 busy.clone(),
+                toast.clone(),
             );
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::delete_project(id).await {
                     Ok(()) => {
+                        toast.push_success.emit(t!("toast.project_deleted").to_string());
                         on_deleted.emit(());
                         on_close.emit(());
                     }
@@ -66,18 +73,18 @@ pub fn delete_project_panel(props: &DeleteProjectPanelProps) -> Html {
     html! {
         <SheetContent open={props.open} on_close={props.on_close.clone()} side={Position::Right}
                       class={classes!("sheet-danger")}>
-            <SheetHeader><SheetTitle>{ format!("Supprimer « {} »", props.project.name) }</SheetTitle></SheetHeader>
-            <p>{ "Cette action est irréversible. Seront supprimés définitivement :" }</p>
+            <SheetHeader><SheetTitle>{ t!("danger.del_project_title", name = props.project.name.clone()) }</SheetTitle></SheetHeader>
+            <p>{ t!("danger.del_project_intro") }</p>
             <ul>
-                <li>{ "le projet et sa configuration ;" }</li>
-                <li>{ format!("ses {n_versions} version(s) et leurs fichiers HTML ;") }</li>
-                <li>{ "l'URL publique (404 ensuite)." }</li>
+                <li>{ t!("danger.del_project_li1") }</li>
+                <li>{ t!("danger.del_project_li2", count = n_versions) }</li>
+                <li>{ t!("danger.del_project_li3") }</li>
             </ul>
             if let Some(msg) = (*error).clone() { <p class="error">{ msg }</p> }
             <SheetFooter>
-                <Button variant={Variant::Ghost} onclick={close}>{ "Annuler" }</Button>
+                <Button variant={Variant::Ghost} onclick={close}>{ t!("common.cancel") }</Button>
                 <Button variant={Variant::Destructive} disabled={*busy} onclick={on_confirm}>
-                    { "Oui, supprimer définitivement" }
+                    { t!("danger.del_project_confirm") }
                 </Button>
             </SheetFooter>
         </SheetContent>

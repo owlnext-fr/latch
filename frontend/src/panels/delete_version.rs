@@ -4,6 +4,8 @@ use shadcn_rs::{Button, Position, SheetContent, SheetFooter, SheetHeader, SheetT
 use yew::prelude::*;
 
 use crate::api;
+use crate::i18n::use_locale;
+use crate::toast::use_toast;
 
 #[derive(Properties, PartialEq)]
 pub struct DeleteVersionPanelProps {
@@ -16,28 +18,33 @@ pub struct DeleteVersionPanelProps {
 
 #[function_component(DeleteVersionPanel)]
 pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
+    let _loc = use_locale();
+    let toast = use_toast();
     let error = use_state(|| Option::<String>::None);
     let busy = use_state(|| false);
     let on_confirm = {
-        let (on_close, on_deleted, error, busy, id, n) = (
+        let (on_close, on_deleted, error, busy, id, n, toast) = (
             props.on_close.clone(),
             props.on_deleted.clone(),
             error.clone(),
             busy.clone(),
             props.project_id,
             props.n,
+            toast.clone(),
         );
         Callback::from(move |_| {
-            let (on_close, on_deleted, error, busy) = (
+            let (on_close, on_deleted, error, busy, toast) = (
                 on_close.clone(),
                 on_deleted.clone(),
                 error.clone(),
                 busy.clone(),
+                toast.clone(),
             );
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::delete_version(id, n).await {
                     Ok(()) => {
+                        toast.push_success.emit(t!("toast.version_deleted").to_string());
                         on_deleted.emit(());
                         on_close.emit(());
                     }
@@ -54,13 +61,13 @@ pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
     html! {
         <SheetContent open={props.open} on_close={props.on_close.clone()} side={Position::Right}
                       class={classes!("sheet-danger")}>
-            <SheetHeader><SheetTitle>{ format!("Supprimer la version v{}", props.n) }</SheetTitle></SheetHeader>
-            <p>{ "Cette version et son fichier HTML seront supprimés. Action irréversible." }</p>
+            <SheetHeader><SheetTitle>{ t!("danger.del_version_title", n = props.n) }</SheetTitle></SheetHeader>
+            <p>{ t!("danger.del_version_intro") }</p>
             if let Some(msg) = (*error).clone() { <p class="error">{ msg }</p> }
             <SheetFooter>
-                <Button variant={Variant::Ghost} onclick={close}>{ "Annuler" }</Button>
+                <Button variant={Variant::Ghost} onclick={close}>{ t!("common.cancel") }</Button>
                 <Button variant={Variant::Destructive} disabled={*busy} onclick={on_confirm}>
-                    { if *busy { "Suppression…" } else { "Oui, supprimer" } }
+                    { if *busy { t!("danger.deleting") } else { t!("danger.del_version_confirm") } }
                 </Button>
             </SheetFooter>
         </SheetContent>

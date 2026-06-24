@@ -11,11 +11,13 @@ use yew_router::prelude::*;
 use crate::api::{self, ApiError};
 use crate::auth::use_auth;
 use crate::components::{copy_button::CopyButton, pin_field::PinField};
+use crate::i18n::use_locale;
 use crate::panels::delete_project::DeleteProjectPanel;
 use crate::panels::delete_version::DeleteVersionPanel;
 use crate::panels::deploy::DeployPanel;
 use crate::panels::project_form::{FormMode, ProjectForm};
 use crate::routes::Route;
+use crate::toast::use_toast;
 use crate::util::url::public_url;
 use latch_dto::ProjectDetail;
 
@@ -35,6 +37,8 @@ enum Load {
 pub fn detail_page(props: &DetailProps) -> Html {
     let id = props.id;
     let auth = use_auth();
+    let _loc = use_locale();
+    let toast = use_toast();
     let navigator = use_navigator().expect("router");
     let data = use_state(|| Load::Loading);
     let editing = use_state(|| false);
@@ -66,7 +70,7 @@ pub fn detail_page(props: &DetailProps) -> Html {
     }
 
     let body = match &*data {
-        Load::Loading => html! { <p>{ "Chargement…" }</p> },
+        Load::Loading => html! { <p>{ t!("common.loading") }</p> },
         Load::Failed(msg) => html! { <p class="error">{ msg.clone() }</p> },
         Load::Ready(p) => {
             let url = public_url(&p.slug);
@@ -89,26 +93,26 @@ pub fn detail_page(props: &DetailProps) -> Html {
 
             let access = html! {
                 <Card>
-                    <CardHeader><CardTitle>{ "Accès public" }</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>{ t!("detail.access_title") }</CardTitle></CardHeader>
                     <CardContent>
                         <div class="kv">
-                            <span class="k">{ "URL publique" }</span>
+                            <span class="k">{ t!("detail.url_label") }</span>
                             <span class="v">
                                 <code>{ url.clone() }</code>
-                                <CopyButton value={url.clone()} aria_label={AttrValue::from("Copier l'URL")} />
+                                <CopyButton value={url.clone()} aria_label={AttrValue::from(t!("detail.copy_url_aria").to_string())} />
                             </span>
                         </div>
                         <div class="kv">
-                            <span class="k">{ "Code d'accès" }</span>
+                            <span class="k">{ t!("detail.code_label") }</span>
                             <span class="v">
                                 if p.code_enabled {
                                     if let Some(pin) = p.pin.clone() {
                                         <PinField pin={pin} />
                                     } else {
-                                        <Badge variant={Variant::Outline}>{ "PIN non défini" }</Badge>
+                                        <Badge variant={Variant::Outline}>{ t!("detail.pin_undefined") }</Badge>
                                     }
                                 } else {
-                                    <Badge variant={Variant::Outline}>{ "Accès libre" }</Badge>
+                                    <Badge variant={Variant::Outline} class={classes!("badge--warning")}>{ t!("detail.free_access") }</Badge>
                                 }
                             </span>
                         </div>
@@ -118,12 +122,12 @@ pub fn detail_page(props: &DetailProps) -> Html {
 
             let config = html! {
                 <Card>
-                    <CardHeader><CardTitle>{ "Configuration" }</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>{ t!("detail.config_title") }</CardTitle></CardHeader>
                     <CardContent>
-                        <div class="kv"><span class="k">{ "Nom de marque" }</span>
-                            <span class="v">{ p.brand_name.clone().unwrap_or_else(|| "—".into()) }</span></div>
-                        <div class="kv"><span class="k">{ "Code" }</span>
-                            <span class="v">{ if p.code_enabled { "activé" } else { "libre" } }</span></div>
+                        <div class="kv"><span class="k">{ t!("detail.brand_label") }</span>
+                            <span class="v">{ p.brand_name.clone().unwrap_or_else(|| t!("common.dash").to_string()) }</span></div>
+                        <div class="kv"><span class="k">{ t!("detail.code_label") }</span>
+                            <span class="v">{ if p.code_enabled { t!("detail.code_on") } else { t!("detail.code_off") } }</span></div>
                     </CardContent>
                 </Card>
             };
@@ -132,10 +136,14 @@ pub fn detail_page(props: &DetailProps) -> Html {
                 let n = v.n;
                 let activate = {
                     let reload = reload.clone();
+                    let toast = toast.clone();
                     Callback::from(move |_| {
-                        let reload = reload.clone();
+                        let (reload, toast) = (reload.clone(), toast.clone());
                         wasm_bindgen_futures::spawn_local(async move {
-                            let _ = api::client::activate_version(id, n).await;
+                            match api::client::activate_version(id, n).await {
+                                Ok(()) => toast.push_success.emit(t!("toast.version_activated").to_string()),
+                                Err(e) => toast.push_error.emit(e.user_message()),
+                            }
                             reload.emit(());
                         });
                     })
@@ -150,18 +158,20 @@ pub fn detail_page(props: &DetailProps) -> Html {
                         <TableCell>{ format!("v{}", v.n) }</TableCell>
                         <TableCell>{ v.created_at.clone() }</TableCell>
                         <TableCell>
-                            if v.is_active { <Badge variant={Variant::Secondary}>{ "active" }</Badge> }
+                            if v.is_active {
+                                <Badge variant={Variant::Secondary} class={classes!("badge--success")}>{ t!("common.active") }</Badge>
+                            }
                         </TableCell>
                         <TableCell>
                             if !v.is_active {
                                 <Button variant={Variant::Ghost} size={Size::Sm} onclick={activate}
-                                        aria_label={AttrValue::from("Activer")}>{ "↑" }</Button>
+                                        aria_label={AttrValue::from(t!("detail.activate_aria").to_string())}>{ "↑" }</Button>
                             }
                             <a href={preview_href} target="_blank" rel="noopener" class="icon-link"
-                               aria-label="Prévisualiser">{ "↗" }</a>
+                               aria-label={AttrValue::from(t!("detail.preview_aria").to_string())}>{ "↗" }</a>
                             if !v.is_active {
                                 <Button variant={Variant::Ghost} size={Size::Sm} onclick={on_del}
-                                        aria_label={AttrValue::from("Supprimer")}>{ "🗑" }</Button>
+                                        aria_label={AttrValue::from(t!("detail.delete_aria").to_string())}>{ "🗑" }</Button>
                             }
                         </TableCell>
                     </TableRow>
@@ -172,25 +182,26 @@ pub fn detail_page(props: &DetailProps) -> Html {
                 <>
                     <header class="detail-head">
                         <div>
-                            <a class="crumb" onclick={on_back}>{ "‹ Projets" }</a>
+                            <button class="linkish crumb" onclick={on_back}>{ t!("detail.back") }</button>
                             <h1>{ p.name.clone() }</h1>
                         </div>
                         <div class="head-actions">
-                            <Button variant={Variant::Outline} onclick={open_edit}>{ "✎ Éditer" }</Button>
-                            <Button variant={Variant::Outline} onclick={open_deploy}>{ "⬆ Déployer" }</Button>
-                            <Button variant={Variant::Destructive} onclick={open_delete}>{ "🗑 Supprimer" }</Button>
+                            <Button variant={Variant::Outline} onclick={open_edit}>{ t!("common.edit") }</Button>
+                            <Button variant={Variant::Outline} onclick={open_deploy}>{ t!("common.deploy") }</Button>
+                            <Button variant={Variant::Destructive} onclick={open_delete}>{ t!("common.delete") }</Button>
                         </div>
                     </header>
+                    <p class="page-intro">{ t!("detail.intro") }</p>
                     { access }
                     { config }
                     <Card>
-                        <CardHeader><CardTitle>{ "Versions" }</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>{ t!("detail.versions_title") }</CardTitle></CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader><TableRow>
-                                    <TableHead>{ "#" }</TableHead>
-                                    <TableHead>{ "Date" }</TableHead>
-                                    <TableHead>{ "Statut" }</TableHead>
+                                    <TableHead>{ t!("detail.col_num") }</TableHead>
+                                    <TableHead>{ t!("detail.col_date") }</TableHead>
+                                    <TableHead>{ t!("detail.col_status") }</TableHead>
                                     <TableHead>{ "" }</TableHead>
                                 </TableRow></TableHeader>
                                 <TableBody>{ rows }</TableBody>
