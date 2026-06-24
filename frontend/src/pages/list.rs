@@ -10,6 +10,7 @@ use yew_router::prelude::*;
 use crate::api::{self, ApiError};
 use crate::auth::use_auth;
 use crate::components::copy_button::CopyButton;
+use crate::panels::project_form::{FormMode, ProjectForm};
 use crate::routes::Route;
 use crate::util::url::public_url;
 use latch_dto::ProjectListItem;
@@ -26,6 +27,7 @@ pub fn list_page() -> Html {
     let auth = use_auth();
     let navigator = use_navigator().expect("router");
     let data = use_state(|| Load::Loading);
+    let creating = use_state(|| false);
 
     // Chargement au montage.
     {
@@ -54,8 +56,10 @@ pub fn list_page() -> Html {
         })
     };
 
-    // T10 seam: no-op placeholder — Task 11 will add `creating` use_state and wire ProjectForm.
-    let on_new = Callback::from(|_: MouseEvent| ());
+    let on_new = {
+        let creating = creating.clone();
+        Callback::from(move |_: MouseEvent| creating.set(true))
+    };
 
     let body = match &*data {
         Load::Loading => html! { <p>{ "Chargement…" }</p> },
@@ -127,6 +131,22 @@ pub fn list_page() -> Html {
                 </span>
             </header>
             { body }
+            <ProjectForm
+                open={*creating}
+                mode={FormMode::Create}
+                on_close={{ let c = creating.clone(); Callback::from(move |_| c.set(false)) }}
+                on_saved={{
+                    let data = data.clone();
+                    Callback::from(move |_| {
+                        let data = data.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            if let Ok(items) = api::client::list_projects().await {
+                                data.set(Load::Ready(items));
+                            }
+                        });
+                    })
+                }}
+            />
         </div>
     }
 }

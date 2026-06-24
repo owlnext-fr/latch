@@ -5,6 +5,7 @@ mod api;
 mod auth;
 mod components;
 mod pages;
+mod panels;
 mod routes;
 mod util;
 
