@@ -95,17 +95,25 @@ mod tests {
 
     #[test]
     fn list_schema_has_no_pin_field() {
-        // Invariant §9.2 reflété dans le contrat : ProjectListItem n'expose pas `pin`.
+        // Invariant §9.2 reflété dans le contrat OpenAPI : ProjectListItem n'expose pas `pin`.
+        // Assertion structurée (pas de fenêtre de texte fragile) : on navigue jusqu'aux
+        // propriétés du schéma et on vérifie l'absence de la clé `pin`.
         let json = ApiDoc::openapi().to_pretty_json().unwrap();
-        // Le bloc de schéma ProjectListItem ne doit pas déclarer de propriété "pin".
-        // (ProjectDetail, lui, le déclare — d'où une recherche ciblée sur le nom de schéma.)
-        let marker = "\"ProjectListItem\"";
-        let start = json.find(marker).expect("schéma ProjectListItem présent");
-        // Fenêtre raisonnable couvrant la définition du schéma.
-        let window = &json[start..(start + 600).min(json.len())];
+        let doc: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let props = &doc["components"]["schemas"]["ProjectListItem"]["properties"];
         assert!(
-            !window.contains("\"pin\""),
+            props.is_object(),
+            "ProjectListItem doit déclarer des propriétés dans le schéma"
+        );
+        assert!(
+            props.get("pin").is_none(),
             "ProjectListItem ne doit pas exposer pin (§9.2)"
+        );
+        // Sanity : ProjectDetail, lui, DOIT déclarer pin (sinon le test ci-dessus serait vacant).
+        let detail_props = &doc["components"]["schemas"]["ProjectDetail"]["properties"];
+        assert!(
+            detail_props.get("pin").is_some(),
+            "ProjectDetail doit exposer pin (garde anti-test-vacant)"
         );
     }
 }
