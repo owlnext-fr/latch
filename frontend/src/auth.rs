@@ -67,8 +67,7 @@ pub fn auth_provider(props: &AuthProviderProps) -> Html {
     html! { <ContextProvider<AuthContext> context={ctx}>{ props.children.clone() }</ContextProvider<AuthContext>> }
 }
 
-/// Wrappe une page protégée : Checking → rien ; Anonymous → redirige Login ;
-/// Authenticated → enfants.
+/// Wrappe une page protégée : Checking → spinner ; Anonymous → redirige Login (+ spinner) ; Authenticated → enfants.
 #[derive(Properties, PartialEq)]
 pub struct ProtectedProps {
     pub children: Html,
@@ -91,6 +90,6 @@ pub fn protected(props: &ProtectedProps) -> Html {
 
     match auth.state {
         AuthState::Authenticated => props.children.clone(),
-        _ => html! { <div class="loading">{ "Chargement…" }</div> },
+        AuthState::Checking | AuthState::Anonymous => html! { <div class="loading">{ "Chargement…" }</div> },
     }
 }
