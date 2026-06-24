@@ -50,6 +50,38 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
     let code_on = use_state(|| initial.code_enabled);
     let pin_val = use_state(|| initial.pin.clone().unwrap_or_else(pin::generate_pin));
     let error = use_state(|| Option::<String>::None);
+    let busy = use_state(|| false);
+
+    // Fix A: reset form fields whenever the panel (re)opens.
+    {
+        let (name, brand, code_on, pin_val, error) = (
+            name.clone(),
+            brand.clone(),
+            code_on.clone(),
+            pin_val.clone(),
+            error.clone(),
+        );
+        let mode = props.mode.clone();
+        use_effect_with(props.open, move |&open| {
+            if open {
+                let (n, b, c, p) = match &mode {
+                    FormMode::Create => (String::new(), String::new(), true, pin::generate_pin()),
+                    FormMode::Edit(d) => (
+                        d.name.clone(),
+                        d.brand_name.clone().unwrap_or_default(),
+                        d.code_enabled,
+                        d.pin.clone().unwrap_or_else(pin::generate_pin),
+                    ),
+                };
+                name.set(n);
+                brand.set(b);
+                code_on.set(c);
+                pin_val.set(p);
+                error.set(None);
+            }
+            || ()
+        });
+    }
 
     let on_name = {
         let name = name.clone();
@@ -86,6 +118,7 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
             pin_val.clone(),
             error.clone(),
         );
+        let busy = busy.clone();
         let (on_saved, on_close, mode) = (
             props.on_saved.clone(),
             props.on_close.clone(),
@@ -107,8 +140,11 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
                 Some((*brand).clone())
             };
             let (name_v, code_v, pin_v) = ((*name).clone(), *code_on, (*pin_val).clone());
-            let (on_saved, on_close, error, mode) =
-                (on_saved.clone(), on_close.clone(), error.clone(), mode.clone());
+            let (on_saved, on_close, error, mode, busy) =
+                (on_saved.clone(), on_close.clone(), error.clone(), mode.clone(), busy.clone());
+
+            // Fix B: mark busy before the async call to prevent duplicate submits.
+            busy.set(true);
 
             wasm_bindgen_futures::spawn_local(async move {
                 let res: Result<(), api::ApiError> = async {
@@ -143,10 +179,14 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
 
                 match res {
                     Ok(()) => {
+                        busy.set(false);
                         on_saved.emit(());
                         on_close.emit(());
                     }
-                    Err(e) => error.set(Some(e.user_message())),
+                    Err(e) => {
+                        busy.set(false);
+                        error.set(Some(e.user_message()));
+                    }
                 }
             });
         })
@@ -196,7 +236,9 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
 
             <SheetFooter>
                 <Button variant={Variant::Ghost} onclick={close}>{ "Annuler" }</Button>
-                <Button variant={Variant::Primary} onclick={on_save}>{ "Enregistrer" }</Button>
+                <Button variant={Variant::Primary} onclick={on_save} disabled={*busy}>
+                    { if *busy { "Enregistrement…" } else { "Enregistrer" } }
+                </Button>
             </SheetFooter>
         </SheetContent>
     }
