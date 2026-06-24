@@ -14,6 +14,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 tokio = { version = "1.45", default-features = false, features = [
   "rt-multi-thread",
+  "fs",
 ] }
 async-trait = { version = "0.1" }
 axum = { version = "0.8" }
@@ -32,6 +33,9 @@ libsqlite3-sys = { version = "0.30", features = ["bundled"] }
 chrono = { version = "0.4" }
 validator = { version = "0.20" }
 uuid = { version = "1.6", features = ["v4"] }
+thiserror = { version = "2" }
+rand = { version = "0.8" }
+subtle = { version = "2" }
 
 [[bin]]
 name = "latch-cli"
@@ -43,3 +47,4 @@ loco-rs = { workspace = true, features = ["testing"] }
 serial_test = { version = "3.1.1" }
 rstest = { version = "0.25" }
 insta = { version = "1.34", features = ["redactions", "yaml", "filters"] }
+tempfile = { version = "3" }
