@@ -1,5 +1,6 @@
 pub mod errors;
 pub mod pin;
+pub mod projects;
 pub mod security;
 pub mod slug;
 pub mod storage;
