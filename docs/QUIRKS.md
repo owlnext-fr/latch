@@ -75,6 +75,12 @@ c'est assumé.
 ## SQLite in-memory — `max_connections(1)` LOAD-BEARING dans les tests (2026-06-24)
 **Symptôme** : pool > 1 en SQLite `:memory:` → chaque connexion est une base distincte → tables vides pour la 2e connexion. **Cause** : `sqlite::memory:` crée une nouvelle base par connexion (comportement SQLite). **Workaround** : `ConnectOptions::max_connections(1)` dans `test_db()` — obligatoire, ne jamais l'augmenter pour les in-memory.
 
+## `active_version_id` = FK logique non contrainte (référence circulaire) (2026-06-24)
+`projects.active_version_id` pointe vers `versions.id`, mais `versions` a une FK vers `projects.id`. Cette référence circulaire (`projects ⇄ versions`) empêche de déclarer une vraie contrainte `FOREIGN KEY` en SQLite : la table cible doit pré-exister au moment de la création de la table source. **Conséquence** : la colonne est un entier nullable sans contrainte DB ; l'intégrité référentielle est assurée au niveau applicatif (`deploy.rs` vérifie que le projet existe avant d'insérer). Ne pas ajouter de contrainte DB sans revoir l'ordre de création des tables.
+
+## FK SQLite non enforced sans `PRAGMA foreign_keys=ON` (2026-06-24)
+SQLite **n'enforce pas** les contraintes `FOREIGN KEY` par défaut. Le `ON DELETE CASCADE` déclaré sur `versions.project_id → projects.id` est purement déclaratif et **best-effort** à l'exécution (fonctionne si la pragma est activée par la session, mais Loco/SeaORM ne l'active pas nécessairement). En pratique, la suppression d'un projet ne cascade pas automatiquement les versions en production sans activation explicite. À prendre en compte pour tout code de suppression de projet dans les adaptateurs (Phase 2).
+
 ## Page de déverrouillage en 200, pas 401
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on

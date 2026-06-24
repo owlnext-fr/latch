@@ -16,6 +16,7 @@
 - [x] Migrations `projects`/`versions` + entités SeaORM générées + `test_support` (in-memory SQLite) — Phase 1 — 2026-06-24
 - [x] `ProjectsService` (create/list/get_by_slug/set_code/clear_code/verify_code) — Phase 1 — 2026-06-24
 - [x] `DeployService` (n=max+1, storage-first, transaction flip pointeur) — Phase 1 — 2026-06-24
+- [x] Garde d'architecture `backend/tests/architecture.rs` (contrat §1 : cœur sans axum/loco) — Phase 1 — 2026-06-24
 
 ## Frontend (SPA Yew)
 - [x] Crate `latch-ui` (Yew 0.21 CSR) buildée par Trunk → bundle wasm `dist/` — Phase 0 — 2026-06-24
@@ -28,7 +29,7 @@
 
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
-- [ ] Phase 1 — cœur + modèle + migrations
+- [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
 - [ ] Phase 2 — adaptateur web admin
 - [ ] Phase 3 — SPA Yew admin
 - [ ] Phase 4 — serving `/c/<slug>`

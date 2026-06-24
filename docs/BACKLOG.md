@@ -41,3 +41,6 @@ fortement la CI/les rebuilds. Non-breaking, purement perf de build.
 L'image distroless tourne en `root` (le `latch.sqlite` du volume est créé root). Passer
 à `gcr.io/distroless/cc-debian12:nonroot` + ownership du volume `/data` durcirait le
 runtime. Reporté : friction d'ownership du volume à régler, faible enjeu derrière Caddy.
+
+## Validation de longueur sur `name` et `brand_name` (Phase 1 – 2026-06-24)
+Aujourd'hui, `name` et `brand_name` n'ont aucune contrainte de longueur ni en DB (SQLite `TEXT` = illimité) ni dans le service (`ProjectsService::create` valide uniquement la présence de `name`). Une valeur absurdement longue passerait sans erreur. À ajouter : validation applicative (ex. `name.len() <= 128`) + contrainte DB `VARCHAR(128)` via migration, pour éviter les surprises à l'affichage en Phase 3 (SPA Yew).
