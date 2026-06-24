@@ -26,7 +26,10 @@ construit, la CI passe au vert sur un projet vide.
 ## Phase 1 — Cœur (services) + modèle + migrations
 
 Le métier, agnostique HTTP.
-- Migrations SeaORM : `projects`, `versions`, `sessions`.
+- Migrations SeaORM : `projects`, `versions`. _(La table `sessions` est reportée
+  en Phase 2 : elle ne sert qu'à l'auth admin via `axum-session` ; la créer à vide
+  ici donnerait une table morte et un risque de conflit de schéma. Décision actée
+  2026-06-24.)_
 - `services/` : `projects` (create/list/get_by_slug/set_code/clear_code/verify_code),
   `deploy` (tx insert version + flip pointeur, ordre fichier→DB du contrat §8),
   `slug` (base + suffixe), trait `Storage` + `FsStorage`, `CoreError`.
@@ -38,6 +41,9 @@ ni `use loco_rs` dans `src/services/`.
 
 ## Phase 2 — Adaptateur web admin (API JSON + session)
 
+- Migration `sessions` (store de session admin), créée ici — soit auto-gérée par
+  `axum-session`, soit migration SeaORM dédiée, à trancher au câblage. _(Reportée
+  de la Phase 1, cf. décision 2026-06-24.)_
 - `controllers/auth.rs` : login/logout, cookie de session (`axum-session` dans
   `after_routes`), compte unique env, comparaison à temps constant, rate-limit login.
 - `controllers/admin.rs` : API JSON — projets CRUD, deploy manuel, switch de version,

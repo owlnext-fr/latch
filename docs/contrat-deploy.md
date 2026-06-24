@@ -136,9 +136,9 @@ chaque visite client). **Révocation = rotation du code du projet** (invalide le
 cookies émis). La *vérification* vit dans le cœur ; rendu, pose du cookie et
 rate-limit dans l'adaptateur `serve.rs`.
 
-**Slug** : base lisible dérivée du nom + suffixe aléatoire court (ex.
-`mon-projet-a7f3`). Présentable dans un mail, et noindex par-dessus. Voir le
-caveat d'énumération dans `docs/QUIRKS.md`.
+**Slug** : base lisible dérivée du nom + suffixe aléatoire de **8 chars base62**
+(ex. `mon-projet-k7Qp2maZ`, ≈ 47 bits — quasi non-énumérable, cf. QUIRKS).
+Présentable dans un mail, et noindex par-dessus.
 
 Toutes les réponses de cette surface (page de déverrouillage **et** HTML actif) sont
 en **`Cache-Control: no-store`** : le client garde un lien stable qui montre toujours

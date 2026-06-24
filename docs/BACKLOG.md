@@ -19,9 +19,9 @@ v1 = PIN 6 chiffres (friction minimale pour client non-tech). Comme on stocke de
 toute façon une valeur récupérable, offrir « PIN ou passphrase » par projet est un
 changement non-breaking : seul l'input de la page de déverrouillage change.
 
-## Suffixe de slug plus long
-Défaut court par préférence. Passer à 8 chars base62 si l'énumération des protos
-sans code devient un enjeu (cf. QUIRKS). Gratuit en UX.
+## ~~Suffixe de slug plus long~~ — TRANCHÉ en v1 (2026-06-24)
+Retenu directement en v1 : **8 chars base62** (≈ 47 bits) comme défaut, cf. QUIRKS.
+Plus dans le backlog.
 
 ## `/admin` restreint en IP / Tailscale
 Durcissement « hide » supplémentaire : `/admin` n'a pas besoin d'être public (accès

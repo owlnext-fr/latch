@@ -50,13 +50,13 @@ distroless (pas de cargo) : la migration doit être lançable depuis le binaire.
 Si `use axum::` ou `use loco_rs::` apparaît dans `src/services/`, l'archi est violée
 (contrat §1). Le cœur suppose l'appelant déjà autorisé et rend un `CoreError`.
 
-## Suffixe de slug — faiblement non énumérable
-`-a7f3` = 4 hex ≈ 16 bits ≈ 65 000 combinaisons : balayable par un attaquant motivé.
-Tant que **PIN + rate-limit** est la vraie barrière, 4 chars suffisent (le suffixe ne
-fait que « cacher du tout-venant »). Mais sur un proto **sans code**, l'URL est la
-*seule* barrière → si ça compte, allonger (8 chars base62 ≈ 47 bits, gratuit en UX
-puisque dans le lien copié-collé). **Longueur exacte non figée** — défaut court par
-préférence, à revisiter si l'énumération des protos sans code devient un sujet.
+## Suffixe de slug — 8 chars base62 (≈ 47 bits) — FIGÉ (2026-06-24)
+Décision actée : **suffixe = 8 caractères base62** (`[A-Za-z0-9]`), ≈ 47 bits, quasi
+non-énumérable. Choix motivé par les protos **sans code**, où l'URL est la *seule*
+barrière (un proto avec code a PIN + rate-limit comme vraie barrière, mais on ne veut
+pas deux régimes de slug). Gratuit en UX : le suffixe vit dans le lien copié-collé,
+jamais tapé. Exemple : `mon-projet-k7Qp2maZ`. _(Antérieurement « non figé, défaut
+court 4 hex » — tranché à l'implémentation du service `slug`, Phase 1.)_
 
 ## PIN 6 chiffres — la sécurité est dans le rate-limit, pas l'entropie
 10⁶ combinaisons = brute-forçable en secondes. Le rate-limit sur `/unlock` est
