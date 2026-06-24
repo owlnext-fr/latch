@@ -15,7 +15,9 @@
 
 ## Repo & exécution (cette instance)
 - **Path repo** : `/srv/owlnext/latch` · **branche par défaut** : `main` (commits directs / branches courtes).
-- **Toolchain** : Rust 1.96, `wasm32-unknown-unknown`, Trunk 0.21, Docker 29, Node 24.
+- **Toolchain** : Rust 1.96, `wasm32-unknown-unknown`, Trunk 0.21, Docker 29, Node 24,
+  **`sea-orm-cli`** (≈ 1.1.x, aligné sur `sea-orm`) — requis par `cargo loco db entities`
+  (`cargo install sea-orm-cli`), cf. QUIRKS.
 - **Lancer le serveur** : `cd backend && cargo loco start` (Loco lit `./config` depuis le
   CWD → impératif depuis `backend/`, cf. QUIRKS). `fmt`/`clippy`/`test` : depuis la racine.
 - **Build image locale** : `docker build -t ghcr.io/owlnext-fr/latch:dev .` (multi-stage).

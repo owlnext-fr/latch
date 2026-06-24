@@ -4,6 +4,37 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Phase 1 mergée sur `main` + scrub d'historique (nom client)
+
+### Dernière chose faite
+- **Phase 1 mergée sur `main`** (fast-forward, `main` = `a06d90a`) et **force-pushée sur GitHub** ;
+  branche `feat/phase-1-coeur` supprimée. 33 tests verts, fmt + clippy clean au moment du merge.
+- **Incident confidentialité traité** : un **nom de client réel** traînait comme exemple de slug
+  dans `docs/contrat-deploy.md` (hérité du bootstrap) et s'était propagé (tests slug, QUIRKS, plan).
+  Purgé du working-tree (placeholder générique `Mon Projet` / `mon-projet`) **et de tout
+  l'historique** via `git filter-repo --replace-text`, puis **force-push de `main`**.
+  Règle non-négociable ajoutée dans `CLAUDE.md` (« jamais de nom de client dans le repo »).
+- Phase 1 a été déroulée en **Subagent-Driven** (1 implémenteur + 1 reviewer par tâche, 3 cycles
+  de fix, revue finale opus = « ready to merge »). Ledger : `.superpowers/sdd/progress.md` (gitignoré).
+
+### Trucs en suspens / à savoir
+- **L'historique de `main` a été RÉÉCRIT** (filter-repo) : tous les SHA d'avant `a06d90a` ont changé.
+  Un clone/worktree antérieur à ce push **diverge** — re-cloner ou `git fetch && git reset --hard origin/main`.
+  Backup de l'ancien historique : `scratchpad/latch-backup-before-scrub.bundle` (hors repo, session-local).
+- **CI** : un run va tourner sur la `main` réécrite — confirmer le vert au prochain passage.
+- Les anciens SHA peuvent rester accessibles côté GitHub (caches/PR/forks) un temps — support GitHub si purge totale requise.
+
+### Prochaine chose à creuser
+- **Phase 2** : adaptateur web admin (handlers Loco/axum, JSON, cookie-session via `axum-session`,
+  table `sessions` créée ici, mapping `CoreError` → HTTP status, guard `Origin` sur mutations).
+
+### Notes pour future Claude
+- `cargo loco db entities` exige **`sea-orm-cli`** installé sur la machine (cf. QUIRKS + ENVIRONMENT).
+- Le cœur `services/` est protégé par la garde `tests/architecture.rs` (récursive, détecte aussi `pub use`).
+- Avant de coder une API Loco/sea-orm/rmcp/yew : **Context7** (versions épinglées).
+
+---
+
 ## 2026-06-24 — Phase 1 TERMINÉE (Task 9 : garde d'archi + clôture mémoire)
 
 ### Dernière chose faite
