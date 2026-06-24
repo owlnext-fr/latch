@@ -11,9 +11,9 @@ use tower_governor::{
     governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor, GovernorLayer,
 };
 
+use crate::dto::LoginReq;
 use crate::services::security::secure_compare;
 use crate::web::AdminSession;
-use latch_dto::LoginReq;
 
 /// Clé de session portant le flag d'authentification admin.
 pub const ADMIN_FLAG: &str = "admin";

@@ -10,11 +10,9 @@ use sea_orm::{
 };
 
 use crate::controllers::auth::AdminAuth;
-use crate::controllers::dto::{
-    CreateProjectReq, DeployReq, ProjectListItem, SetCodeReq, UpdateProjectReq,
-};
 use crate::controllers::error::into_response;
 use crate::controllers::middleware::origin::require_same_origin;
+use crate::dto::{CreateProjectReq, DeployReq, ProjectListItem, SetCodeReq, UpdateProjectReq};
 use crate::models::_entities::versions;
 use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
@@ -24,10 +22,7 @@ use crate::services::projects::{CreateProject, ProjectsService};
 async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let projects = svc.list().await.map_err(into_response)?;
-    let items: Vec<ProjectListItem> = projects
-        .iter()
-        .map(crate::controllers::dto::to_list_item)
-        .collect();
+    let items: Vec<ProjectListItem> = projects.iter().map(crate::dto::to_list_item).collect();
     format::json(items)
 }
 
@@ -53,7 +48,7 @@ async fn detail(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::controllers::dto::to_detail(project, vers))
+    format::json(crate::dto::to_detail(project, vers))
 }
 
 /// POST /admin/projects — crée un nouveau projet.
@@ -74,7 +69,7 @@ async fn create(
         })
         .await
         .map_err(into_response)?;
-    format::json(crate::controllers::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(project, vec![]))
 }
 
 /// PUT /admin/projects/{id} — met à jour le nom ou le brand_name d'un projet.
@@ -124,7 +119,7 @@ async fn update(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::controllers::dto::to_detail(saved, vers))
+    format::json(crate::dto::to_detail(saved, vers))
 }
 
 /// DELETE /admin/projects/{id} — supprime un projet et ses versions.
@@ -172,7 +167,7 @@ async fn set_code(
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let project = svc.set_code(id, &body.pin).await.map_err(into_response)?;
-    format::json(crate::controllers::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(project, vec![]))
 }
 
 /// DELETE /admin/projects/{id}/code — désactive le code d'accès (PIN effacé).
@@ -184,7 +179,7 @@ async fn clear_code(
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let project = svc.clear_code(id).await.map_err(into_response)?;
-    format::json(crate::controllers::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(project, vec![]))
 }
 
 /// POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
