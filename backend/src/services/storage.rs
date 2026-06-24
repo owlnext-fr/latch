@@ -38,7 +38,14 @@ impl Storage for FsStorage {
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent).await?;
         }
-        let tmp = dest.with_extension("tmp");
+        // Nom de tmp unique : appendé au nom de fichier complet (ne remplace pas
+        // l'extension) + jeton aléatoire, pour que deux écritures concurrentes vers
+        // le même chemin n'entrent jamais en collision sur le tmp.
+        let file_name = dest
+            .file_name()
+            .ok_or_else(|| CoreError::Validation("invalid storage path".to_string()))?
+            .to_string_lossy();
+        let tmp = dest.with_file_name(format!("{file_name}.{:016x}.tmp", rand::random::<u64>()));
         fs::write(&tmp, contents).await?;
         fs::rename(&tmp, &dest).await?;
         Ok(())
@@ -93,7 +100,12 @@ mod tests {
         storage.write("1/1.html", b"old").await.unwrap();
         storage.write("1/1.html", b"new").await.unwrap();
         assert_eq!(storage.read("1/1.html").await.unwrap(), "new");
-        // pas de fichier .tmp résiduel
-        assert!(!dir.path().join("1/1.tmp").exists());
+        // aucun fichier .tmp résiduel dans le dossier du projet
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path().join("1"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "tmp résiduel: {leftovers:?}");
     }
 }
