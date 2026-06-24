@@ -1,8 +1,6 @@
 //! Client HTTP typé vers l'API /api/*. Même origin → le cookie de session part
 //! automatiquement (credentials same-origin par défaut). Les types viennent de
 //! `latch-dto` (contrat de fil partagé).
-// consumed in T7-T13
-#![allow(dead_code)]
 
 use gloo_net::http::Request;
 use latch_dto::{

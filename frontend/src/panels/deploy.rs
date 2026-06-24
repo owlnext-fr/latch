@@ -10,8 +10,6 @@ use crate::api;
 use latch_dto::DeployReq;
 
 #[derive(Properties, PartialEq)]
-// consumed in T13
-#[allow(dead_code)]
 pub struct DeployPanelProps {
     pub open: bool,
     pub project_id: i32,
@@ -20,8 +18,6 @@ pub struct DeployPanelProps {
 }
 
 #[function_component(DeployPanel)]
-// consumed in T13
-#[allow(dead_code)]
 pub fn deploy_panel(props: &DeployPanelProps) -> Html {
     let html_content = use_state(|| Option::<String>::None);
     let filename = use_state(|| Option::<String>::None);

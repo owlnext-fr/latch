@@ -1,8 +1,6 @@
 //! Construit l'URL publique absolue d'un prototype. Admin et serving partagent
 //! l'origin (D9) → pas de config nécessaire.
 
-#![allow(dead_code)]
-
 /// `https://latch.owlnext.fr/c/<slug>` (dérivé de l'origin courant).
 pub fn public_url(slug: &str) -> String {
     let origin = web_sys::window()

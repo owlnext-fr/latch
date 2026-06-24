@@ -15,8 +15,6 @@ use latch_dto::{CreateProjectReq, ProjectDetail, SetCodeReq, UpdateProjectReq};
 #[derive(Clone, PartialEq)]
 pub enum FormMode {
     Create,
-    // T12/T13 will construct this variant; suppress until then.
-    #[allow(dead_code)]
     Edit(ProjectDetail),
 }
 

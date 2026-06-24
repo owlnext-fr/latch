@@ -7,8 +7,6 @@ use yew::prelude::*;
 
 use crate::util::clipboard;
 
-// consumed in T10/T13
-#[allow(dead_code)]
 #[derive(Properties, PartialEq)]
 pub struct CopyButtonProps {
     pub value: String,

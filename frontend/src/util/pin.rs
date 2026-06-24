@@ -1,8 +1,6 @@
 //! Génération/validation du PIN côté SPA (affichage live dans le panel). Le cœur
 //! backend garde sa propre génération pour le chemin MCP (contrat §3/§7, D10).
 
-#![allow(dead_code)]
-
 /// Vrai si `s` fait exactement 6 caractères, tous des chiffres ASCII.
 pub fn is_valid_pin(s: &str) -> bool {
     s.len() == 6 && s.bytes().all(|b| b.is_ascii_digit())

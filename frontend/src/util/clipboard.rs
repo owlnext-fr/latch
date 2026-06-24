@@ -3,8 +3,6 @@
 
 use wasm_bindgen_futures::JsFuture;
 
-// consumed via CopyButton (T10/T13 will wire components into pages)
-#[allow(dead_code)]
 pub fn copy(text: String) {
     wasm_bindgen_futures::spawn_local(async move {
         if let Some(win) = web_sys::window() {

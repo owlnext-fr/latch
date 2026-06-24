@@ -5,8 +5,6 @@ use yew::prelude::*;
 
 use crate::components::copy_button::CopyButton;
 
-// consumed in T13
-#[allow(dead_code)]
 #[derive(Properties, PartialEq)]
 pub struct PinFieldProps {
     pub pin: String,

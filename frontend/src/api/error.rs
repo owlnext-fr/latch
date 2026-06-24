@@ -1,6 +1,4 @@
 //! Erreurs du client API. Un 401 est distingué pour piloter l'état d'auth global.
-// consumed in T7-T13
-#![allow(dead_code)]
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ApiError {
