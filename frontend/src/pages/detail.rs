@@ -93,7 +93,11 @@ pub fn detail_page(props: &DetailProps) -> Html {
                             <span class="k">{ "Code d'accès" }</span>
                             <span class="v">
                                 if p.code_enabled {
-                                    if let Some(pin) = p.pin.clone() { <PinField pin={pin} /> }
+                                    if let Some(pin) = p.pin.clone() {
+                                        <PinField pin={pin} />
+                                    } else {
+                                        <Badge variant={Variant::Outline}>{ "PIN non défini" }</Badge>
+                                    }
                                 } else {
                                     <Badge variant={Variant::Outline}>{ "Accès libre" }</Badge>
                                 }

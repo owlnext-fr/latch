@@ -19,16 +19,20 @@ pub struct DeleteVersionPanelProps {
 #[function_component(DeleteVersionPanel)]
 pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
     let error = use_state(|| Option::<String>::None);
+    let busy = use_state(|| false);
     let on_confirm = {
-        let (on_close, on_deleted, error, id, n) = (
+        let (on_close, on_deleted, error, busy, id, n) = (
             props.on_close.clone(),
             props.on_deleted.clone(),
             error.clone(),
+            busy.clone(),
             props.project_id,
             props.n,
         );
         Callback::from(move |_| {
-            let (on_close, on_deleted, error) = (on_close.clone(), on_deleted.clone(), error.clone());
+            let (on_close, on_deleted, error, busy) =
+                (on_close.clone(), on_deleted.clone(), error.clone(), busy.clone());
+            busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::delete_version(id, n).await {
                     Ok(()) => {
@@ -37,6 +41,7 @@ pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
                     }
                     Err(e) => error.set(Some(e.user_message())),
                 }
+                busy.set(false);
             });
         })
     };
@@ -52,7 +57,9 @@ pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
             if let Some(msg) = (*error).clone() { <p class="error">{ msg }</p> }
             <SheetFooter>
                 <Button variant={Variant::Ghost} onclick={close}>{ "Annuler" }</Button>
-                <Button variant={Variant::Destructive} onclick={on_confirm}>{ "Oui, supprimer" }</Button>
+                <Button variant={Variant::Destructive} disabled={*busy} onclick={on_confirm}>
+                    { if *busy { "Suppression…" } else { "Oui, supprimer" } }
+                </Button>
             </SheetFooter>
         </SheetContent>
     }
