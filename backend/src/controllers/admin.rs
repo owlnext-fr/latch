@@ -19,7 +19,7 @@ use crate::models::_entities::versions;
 use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
 
-/// GET /admin/projects — liste tous les projets (sans PIN, invariant §9.2).
+/// GET /api/projects — liste tous les projets (sans PIN, invariant §9.2).
 #[debug_handler]
 async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
@@ -31,7 +31,7 @@ async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Respons
     format::json(items)
 }
 
-/// GET /admin/projects/{id} — détail d'un projet avec ses versions et son PIN.
+/// GET /api/projects/{id} — détail d'un projet avec ses versions et son PIN.
 #[debug_handler]
 async fn detail(
     _auth: AdminAuth,

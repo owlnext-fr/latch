@@ -68,13 +68,22 @@ mod tests {
     #[test]
     fn list_item_never_serializes_pin() {
         let json = serde_json::to_string(&to_list_item(&sample_model())).unwrap();
-        assert!(!json.contains("424242"));
-        assert!(!json.contains("\"pin\""));
+        assert!(
+            !json.contains("424242"),
+            "le PIN ne doit JAMAIS apparaître en liste (§9.2)"
+        );
+        assert!(
+            !json.contains("\"pin\""),
+            "le champ pin ne doit pas exister en liste (§9.2)"
+        );
     }
 
     #[test]
     fn detail_does_serialize_pin() {
         let json = serde_json::to_string(&to_detail(sample_model(), vec![])).unwrap();
-        assert!(json.contains("424242"));
+        assert!(
+            json.contains("424242"),
+            "le détail doit exposer le PIN (copiable en admin)"
+        );
     }
 }
