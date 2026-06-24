@@ -252,20 +252,21 @@ Un **side-panel** utilise `<SheetContent open on_close>` piloté manuellement + 
 // Extrait représentatif — pages/list.rs (page liste)
 #[function_component(ListPage)]
 pub fn list_page() -> Html {
-    let auth = use_context::<AuthContext>().unwrap();
+    let auth = use_auth();
     let projects: UseStateHandle<Load<Vec<ProjectListItem>>> = use_state(|| Load::Loading);
 
     {
         let projects = projects.clone();
-        let auth = auth.clone();
+        let set_anon = auth.set_anonymous.clone();
         use_effect_with((), move |_| {
-            spawn_local(async move {
-                match api::list_projects().await {
+            wasm_bindgen_futures::spawn_local(async move {
+                match api::client::list_projects().await {
                     Ok(items) => projects.set(Load::Ready(items)),
-                    Err(ApiError::Unauthorized) => auth.logout(),
-                    Err(e) => projects.set(Load::Failed(e.to_string())),
+                    Err(ApiError::Unauthorized) => set_anon.emit(()),
+                    Err(e) => projects.set(Load::Failed(e.user_message())),
                 }
             });
+            || ()
         });
     }
 
@@ -310,7 +311,7 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
 **Règles :**
 - `use_effect_with((), ...)` pour le chargement initial (dépendance vide = une seule fois au mount).
 - `use_effect_with(props.open, ...)` pour réinitialiser les champs à la (ré)ouverture.
-- Basculer l'auth via `auth.logout()` sur `ApiError::Unauthorized` (pas de redirect manuel).
+- Basculer l'auth via `auth.set_anonymous.emit(())` sur `ApiError::Unauthorized` (pas de redirect manuel).
 - `<SheetContent open on_close>` directement — `<Sheet>` ignore ses props (cf. QUIRKS).
 - Ne pas oublier `use_context::<AuthContext>()` dans tout composant qui appelle l'API.
 
@@ -321,11 +322,13 @@ Une fonction `async` par endpoint. Le pattern `gloo-net 0.6` : construire la req
 ```rust
 // Extrait représentatif — api/client.rs
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ApiError {
+    /// 401 — session absente/expirée. Bascule l'app en Anonymous.
     Unauthorized,
-    NotFound,
-    Server(String),
+    /// Autre code HTTP non-2xx.
+    Status(u16),
+    /// Échec réseau / parse JSON.
     Network(String),
 }
 
@@ -334,8 +337,7 @@ fn check_status(status: u16) -> Result<(), ApiError> {
     match status {
         200..=299 => Ok(()),
         401 => Err(ApiError::Unauthorized),
-        404 => Err(ApiError::NotFound),
-        _ => Err(ApiError::Server(format!("HTTP {status}"))),
+        _ => Err(ApiError::Status(status)),
     }
 }
 

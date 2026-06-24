@@ -15,6 +15,7 @@ pub fn generate_pin() -> String {
             let _ = crypto.get_random_values_with_u8_array(&mut buf);
         }
     }
+    // Léger biais modulo (256 % 10 ≠ 0) — acceptable pour un PIN d'affichage uniquement.
     buf.iter().map(|b| char::from(b'0' + (b % 10))).collect()
 }
 

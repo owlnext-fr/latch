@@ -49,6 +49,7 @@ pub fn login_page() -> Html {
                 set_auth.clone(),
                 navigator.clone(),
             );
+            error.set(None);
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::login(&body).await {
