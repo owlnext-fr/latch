@@ -24,9 +24,11 @@ fn app() -> Html {
     html! {
         <BrowserRouter>
             <i18n::LocaleProvider>
-                <AuthProvider>
-                    <Switch<Route> render={switch} />
-                </AuthProvider>
+                <toast::ToastProvider>
+                    <AuthProvider>
+                        <Switch<Route> render={switch} />
+                    </AuthProvider>
+                </toast::ToastProvider>
             </i18n::LocaleProvider>
         </BrowserRouter>
     }

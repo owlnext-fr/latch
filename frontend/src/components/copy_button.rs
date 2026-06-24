@@ -1,10 +1,10 @@
-//! Bouton-icône « copier » avec confirmation éphémère (pas de toast global :
-//! shadcn Toast/Sonner n'auto-dismiss pas — D : feedback inline + gloo-timers).
+//! Bouton-icône « copier » : confirmation éphémère inline + toast global.
 
 use gloo_timers::callback::Timeout;
 use shadcn_rs::{Button, Size, Variant};
 use yew::prelude::*;
 
+use crate::toast::use_toast;
 use crate::util::clipboard;
 
 #[derive(Properties, PartialEq)]
@@ -16,15 +16,17 @@ pub struct CopyButtonProps {
 
 #[function_component(CopyButton)]
 pub fn copy_button(props: &CopyButtonProps) -> Html {
+    let _loc = crate::i18n::use_locale(); // abonnement i18n (re-render au switch de langue)
+    let toast = use_toast();
     let copied = use_state(|| false);
 
     let onclick = {
-        let (value, copied) = (props.value.clone(), copied.clone());
+        let (value, copied, toast) = (props.value.clone(), copied.clone(), toast.clone());
         Callback::from(move |_| {
             clipboard::copy(value.clone());
             copied.set(true);
+            toast.push_success.emit(t!("toast.copied").to_string());
             let copied = copied.clone();
-            // reset après 2 s ; Timeout::forget garde le timer vivant.
             Timeout::new(2000, move || copied.set(false)).forget();
         })
     };
@@ -32,7 +34,7 @@ pub fn copy_button(props: &CopyButtonProps) -> Html {
     html! {
         <Button variant={Variant::Ghost} size={Size::Sm} onclick={onclick}
                 aria_label={props.aria_label.clone()}>
-            { if *copied { "Copié !" } else { "⧉" } }
+            { if *copied { t!("common.copied") } else { std::borrow::Cow::Borrowed("⧉") } }
         </Button>
     }
 }
