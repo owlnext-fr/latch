@@ -36,6 +36,11 @@ uuid = { version = "1.6", features = ["v4"] }
 thiserror = { version = "2" }
 rand = { version = "0.8" }
 subtle = { version = "2" }
+tower = { version = "0.5" }
+tower_governor = { version = "0.7" }
+axum_session = { version = "0.16" }
+axum_session_sqlx = { version = "0.5", features = ["sqlite", "tls-rustls"] }
+time = { version = "0.3" }
 
 [[bin]]
 name = "latch-cli"

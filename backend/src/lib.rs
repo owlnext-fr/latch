@@ -6,3 +6,4 @@ pub mod models;
 pub mod services;
 pub mod tasks;
 pub mod views;
+pub mod web;

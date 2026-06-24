@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use axum::Router as AxumRouter;
 use loco_rs::{
     app::{AppContext, Hooks, Initializer},
     bgworker::Queue,
@@ -56,6 +57,12 @@ impl Hooks for App {
     fn register_tasks(tasks: &mut Tasks) {
         // tasks-inject (do not remove)
     }
+    async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter> {
+        let store = crate::web::build_session_store(ctx).await?;
+        let router = router.layer(axum_session::SessionLayer::new(store));
+        Ok(router)
+    }
+
     async fn truncate(_ctx: &AppContext) -> Result<()> {
         Ok(())
     }
