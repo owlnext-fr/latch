@@ -11,7 +11,7 @@ use tower_governor::{
     governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor, GovernorLayer,
 };
 
-use crate::dto::LoginReq;
+use crate::dto::{LoginReq, OkResponse};
 use crate::services::security::secure_compare;
 use crate::web::AdminSession;
 
@@ -48,6 +48,12 @@ where
 /// POST /admin/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.
 /// Les deux comparaisons sont TOUJOURS effectuées (pas de court-circuit) pour ne pas
 /// révéler quel champ a échoué (contrat §9).
+#[utoipa::path(
+    post, path = "/api/login", tag = "auth",
+    request_body = LoginReq,
+    responses((status = 200, description = "Authentifié (cookie de session posé)", body = OkResponse),
+              (status = 401, description = "Identifiants invalides"))
+)]
 #[debug_handler]
 async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Response> {
     let expected_user = std::env::var("ADMIN_USER").unwrap_or_default();
@@ -69,6 +75,11 @@ async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Resp
 /// POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).
 /// `destroy()` marque la session pour suppression en DB à la phase de réponse,
 /// ce qui assure la révocation immédiate côté serveur (contrat §4).
+#[utoipa::path(
+    post, path = "/api/logout", tag = "auth",
+    responses((status = 200, description = "Session détruite", body = OkResponse),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn logout(session: AdminSession) -> Result<Response> {
     session.destroy();

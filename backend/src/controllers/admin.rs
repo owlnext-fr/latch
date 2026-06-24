@@ -12,12 +12,20 @@ use sea_orm::{
 use crate::controllers::auth::AdminAuth;
 use crate::controllers::error::into_response;
 use crate::controllers::middleware::origin::require_same_origin;
-use crate::dto::{CreateProjectReq, DeployReq, ProjectListItem, SetCodeReq, UpdateProjectReq};
+use crate::dto::{
+    ActivateResponse, CreateProjectReq, DeployReq, DeployResponse, OkResponse, ProjectDetail,
+    ProjectListItem, SetCodeReq, UpdateProjectReq,
+};
 use crate::models::_entities::versions;
 use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
 
 /// GET /api/projects — liste tous les projets (sans PIN, invariant §9.2).
+#[utoipa::path(
+    get, path = "/api/projects", tag = "projects",
+    responses((status = 200, description = "Liste des projets (sans PIN)", body = Vec<ProjectListItem>),
+              (status = 401, description = "Non authentifié"))
+)]
 #[debug_handler]
 async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
@@ -27,6 +35,13 @@ async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Respons
 }
 
 /// GET /api/projects/{id} — détail d'un projet avec ses versions et son PIN.
+#[utoipa::path(
+    get, path = "/api/projects/{id}", tag = "projects",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    responses((status = 200, description = "Détail du projet (avec PIN)", body = ProjectDetail),
+              (status = 404, description = "Projet inconnu"),
+              (status = 401, description = "Non authentifié"))
+)]
 #[debug_handler]
 async fn detail(
     _auth: AdminAuth,
@@ -53,6 +68,14 @@ async fn detail(
 
 /// POST /admin/projects — crée un nouveau projet.
 /// Requiert un Origin same-origin (garde CSRF, contrat §4/§9.6).
+#[utoipa::path(
+    post, path = "/api/projects", tag = "projects",
+    request_body = CreateProjectReq,
+    responses((status = 200, description = "Projet créé", body = ProjectDetail),
+              (status = 400, description = "Requête invalide"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn create(
     _auth: AdminAuth,
@@ -77,6 +100,16 @@ async fn create(
 ///   - `None` → ne pas toucher au champ
 ///   - `Some(None)` → effacer la valeur
 ///   - `Some(Some(x))` → remplacer par `x`
+#[utoipa::path(
+    put, path = "/api/projects/{id}", tag = "projects",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    request_body = UpdateProjectReq,
+    responses((status = 200, description = "Projet mis à jour", body = ProjectDetail),
+              (status = 400, description = "Requête invalide"),
+              (status = 404, description = "Projet inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn update(
     _auth: AdminAuth,
@@ -124,6 +157,14 @@ async fn update(
 
 /// DELETE /admin/projects/{id} — supprime un projet et ses versions.
 /// SQLite n'enforce pas les FK sans PRAGMA → suppression explicite en transaction (QUIRKS).
+#[utoipa::path(
+    delete, path = "/api/projects/{id}", tag = "projects",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    responses((status = 200, description = "Projet supprimé", body = OkResponse),
+              (status = 404, description = "Projet inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn delete(
     _auth: AdminAuth,
@@ -158,6 +199,14 @@ async fn delete(
 }
 
 /// POST /admin/projects/{id}/code — active le code d'accès avec le PIN fourni.
+#[utoipa::path(
+    post, path = "/api/projects/{id}/code", tag = "projects",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    request_body = SetCodeReq,
+    responses((status = 200, description = "Code activé", body = ProjectDetail),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn set_code(
     _auth: AdminAuth,
@@ -171,6 +220,13 @@ async fn set_code(
 }
 
 /// DELETE /admin/projects/{id}/code — désactive le code d'accès (PIN effacé).
+#[utoipa::path(
+    delete, path = "/api/projects/{id}/code", tag = "projects",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    responses((status = 200, description = "Code désactivé", body = ProjectDetail),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn clear_code(
     _auth: AdminAuth,
@@ -184,6 +240,14 @@ async fn clear_code(
 
 /// POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
 /// Si `activate=true`, repointe `active_version_id`. Répond `{id, n}`.
+#[utoipa::path(
+    post, path = "/api/projects/{id}/deploy", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet")),
+    request_body = DeployReq,
+    responses((status = 200, description = "Version déployée", body = DeployResponse),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn deploy(
     _auth: AdminAuth,
@@ -205,6 +269,15 @@ async fn deploy(
 
 /// POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.
 /// Charge la version par (project_id, n) → 404 si absente. Met à jour le projet.
+#[utoipa::path(
+    post, path = "/api/projects/{id}/versions/{n}/activate", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("n" = i32, Path, description = "Numéro de version")),
+    responses((status = 200, description = "Version activée", body = ActivateResponse),
+              (status = 404, description = "Version inconnue"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn activate_version(
     _auth: AdminAuth,
@@ -246,6 +319,16 @@ async fn activate_version(
 /// Charge la version par (project_id, n) → 404 si absente.
 /// Refuse la suppression si elle est la version active du projet → 400.
 /// Nettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).
+#[utoipa::path(
+    delete, path = "/api/projects/{id}/versions/{n}", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("n" = i32, Path, description = "Numéro de version")),
+    responses((status = 200, description = "Version supprimée", body = OkResponse),
+              (status = 400, description = "Version active : suppression refusée"),
+              (status = 404, description = "Version inconnue"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
 #[debug_handler]
 async fn delete_version(
     _auth: AdminAuth,
@@ -288,6 +371,14 @@ async fn delete_version(
 /// Protégé par `AdminAuth` (pas de garde Origin : GET est idempotent).
 /// Confirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;
 /// le tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.
+#[utoipa::path(
+    get, path = "/api/projects/{id}/versions/{n}/preview", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("n" = i32, Path, description = "Numéro de version")),
+    responses((status = 200, description = "HTML brut de la version", content_type = "text/html"),
+              (status = 404, description = "Version inconnue"),
+              (status = 401, description = "Non authentifié"))
+)]
 #[debug_handler]
 async fn preview_version(
     _auth: AdminAuth,
