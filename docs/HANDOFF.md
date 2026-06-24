@@ -4,6 +4,25 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — T2 : retrait crate `latch-dto` (Plan 1, feat/admin-react)
+
+### Dernière chose faite
+- **`latch-dto` supprimée du workspace.** Retirée de `Cargo.toml` (`members`/`default-members`) et de `backend/Cargo.toml` (`[dependencies]`). Répertoire supprimé via `git rm -r latch-dto`. Workspace réduit à 2 membres : `backend` + `backend/migration`.
+- Vérification : `cargo fmt --all && cargo clippy --all-targets -- -D warnings` propre + **84 tests verts** (`cargo nextest run`). Aucune référence résiduelle à `latch_dto`.
+- Commit : `0b7c236 🔥 chore(dto): retrait de la crate latch-dto (inlinée dans backend/src/dto)`.
+
+### Trucs en suspens
+- **T3 à T8 du Plan 1** (`feat/admin-react`) : réponses typées, annotations `#[utoipa::path]`, `ApiDoc`, `openapi.json`, Swagger UI, clôture mémoire.
+
+### Prochaine chose à creuser
+- **T3 — Réponses typées** (`Ok`/`Deploy`/`Activate`) selon le brief `task-3-brief.md`.
+
+### Notes pour future Claude
+- Le workspace n'a plus de crate `latch-dto`. Tout est dans `crate::dto` (module `backend/src/dto/mod.rs`). Les types sont identiques, juste inlinés.
+- La suite (T3…T8) suit le plan 1 : ajouter `utoipa` + schéma OpenAPI, puis brancher la SPA React.
+
+---
+
 ## 2026-06-25 — DÉCISION : migration admin Yew → React/Vite/shadcn (pause, reprise à froid)
 
 ### Dernière chose faite

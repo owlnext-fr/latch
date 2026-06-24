@@ -28,7 +28,7 @@
 - [x] `controllers/admin.rs` : API JSON écriture `POST /admin/projects`, `PUT /admin/projects/{id}`, `DELETE /admin/projects/{id}`, `POST /admin/projects/{id}/code`, `DELETE /admin/projects/{id}/code` — tous protégés par `AdminAuth` + garde `require_same_origin` — Phase 2 — 2026-06-24
 - [x] `controllers/admin.rs` : `POST /admin/projects/{id}/deploy` (DeployService), `POST /admin/projects/{id}/versions/{n}/activate`, `DELETE /admin/projects/{id}/versions/{n}` (garde actif→400), `GET /admin/projects/{id}/versions/{n}/preview` (HTML brut + `Cache-Control: no-store`, AdminAuth) — Phase 2 — 2026-06-24
 - [x] `backend/tests/security_invariants.rs` : invariants §9.1 (pas de hash) et §9.2 (PIN absent de la liste, présent au détail) — Phase 2 — 2026-06-24
-- [x] Crate `latch-dto` (workspace, serde, cible native + wasm32) — types partagés `ProjectListItem`, `ProjectDetail`, `VersionItem`, `CreateProjectReq`, `UpdateProjectReq`, `SetCodeReq`, `DeployReq` — Phase 3 — 2026-06-24
+- [x] Crate `latch-dto` (workspace, serde, cible native + wasm32) — types partagés `ProjectListItem`, `ProjectDetail`, `VersionItem`, `CreateProjectReq`, `UpdateProjectReq`, `SetCodeReq`, `DeployReq` — Phase 3 — 2026-06-24 **(retirée feat/admin-react, inlinée dans `backend/src/dto/` — 2026-06-25)**
 - [x] API JSON re-préfixée sous `/api/*` (depuis `/admin/*`) + conversions libres `dto::to_list_item`/`to_detail` — Phase 3 — 2026-06-24
 - [x] `web::spa_dist_dir()` + `nest_service("/admin", ServeDir + ServeFile fallback)` dans `after_routes` — serving SPA Yew sous `/admin` avec fallback `index.html` — Phase 3 — 2026-06-24
 
