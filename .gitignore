@@ -1,0 +1,2 @@
+# Claude Code — secrets et overrides locaux (hors git)
+.claude/settings.local.json
