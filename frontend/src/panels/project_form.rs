@@ -1,12 +1,12 @@
 //! Side-panel Créer/Éditer un projet (même composant, 2 modes). Pilote SheetContent
 //! manuellement (open + on_close). Code = toggle + explication ; PIN généré côté SPA.
 
-use shadcn_rs::{
-    Button, Input, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
-};
 use crate::components::toggle::Toggle;
 use crate::i18n::use_locale;
 use crate::toast::use_toast;
+use shadcn_rs::{
+    Button, Input, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
+};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 

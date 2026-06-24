@@ -55,7 +55,9 @@ pub fn delete_project_panel(props: &DeleteProjectPanelProps) -> Html {
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::delete_project(id).await {
                     Ok(()) => {
-                        toast.push_success.emit(t!("toast.project_deleted").to_string());
+                        toast
+                            .push_success
+                            .emit(t!("toast.project_deleted").to_string());
                         on_deleted.emit(());
                         on_close.emit(());
                     }

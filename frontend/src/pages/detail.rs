@@ -186,9 +186,9 @@ pub fn detail_page(props: &DetailProps) -> Html {
                             <h1>{ p.name.clone() }</h1>
                         </div>
                         <div class="head-actions">
-                            <Button variant={Variant::Outline} onclick={open_edit}>{ t!("common.edit") }</Button>
-                            <Button variant={Variant::Outline} onclick={open_deploy}>{ t!("common.deploy") }</Button>
-                            <Button variant={Variant::Destructive} onclick={open_delete}>{ t!("common.delete") }</Button>
+                            <Button variant={Variant::Outline} onclick={open_edit}>{ "✎ " }{ t!("common.edit") }</Button>
+                            <Button variant={Variant::Outline} onclick={open_deploy}>{ "⬆ " }{ t!("common.deploy") }</Button>
+                            <Button variant={Variant::Destructive} onclick={open_delete}>{ "🗑 " }{ t!("common.delete") }</Button>
                         </div>
                     </header>
                     <p class="page-intro">{ t!("detail.intro") }</p>

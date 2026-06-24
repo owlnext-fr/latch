@@ -84,3 +84,5 @@ Retours du test manuel (Playwright) avec l'humain. **Détail complet + patchs UX
 - **Snackbars/toasts** pour tous les retours d'action (recoupe « couche de toast globale » ci-dessus).
 - **Revue UX d'ensemble pour distribution** : états de chargement, messages d'erreur, accessibilité (`<a>`-sans-href → `<button>`, focus, labels), cohérence.
 - **Self-review produit** (pas seulement code) après les patchs.
+
+## Dropzone `ondragleave` flicker sur les éléments enfants (Task 8) — fix possible via `pointer-events:none` sur le contenu interne ou check `relatedTarget`. Cosmétique.

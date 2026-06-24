@@ -91,7 +91,7 @@ pub fn protected(props: &ProtectedProps) -> Html {
     match auth.state {
         AuthState::Authenticated => props.children.clone(),
         AuthState::Checking | AuthState::Anonymous => {
-            html! { <div class="loading">{ "Chargement…" }</div> }
+            html! { <div class="loading">{ t!("common.loading") }</div> }
         }
     }
 }

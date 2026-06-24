@@ -1,7 +1,9 @@
 //! Side-panel Déployer une version : dropzone HTML (drag-and-drop + clic) → POST /deploy.
 
-use shadcn_rs::{Button, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant};
-use web_sys::{HtmlInputElement, HtmlElement};
+use shadcn_rs::{
+    Button, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
+};
+use web_sys::{HtmlElement, HtmlInputElement};
 use yew::prelude::*;
 
 use crate::api;
@@ -147,7 +149,10 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
                 error.set(Some(t!("deploy.err_no_file").to_string()));
                 return;
             };
-            let req = DeployReq { html, activate: *activate };
+            let req = DeployReq {
+                html,
+                activate: *activate,
+            };
             let (on_close, on_deployed, error, busy, toast) = (
                 on_close.clone(),
                 on_deployed.clone(),
@@ -159,7 +164,9 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::deploy(id, &req).await {
                     Ok(_) => {
-                        toast.push_success.emit(t!("toast.version_deployed").to_string());
+                        toast
+                            .push_success
+                            .emit(t!("toast.version_deployed").to_string());
                         on_deployed.emit(());
                         on_close.emit(());
                     }
@@ -179,7 +186,11 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
         Callback::from(move |_: MouseEvent| on_close.emit(()))
     };
 
-    let zone_class = if *over { "dropzone dropzone--over" } else { "dropzone" };
+    let zone_class = if *over {
+        "dropzone dropzone--over"
+    } else {
+        "dropzone"
+    };
 
     html! {
         <SheetContent open={props.open} on_close={props.on_close.clone()} side={Position::Right}>
