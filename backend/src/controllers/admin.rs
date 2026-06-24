@@ -111,7 +111,15 @@ async fn update(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(ProjectDetail::from_model(saved, vec![]))
+    // Charge les versions du projet pour renvoyer un détail complet (comme GET /detail).
+    let vers = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .order_by_desc(versions::Column::N)
+        .all(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?;
+
+    format::json(ProjectDetail::from_model(saved, vers))
 }
 
 /// DELETE /admin/projects/{id} — supprime un projet et ses versions.
@@ -138,11 +146,14 @@ async fn delete(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    txn.commit().await.map_err(|e| into_response(e.into()))?;
-
+    // 404 avant le commit : si le projet n'existait pas, la txn se rollback au drop
+    // (les versions supprimées sont annulées — correct, elles n'existaient pas non plus).
     if res.rows_affected == 0 {
         return Err(loco_rs::Error::NotFound);
     }
+
+    txn.commit().await.map_err(|e| into_response(e.into()))?;
+
     format::json(serde_json::json!({"ok": true}))
 }
 

@@ -216,6 +216,50 @@ async fn set_and_clear_code_via_api() {
     .await;
 }
 
+/// PUT /admin/projects/{id} — renomme un projet et rejette un nom vide.
+#[tokio::test]
+#[serial]
+async fn update_project_changes_name_and_rejects_empty() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        // Renommage valide.
+        let updated = request
+            .put(&format!("/admin/projects/{id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Renommé"}))
+            .await;
+        assert_eq!(updated.status_code(), 200);
+        assert_eq!(
+            updated.json::<serde_json::Value>()["name"]
+                .as_str()
+                .unwrap(),
+            "Renommé"
+        );
+
+        // Nom vide (whitespace) → 400.
+        let bad = request
+            .put(&format!("/admin/projects/{id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "   "}))
+            .await;
+        assert_eq!(bad.status_code(), 400);
+    })
+    .await;
+}
+
 /// GET /admin/projects/{id} sur un id inexistant doit renvoyer 404.
 /// `save_cookies(true)` est requis pour que axum-test propage le cookie de session.
 #[tokio::test]
