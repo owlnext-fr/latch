@@ -112,6 +112,12 @@ serveur jusqu'à expiration). `session.destroy()` marque la session pour suppres
 la phase de réponse : révocation immédiate côté serveur + cookie invalidé. Pour un logout
 admin, utiliser **`session.destroy()`** (contrat §4). `session.purge()` n'existe pas en 0.16.
 
+## loco_rs::Error::Unauthorized → 401, pas 403 (confirmé 0.16.4) (2026-06-24)
+`loco_rs::Error::Unauthorized(msg)` mappe sur **401 UNAUTHORIZED** dans `controller/mod.rs` ligne ~209. Il n'existe pas de variant `Forbidden` dans `loco_rs::Error` 0.16.4. Pour produire un **403** dans un middleware axum, utiliser directement `Ok((StatusCode::FORBIDDEN, "msg").into_response())` — c'est idiomatique (le middleware court-circuite la chaîne en produisant sa propre réponse) et ne dépend pas de `ErrorDetail`. Alternative : `loco_rs::Error::CustomError(StatusCode::FORBIDDEN, ErrorDetail::with_reason(...))` — fonctionne mais couple le middleware à `ErrorDetail`.
+
+## same_host() — ports différents sur même hôte sont des origines distinctes (2026-06-24)
+`same_host("example.com:8080", "example.com:9090")` doit retourner `false` (RFC 6454 : l'origine inclut le port). La première implémentation utilisait `host.split(':').next()` — ce qui comparait seulement les noms d'hôtes et acceptait à tort des ports différents. Correction : utiliser `rsplit_once(':')` pour extraire nom et port séparément, et ne comparer les ports que si les deux en ont un. Caveat : IPv6 (`[::1]:port`) non géré.
+
 ## Page de déverrouillage en 200, pas 401
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on

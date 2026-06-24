@@ -4,6 +4,31 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 5 Phase 2 : middleware same-origin (CSRF guard)
+
+### Dernière chose faite
+- `controllers/middleware/mod.rs` créé : déclare `pub mod origin`.
+- `controllers/middleware/origin.rs` créé : helpers `url_host` / `same_host` / `split_host_port` + middleware `require_same_origin` (axum `from_fn`).
+- 403 produit via `Ok((StatusCode::FORBIDDEN, ...).into_response())` — pas via `loco_rs::Error::Unauthorized` (→401). Confirmé via lecture directe de `loco-rs-0.16.4/src/errors.rs` + `controller/mod.rs`.
+- `controllers/mod.rs` mis à jour : déclare `pub mod middleware`.
+- 13 tests unitaires des helpers (RED→GREEN, y compris bug corrigé sur ports différents).
+- Test `mutation_rejected_on_cross_origin` ajouté dans `admin_api.rs`, `#[ignore = "needs POST /admin/projects (Task 7)"]`.
+- Suite complète 56/56 passés, 3 ignorés. fmt + clippy clean. Commit `ee60df3`.
+
+### Trucs en suspens
+- Le middleware n'est PAS encore câblé sur des routes mutantes (Tasks 7/8).
+- Test `mutation_rejected_on_cross_origin` reste `#[ignore]` jusqu'à ce que `POST /admin/projects` existe (Task 7).
+
+### Prochaine chose à creuser
+- Task 6 (si l'ordre du plan l'exige) ou directement Task 7 : `controllers/admin.rs` — handlers CRUD JSON protégés par `AdminAuth` + `require_same_origin` câblé sur mutations.
+
+### Notes pour future Claude
+- `loco_rs::Error::Unauthorized` → **401** (pas 403). Pour un 403 dans un middleware axum, utiliser `Ok((StatusCode::FORBIDDEN, "msg").into_response())` — idiomatique, sans dépendance sur `ErrorDetail` Loco.
+- `same_host` utilise `rsplit_once(':')` pour séparer host/port — gère les cas `"example.com"` (pas de port) et `"example.com:8080"` (port explicite). Si les deux ont un port, ils doivent être égaux. Si l'un n'en a pas, on accepte.
+- Bug potentiel IPv6 (`[::1]:port`) : `rsplit_once(':')` ne fonctionnerait pas correctement. Non adressé en v1 (pas de cas IPv6 dans le périmètre, noté dans les commentaires du code).
+
+---
+
 ## 2026-06-24 — Task 4 Phase 2 : auth admin (login/logout, AdminAuth, rate-limit)
 
 ### Dernière chose faite
