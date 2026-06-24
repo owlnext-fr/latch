@@ -90,6 +90,37 @@ pub fn routes() -> Routes {
 - Erreurs DB : `.map_err(|e| into_response(e.into()))` (CoreError::Db via From<DbErr>).
 - Not found : `.ok_or(loco_rs::Error::NotFound)` directement (pas via into_response).
 
+## Câblage multi-verbe avec garde Origin par handler (Phase 2, Task 7)
+
+Loco 0.16 / axum 0.8 : plusieurs `.add(path, method_router)` sur le même chemin
+avec des verbes distincts sont **fusionnés** par axum (`Router::route` merge les `MethodRouter`).
+Le `.layer(mw)` par `MethodRouter` s'applique uniquement aux verbes définis dans ce `MethodRouter`.
+
+```rust
+// Dans routes() — un .add() par verbe, layer uniquement sur les mutations.
+pub fn routes() -> Routes {
+    Routes::new()
+        .prefix("/admin")
+        // Lecture : pas de layer (GET idempotent)
+        .add("/projects", get(list))
+        .add("/projects/{id}", get(detail))
+        // Mutations : garde Origin obligatoire (contrat §4/§9.6)
+        .add("/projects", post(create).layer(from_fn(require_same_origin)))
+        .add("/projects/{id}", put(update).layer(from_fn(require_same_origin)))
+        .add(
+            "/projects/{id}",
+            // Nommer explicitement axum::routing::delete si le handler se nomme aussi `delete`.
+            axum::routing::delete(delete).layer(from_fn(require_same_origin)),
+        )
+}
+```
+
+**Règles :**
+- `axum::routing::delete(handler)` (namespaced) si le handler se nomme `delete` (évite ambiguïté).
+- `.layer()` sur `MethodRouter` s'applique à tous ses verbes définis — donc `post(h).layer(mw)` = seul POST+mw, pas GET.
+- Fusionner GET (sans layer) + POST+layer : résultat = `{ GET: handler_sans_layer, POST: handler_avec_layer }`.
+- En tests, utiliser `Origin: http://127.0.0.1` (pas `localhost`) — le harness Loco envoie `Host: 127.0.0.1:PORT`.
+
 ## Extracteur d'auth axum (FromRequestParts, axum 0.8)
 
 Pattern `AdminAuth` — pas de `#[async_trait]`, fn async native :

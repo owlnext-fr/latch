@@ -68,7 +68,6 @@ async fn login_then_access_protected_route() {
 /// activé quand la route existera.
 #[tokio::test]
 #[serial]
-#[ignore = "needs POST /admin/projects (Task 7)"]
 async fn mutation_rejected_on_cross_origin() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
@@ -140,6 +139,79 @@ async fn list_projects_returns_empty_array_when_none() {
         let res = request.get("/admin/projects").await;
         assert_eq!(res.status_code(), 200);
         assert_eq!(res.json::<serde_json::Value>(), serde_json::json!([]));
+    })
+    .await;
+}
+
+/// Création, lecture, suppression d'un projet via l'API — flux complet.
+/// Origin same-origin requis sur les mutations (contrat §4/§9.6).
+#[tokio::test]
+#[serial]
+async fn create_then_get_and_delete_project() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        assert_eq!(created.status_code(), 200);
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        let got = request.get(&format!("/admin/projects/{id}")).await;
+        assert_eq!(got.status_code(), 200);
+
+        let deleted = request
+            .delete(&format!("/admin/projects/{id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(deleted.status_code(), 200);
+
+        let gone = request.get(&format!("/admin/projects/{id}")).await;
+        assert_eq!(gone.status_code(), 404);
+    })
+    .await;
+}
+
+/// Activation et désactivation du code d'accès via les endpoints dédiés.
+#[tokio::test]
+#[serial]
+async fn set_and_clear_code_via_api() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/admin/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        let set = request
+            .post(&format!("/admin/projects/{id}/code"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"pin": "135790"}))
+            .await;
+        assert_eq!(set.status_code(), 200);
+        assert!(set.text().contains("135790"));
+
+        let clear = request
+            .delete(&format!("/admin/projects/{id}/code"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(clear.status_code(), 200);
     })
     .await;
 }

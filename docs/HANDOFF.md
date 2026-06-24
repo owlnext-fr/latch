@@ -4,6 +4,33 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 7 Phase 2 : API admin écriture (CRUD + code) + garde Origin
+
+### Dernière chose faite
+- 5 handlers d'écriture ajoutés à `controllers/admin.rs` : `create`, `update`, `delete`, `set_code`, `clear_code`.
+- Routes câblées avec garde `require_same_origin` sur chaque mutation via `.layer(from_fn(...))` par handler (axum 0.8 fusionne les MethodRouter sur même chemin).
+- Cascade manuelle versions→projet en transaction dans `delete` (QUIRKS — FK SQLite non enforced).
+- `updated_at` posé manuellement dans `update` (cf. QUIRKS hook before_save).
+- 3 tests ignorés activés : `mutation_rejected_on_cross_origin`, `pin_never_appears_in_project_list`, `pin_appears_on_project_detail`.
+- Tests de mutation ajoutés : `create_then_get_and_delete_project`, `set_and_clear_code_via_api`.
+- **Piège découvert** : harness Loco utilise `Host: 127.0.0.1:PORT`, pas `localhost` — Origin de test doit être `http://127.0.0.1` (cf. QUIRKS).
+- Fallback URI dans `require_same_origin` pour le mode mock (où `Host` header peut être absent).
+- Suite complète 72/72 verts, 0 ignorés. fmt + clippy clean.
+
+### Trucs en suspens
+- Aucun test ignoré restant (les 3 ont été activés et passent).
+
+### Prochaine chose à creuser
+- Phase 2 est complète côté adaptateur web admin (Tasks 2-7 terminées).
+- Phase 3 : SPA Yew admin (login, liste, détail, side-panel création/édition, etc.).
+
+### Notes pour future Claude
+- `Origin: http://127.0.0.1` (sans port) matche `Host: 127.0.0.1:PORT` grâce à la règle "si l'un n'a pas de port, on accepte" dans `same_host`. Ne pas mettre `http://localhost` dans les tests de mutation.
+- Plusieurs `.add(path, method_router)` sur le même chemin avec des verbes distincts fusionnent via axum `Router::route` (merge des MethodRouter). Le `.layer()` sur un MethodRouter s'applique uniquement aux verbes définis dans ce MethodRouter (pas aux autres).
+- `axum::routing::delete(handler)` doit être utilisé (namespaced) si `delete` est aussi le nom du handler, pour éviter l'ambiguïté.
+
+---
+
 ## 2026-06-24 — Task 6 Phase 2 : API admin lecture (liste + détail projets)
 
 ### Dernière chose faite

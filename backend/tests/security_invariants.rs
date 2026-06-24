@@ -6,7 +6,6 @@ use serial_test::serial;
 /// Dépend de `POST /admin/projects` (Task 7) pour créer un projet via l'API.
 #[tokio::test]
 #[serial]
-#[ignore = "needs POST /admin/projects (Task 7)"]
 async fn pin_never_appears_in_project_list() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
@@ -19,7 +18,7 @@ async fn pin_never_appears_in_project_list() {
         // Crée un projet protégé via l'API admin (Task 7).
         request
             .post("/admin/projects")
-            .add_header("origin", "http://localhost")
+            .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": true, "pin": "424242"}))
             .await;
         let list = request.get("/admin/projects").await;
@@ -40,7 +39,6 @@ async fn pin_never_appears_in_project_list() {
 /// Dépend de `POST /admin/projects` (Task 7) pour créer un projet via l'API.
 #[tokio::test]
 #[serial]
-#[ignore = "needs POST /admin/projects (Task 7)"]
 async fn pin_appears_on_project_detail() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
@@ -52,7 +50,7 @@ async fn pin_appears_on_project_detail() {
             .await;
         let created = request
             .post("/admin/projects")
-            .add_header("origin", "http://localhost")
+            .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": true, "pin": "424242"}))
             .await;
         let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();

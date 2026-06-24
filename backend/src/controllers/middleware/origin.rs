@@ -26,10 +26,16 @@ use axum::response::{IntoResponse, Response};
 /// `.layer(axum::middleware::from_fn(require_same_origin))`.
 pub async fn require_same_origin(req: Request, next: Next) -> Result<Response, loco_rs::Error> {
     let headers = req.headers();
-    let host = headers
+
+    let host_hdr = headers
         .get(HOST)
         .and_then(|v| v.to_str().ok())
         .map(str::to_string);
+
+    // Récupère le host depuis le header `Host`. En transport HTTP réel (Loco tests),
+    // hyper injecte ce header automatiquement. En mode mock sans Host, fallback sur
+    // l'authority de l'URI.
+    let host = host_hdr.or_else(|| req.uri().authority().map(|a| a.host().to_string()));
 
     let origin_host = headers
         .get(ORIGIN)
