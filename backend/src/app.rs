@@ -12,6 +12,7 @@ use loco_rs::{
 };
 use migration::Migrator;
 use std::path::Path;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[allow(unused_imports)]
 use crate::{controllers, tasks};
@@ -62,6 +63,15 @@ impl Hooks for App {
     async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter> {
         let store = crate::web::build_session_store(ctx).await?;
         let router = router.layer(axum_session::SessionLayer::new(store));
+
+        // SPA servie sous /admin : assets si le fichier existe, sinon index.html
+        // (deep-links client). nest_service strip le préfixe /admin ; les routes
+        // /api/* et /_health restent prioritaires (non masquées).
+        let dist = crate::web::spa_dist_dir();
+        let index = dist.join("index.html");
+        let spa = ServeDir::new(&dist).fallback(ServeFile::new(index));
+        let router = router.nest_service("/admin", spa);
+
         Ok(router)
     }
 

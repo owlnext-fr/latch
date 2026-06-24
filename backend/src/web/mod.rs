@@ -1,6 +1,7 @@
 //! Helpers de l'adaptateur web (HTTP). Hors du cœur : c'est ici que vivent
 //! session, storage concret, résolution d'environnement. Le cœur reste agnostique.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use loco_rs::app::AppContext;
@@ -12,6 +13,14 @@ use crate::services::storage::{FsStorage, Storage};
 pub type SessionPool = axum_session_sqlx::SessionSqlitePool;
 /// Extracteur de session injectable dans les handlers.
 pub type AdminSession = axum_session::Session<SessionPool>;
+
+/// Racine des assets buildés de la SPA (`frontend/dist`). Surclassable par
+/// `LATCH_SPA_DIST` (posée dans l'image Docker). Défaut relatif au CWD `backend/`.
+pub fn spa_dist_dir() -> PathBuf {
+    std::env::var("LATCH_SPA_DIST")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("../frontend/dist"))
+}
 
 /// Racine de stockage des HTML de versions (volume). `LATCH_STORAGE_ROOT`, défaut `data`.
 pub fn storage_from_ctx(_ctx: &AppContext) -> Arc<dyn Storage> {
