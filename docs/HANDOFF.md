@@ -62,7 +62,7 @@
 
 ### Notes pour future Claude
 - Type date généré : `DateTimeWithTimeZone` — utiliser `chrono::Utc::now().into()` dans les `Set(...)`.
-- Le wrapper `models/projects.rs` auto-met à jour `updated_at` dans `before_save` → pas besoin de le faire manuellement dans les services.
+- Le wrapper `models/projects.rs` a un hook `before_save` qui touche `updated_at`, mais il ne s'applique que si le champ est `unchanged` ; les services (`set_code`/`clear_code`/`deploy`) posent `updated_at = Set(chrono::Utc::now().into())` explicitement (ceinture + bretelles, valeur cohérente). Donc : on continue de le set manuellement dans les services.
 - `UNIQUE(project_id,n)` sur `versions` est géré par l'index `idx_versions_project_n` (SQLite l'honore correctement en-memory, testé).
 - `sea-orm-cli` doit être présent sur la machine pour `cargo loco db entities`. Cf. QUIRKS.
 
