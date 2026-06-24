@@ -4,6 +4,27 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 8 : DeployService
+
+### Dernière chose faite
+- `DeployService` implémenté dans `backend/src/services/deploy.rs`.
+- Ordre imposé : `storage.write(...)` AVANT `db.begin()` → un fichier orphelin est inoffensif, un pointeur actif vers un fichier absent ne l'est pas.
+- Transaction : insert `versions` row + flip `projects.active_version_id` si `activate=true`.
+- 3 tests GREEN, full suite 32/32, fmt + clippy clean.
+- Commit : `b329682` — `✨ feat: DeployService (ordre fichier→tx, flip pointeur transactionnel)`.
+
+### Trucs en suspens
+- Task 9 : garde d'archi (`no_axum_in_services`) + clôture mémoire Phase 1.
+
+### Prochaine chose à creuser
+- Task 9 : ajouter un test `#[test]` qui vérifie qu'aucun fichier sous `backend/src/services/` ne contient `use axum::` ou `use loco_rs::`.
+
+### Notes pour future Claude
+- Le n `max(n)+1` est calculé hors transaction. `UNIQUE(project_id,n)` est le backstop pour la concurrence.
+- `project.updated_at` est mis à jour manuellement dans `deploy.rs` car le wrapper `before_save` du modèle Loco ne s'applique qu'en dehors des transactions directes sur `ActiveModel`.
+
+---
+
 ## 2026-06-24 — Task 6 : Migrations + entités + test_support
 
 ### Dernière chose faite
