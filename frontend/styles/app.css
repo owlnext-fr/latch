@@ -274,3 +274,34 @@
   background: hsl(var(--color-primary));
   color: hsl(var(--color-primary-foreground));
 }
+
+/* ---- Badges accès (vert = PIN requis, orange = libre) ---- */
+.badge--success {
+  background: hsl(var(--color-success));
+  color: hsl(var(--color-success-foreground));
+}
+.badge--warning {
+  background: hsl(var(--color-warning));
+  color: hsl(var(--color-warning-foreground));
+}
+
+/* ---- Lien-bouton accessible (remplace <a onclick> sans href) ---- */
+.linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.linkish:hover {
+  text-decoration: underline;
+}
+
+/* ---- Intro de page ---- */
+.page-intro {
+  color: hsl(var(--color-muted-foreground));
+  font-size: 13.5px;
+  margin: -8px 0 20px;
+}
