@@ -55,7 +55,7 @@ impl ProjectDetail {
     pub fn from_model(m: projects::Model, versions: Vec<versions::Model>) -> Self {
         let active = m.active_version_id;
         let versions = versions
-            .iter()
+            .into_iter()
             .map(|v| VersionItem {
                 id: v.id,
                 n: v.n,

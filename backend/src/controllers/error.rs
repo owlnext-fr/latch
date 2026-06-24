@@ -29,4 +29,16 @@ mod tests {
         let e = into_response(CoreError::Validation("bad".into()));
         assert!(matches!(e, loco_rs::Error::BadRequest(_)));
     }
+
+    #[test]
+    fn db_maps_to_500() {
+        let e = into_response(CoreError::Db(sea_orm::DbErr::Custom("test".into())));
+        assert!(matches!(e, loco_rs::Error::Message(_)));
+    }
+
+    #[test]
+    fn io_maps_to_500() {
+        let e = into_response(CoreError::Io(std::io::Error::other("test")));
+        assert!(matches!(e, loco_rs::Error::Message(_)));
+    }
 }
