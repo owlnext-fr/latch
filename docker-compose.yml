@@ -4,7 +4,10 @@
 
 services:
   latch:
-    image: ghcr.io/owlnext-fr/latch:latest
+    # Tag pinné via .env (LATCH_IMAGE_TAG). Défaut `latest` = dernière release.
+    # En prod, pinner une version précise (ex. 1.2.3 ou sha-abc1234) pour des
+    # déploiements reproductibles et un rollback trivial.
+    image: ghcr.io/owlnext-fr/latch:${LATCH_IMAGE_TAG:-latest}
     container_name: latch
     restart: unless-stopped
     env_file:

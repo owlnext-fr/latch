@@ -97,7 +97,13 @@ cache wasm/trunk) :
 5. `cargo deny` / `cargo audit` (licences + advisories — c'est ce qui aurait levé le
    CVE rmcp).
 6. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
-   **public** du repo (`ghcr.io/owlnext-fr/latch`).
+   **public** du repo (`ghcr.io/owlnext-fr/latch`). Tags dérivés par
+   `docker/metadata-action` (modèle *release-driven*) :
+   - tag git `vX.Y.Z` → `X.Y.Z`, `X.Y`, `latest`, `sha-xxxxxxx` ;
+   - push `main` → `main`, `sha-xxxxxxx` (pas `latest` : il pointe la dernière *release*).
+   Le déploiement pin une version via `LATCH_IMAGE_TAG` (`docker-compose.yml`).
+   Le job docker dépend de **tous** les contrôles (dont `cargo-deny`) : pas de publication
+   d'une image qui échoue fmt/clippy/tests/supply-chain.
 
 Badge CI dans le README, dual-license, CHANGELOG en commits conventionnels.
 

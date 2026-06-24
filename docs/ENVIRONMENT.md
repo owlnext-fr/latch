@@ -29,6 +29,11 @@
 
 ## GHCR
 - Package : `ghcr.io/owlnext-fr/latch` — **public** (pas de `docker login` au pull).
+- **Schéma de tags** (CI, `docker/metadata-action`) :
+  - release `vX.Y.Z` → `X.Y.Z` (immuable, à pinner en prod), `X.Y`, `latest`, `sha-xxxxxxx` ;
+  - `main` → `main` (dernier état intégré, pour staging), `sha-xxxxxxx`.
+- **Pin du déploiement** : `LATCH_IMAGE_TAG` dans `.env` (défaut `latest`). Rollback =
+  remettre l'ancien tag + `./deploy.sh`.
 
 ## Connexion du connecteur MCP côté Claude web
 - _(procédure de branchement aux designers — dépend de la formule OWLNEXT,

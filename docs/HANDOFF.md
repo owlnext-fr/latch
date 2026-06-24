@@ -30,8 +30,11 @@
 - **Lancer le serveur depuis `backend/`** (Loco lit `./config` au CWD) — cf. QUIRKS.
 - `default-members = [backend, backend/migration]` : le frontend wasm est exclu des
   commandes natives (sinon `cargo build` tente de le compiler pour l'hôte) — cf. QUIRKS.
-- CI **non exécutée** dans cet environnement (pas de runner) : YAML à confirmer au 1ᵉʳ push.
-  Job `cargo-deny` en `continue-on-error` (à durcir Phase 6).
+- **CI verte sur `main`** (run confirmé) : fmt/clippy, tests, build SPA, **cargo-deny**
+  (corrigé + désormais **bloquant**), docker build/push GHCR. Tous SUCCESS.
+- **Images versionnées** (`docker/metadata-action`) : pour publier une release, **pousser
+  un tag git `vX.Y.Z`** → produit `X.Y.Z`/`X.Y`/`latest`/`sha-`. Un push `main` ne produit
+  que `main`+`sha-`. Déploiement pin via `LATCH_IMAGE_TAG` (`.env`).
 - `Cargo.lock` est commité (pin réel). `.vscode/` toujours hors commit.
 
 ### Prochaine chose à creuser
