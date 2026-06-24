@@ -106,6 +106,12 @@ ou period=0). Utiliser `.expect("governor config valide")` (acceptable en init d
 Pour l'utiliser dans un extracteur custom dont le `Rejection = loco_rs::Error`, mapper avec
 `.map_err(|_| loco_rs::Error::Unauthorized("..."))`.
 
+## axum_session 0.16 — clear() vs destroy() au logout (2026-06-24)
+`session.clear()` vide les clés en mémoire mais laisse la ligne en DB (session valide côté
+serveur jusqu'à expiration). `session.destroy()` marque la session pour suppression en DB à
+la phase de réponse : révocation immédiate côté serveur + cookie invalidé. Pour un logout
+admin, utiliser **`session.destroy()`** (contrat §4). `session.purge()` n'existe pas en 0.16.
+
 ## Page de déverrouillage en 200, pas 401
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on
