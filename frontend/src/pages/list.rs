@@ -86,14 +86,18 @@ pub fn list_page() -> Html {
                 html! {
                     <TableRow>
                         <TableCell>
-                            <a onclick={onclick} style="cursor:pointer">{ p.name.clone() }</a>
+                            <a onclick={onclick.clone()} style="cursor:pointer">{ p.name.clone() }</a>
                         </TableCell>
                         <TableCell>
                             <code>{ url.clone() }</code>
                             <CopyButton value={url} aria_label={AttrValue::from("Copier l'URL")} />
                         </TableCell>
-                        <TableCell>{ badge }</TableCell>
-                        <TableCell>{ version }</TableCell>
+                        <TableCell>
+                            <a onclick={onclick.clone()} style="cursor:pointer">{ badge }</a>
+                        </TableCell>
+                        <TableCell>
+                            <a onclick={onclick} style="cursor:pointer">{ version }</a>
+                        </TableCell>
                     </TableRow>
                 }
             }).collect::<Html>();
