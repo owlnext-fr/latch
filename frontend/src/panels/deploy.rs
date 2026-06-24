@@ -1,8 +1,5 @@
 //! Side-panel Déployer une version : lit un fichier HTML (gloo-file) et POST /deploy.
 
-// consumed in T13
-#[allow(dead_code)]
-use gloo_file::File;
 use shadcn_rs::{
     Button, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Switch, Variant,
 };
@@ -32,6 +29,19 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
     let error = use_state(|| Option::<String>::None);
     let busy = use_state(|| false);
 
+    {
+        let (html_content, filename, error, activate) = (
+            html_content.clone(), filename.clone(), error.clone(), activate.clone(),
+        );
+        use_effect_with(props.open, move |_| {
+            html_content.set(None);
+            filename.set(None);
+            error.set(None);
+            activate.set(true);
+            || ()
+        });
+    }
+
     let on_file = {
         let (html_content, filename, error) =
             (html_content.clone(), filename.clone(), error.clone());
@@ -40,7 +50,7 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
             let Some(files) = input.files() else { return };
             let Some(file) = files.get(0) else { return };
             let name = file.name();
-            let gfile = File::from(file);
+            let gfile = gloo_file::File::from(file);
             let (html_content, filename, error) =
                 (html_content.clone(), filename.clone(), error.clone());
             filename.set(Some(name));
