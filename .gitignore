@@ -22,3 +22,6 @@ Cargo.lock.bak
 
 # Divers
 .DS_Store
+
+# Visual brainstorming companion (session-local)
+.superpowers/
