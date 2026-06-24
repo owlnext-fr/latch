@@ -305,3 +305,17 @@
   font-size: 13.5px;
   margin: -8px 0 20px;
 }
+
+/* ---- Aide sous les champs de formulaire ---- */
+.field-help {
+  display: block;
+  color: hsl(var(--color-muted-foreground));
+  font-size: 12px;
+  margin: 2px 0 6px;
+}
+/* Input désactivé (PIN quand code off, slug en édition) */
+.sheet-content .input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: hsl(var(--color-muted));
+}

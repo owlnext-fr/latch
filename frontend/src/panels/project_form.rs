@@ -5,6 +5,8 @@ use shadcn_rs::{
     Button, Input, Label, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
 };
 use crate::components::toggle::Toggle;
+use crate::i18n::use_locale;
+use crate::toast::use_toast;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -42,6 +44,9 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
             versions: vec![],
         },
     };
+
+    let _loc = use_locale();
+    let toast = use_toast();
 
     let name = use_state(|| initial.name.clone());
     let brand = use_state(|| initial.brand_name.clone().unwrap_or_default());
@@ -117,19 +122,20 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
             error.clone(),
         );
         let busy = busy.clone();
-        let (on_saved, on_close, mode) = (
+        let (on_saved, on_close, mode, toast) = (
             props.on_saved.clone(),
             props.on_close.clone(),
             props.mode.clone(),
+            toast.clone(),
         );
         Callback::from(move |_: MouseEvent| {
             // Validation locale.
             if name.trim().is_empty() {
-                error.set(Some("Le nom est requis.".into()));
+                error.set(Some(t!("form.err_name").to_string()));
                 return;
             }
             if *code_on && !pin::is_valid_pin(&pin_val) {
-                error.set(Some("Le PIN doit faire 6 chiffres.".into()));
+                error.set(Some(t!("form.err_pin").to_string()));
                 return;
             }
             let brand_opt = if brand.trim().is_empty() {
@@ -138,12 +144,13 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
                 Some((*brand).clone())
             };
             let (name_v, code_v, pin_v) = ((*name).clone(), *code_on, (*pin_val).clone());
-            let (on_saved, on_close, error, mode, busy) = (
+            let (on_saved, on_close, error, mode, busy, toast) = (
                 on_saved.clone(),
                 on_close.clone(),
                 error.clone(),
                 mode.clone(),
                 busy.clone(),
+                toast.clone(),
             );
 
             // Fix B: mark busy before the async call to prevent duplicate submits.
@@ -183,6 +190,11 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
                 match res {
                     Ok(()) => {
                         busy.set(false);
+                        let msg = match &mode {
+                            FormMode::Create => t!("toast.project_created"),
+                            FormMode::Edit(_) => t!("toast.project_updated"),
+                        };
+                        toast.push_success.emit(msg.to_string());
                         on_saved.emit(());
                         on_close.emit(());
                     }
@@ -203,44 +215,44 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
     html! {
         <SheetContent open={props.open} on_close={props.on_close.clone()} side={Position::Right}>
             <SheetHeader>
-                <SheetTitle>{ if is_edit { "Éditer le projet" } else { "Nouveau projet" } }</SheetTitle>
+                <SheetTitle>{ if is_edit { t!("form.title_edit") } else { t!("form.title_create") } }</SheetTitle>
             </SheetHeader>
 
-            <Label html_for="pf-name" required={true}>{ "Nom" }</Label>
+            <Label html_for="pf-name" required={true}>{ t!("form.name") }</Label>
             <Input id="pf-name" value={(*name).clone()} oninput={on_name} />
+            <span class="field-help">{ t!("form.name_help") }</span>
 
             if is_edit {
-                <Label html_for="pf-slug">{ "Slug (auto)" }</Label>
-                <Input id="pf-slug" value={initial.slug.clone()} readonly={true} />
+                <Label html_for="pf-slug">{ t!("form.slug") }</Label>
+                <Input id="pf-slug" value={initial.slug.clone()} disabled={true} />
+                <span class="field-help">{ t!("form.slug_help") }</span>
             }
 
-            <Label html_for="pf-brand">{ "Nom de marque (optionnel)" }</Label>
+            <Label html_for="pf-brand">{ t!("form.brand") }</Label>
             <Input id="pf-brand" value={(*brand).clone()} oninput={on_brand} />
+            <span class="field-help">{ t!("form.brand_help") }</span>
 
-            <Label html_for="pf-code">{ "Code d'accès" }</Label>
+            <Label html_for="pf-code">{ t!("form.code") }</Label>
             <div class="toggle-row">
                 <Toggle id={AttrValue::from("pf-code")} checked={*code_on} onchange={on_code_toggle.clone()} />
-                <span class="hint">
-                    { "Quand activé, les visiteurs saisissent un PIN à 6 chiffres avant d'accéder au prototype. Désactivé = accès libre par l'URL." }
-                </span>
+                <span class="hint">{ t!("form.code_help") }</span>
             </div>
 
-            if *code_on {
-                <Label html_for="pf-pin">{ "PIN (6 chiffres)" }</Label>
-                <div class="pin-row">
-                    <Input id="pf-pin" value={(*pin_val).clone()} oninput={on_pin} />
-                    <Button variant={Variant::Outline} onclick={on_regen}>{ "⟳ régénérer" }</Button>
-                </div>
-            }
+            <Label html_for="pf-pin">{ t!("form.pin") }</Label>
+            <div class="pin-row">
+                <Input id="pf-pin" value={(*pin_val).clone()} oninput={on_pin} disabled={!*code_on} />
+                <Button variant={Variant::Outline} onclick={on_regen} disabled={!*code_on}>{ t!("common.regenerate") }</Button>
+            </div>
+            <span class="field-help">{ t!("form.pin_help") }</span>
 
             if let Some(msg) = (*error).clone() {
                 <p class="error">{ msg }</p>
             }
 
             <SheetFooter>
-                <Button variant={Variant::Ghost} onclick={close}>{ "Annuler" }</Button>
+                <Button variant={Variant::Ghost} onclick={close}>{ t!("common.cancel") }</Button>
                 <Button variant={Variant::Primary} onclick={on_save} disabled={*busy}>
-                    { if *busy { "Enregistrement…" } else { "Enregistrer" } }
+                    { if *busy { t!("common.saving") } else { t!("common.save") } }
                 </Button>
             </SheetFooter>
         </SheetContent>
