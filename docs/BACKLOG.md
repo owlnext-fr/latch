@@ -60,3 +60,18 @@ logger le détail côté serveur et renvoyer un message opaque générique.
 
 ## Validation de longueur sur `name` et `brand_name` (Phase 1 – 2026-06-24)
 Aujourd'hui, `name` et `brand_name` n'ont aucune contrainte de longueur ni en DB (SQLite `TEXT` = illimité) ni dans le service (`ProjectsService::create` valide uniquement la présence de `name`). Une valeur absurdement longue passerait sans erreur. À ajouter : validation applicative (ex. `name.len() <= 128`) + contrainte DB `VARCHAR(128)` via migration, pour éviter les surprises à l'affichage en Phase 3 (SPA Yew).
+
+## Base de slug éditable (Phase 3 – 2026-06-24)
+En v1, le slug est en lecture seule (base lisible auto-générée + suffixe fixe). Rouvrir l'édition de la base du slug nécessite de retoucher le cœur (`slug.rs`), l'API (`PUT /api/projects/{id}`), le DTO et le side-panel `ProjectForm`. Reporté : faible besoin identifié, risque de collisions à gérer si l'admin change la base d'un projet déjà partagé.
+
+## Override `PUBLIC_BASE_URL` (Phase 3 – 2026-06-24)
+En v1, la SPA construit l'URL publique via `window.location.origin` (admin et serving `/c` sur la même origine). Si l'admin et le serving `/c/<slug>` étaient un jour sur des hosts distincts (ex. CDN ou sous-domaine dédié), il faudrait un `PUBLIC_BASE_URL` injecté au build ou à l'exécution. Non nécessaire aujourd'hui : même binaire, même origin.
+
+## Couche de toast globale SPA (Phase 3 – 2026-06-24)
+`shadcn-rs` expose `Toast`/`Sonner` en déclaratif, mais `duration` (auto-dismiss) n'est pas implémenté en 0.1. En v1 : feedback inline dans les formulaires + confirmation « Copié ! » éphémère via `CopyButton`. Amélioration future : intégrer un vrai provider de toasts (ou attendre que shadcn-rs l'implémente) pour les feedbacks transients (succès de déploiement, erreurs réseau, etc.).
+
+## Remontée d'erreur sur `activate_version` (Phase 3 – 2026-06-24)
+La SPA page détail (`pages/detail.rs`) active une version via `POST /api/projects/{id}/versions/{n}/activate` puis recharge la page (reload implicite). Si l'activation échoue (erreur serveur), l'erreur est actuellement silencieuse — le rechargement donne un feedback implicite. Amélioration : afficher l'erreur retournée par l'API avant le reload.
+
+## Polish UI login.rs — effacer l'erreur au re-submit (Phase 3 – 2026-06-24)
+Dans `pages/login.rs`, si l'utilisateur soumet le formulaire une seconde fois après une erreur, l'ancienne erreur reste affichée pendant la requête en cours. À corriger : `error.set(None)` avant `busy.set(true)` dans le handler `onsubmit`, pour effacer le message d'erreur précédent dès le nouveau submit.

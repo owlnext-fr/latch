@@ -27,7 +27,10 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
 
     {
         let (html_content, filename, error, activate) = (
-            html_content.clone(), filename.clone(), error.clone(), activate.clone(),
+            html_content.clone(),
+            filename.clone(),
+            error.clone(),
+            activate.clone(),
         );
         use_effect_with(props.open, move |_| {
             html_content.set(None);
@@ -65,18 +68,32 @@ pub fn deploy_panel(props: &DeployPanelProps) -> Html {
     };
 
     let on_deploy = {
-        let (html_content, activate, error, busy) =
-            (html_content.clone(), activate.clone(), error.clone(), busy.clone());
-        let (on_close, on_deployed, id) =
-            (props.on_close.clone(), props.on_deployed.clone(), props.project_id);
+        let (html_content, activate, error, busy) = (
+            html_content.clone(),
+            activate.clone(),
+            error.clone(),
+            busy.clone(),
+        );
+        let (on_close, on_deployed, id) = (
+            props.on_close.clone(),
+            props.on_deployed.clone(),
+            props.project_id,
+        );
         Callback::from(move |_: MouseEvent| {
             let Some(html) = (*html_content).clone() else {
                 error.set(Some("Choisis un fichier HTML.".into()));
                 return;
             };
-            let req = DeployReq { html, activate: *activate };
-            let (on_close, on_deployed, error, busy) =
-                (on_close.clone(), on_deployed.clone(), error.clone(), busy.clone());
+            let req = DeployReq {
+                html,
+                activate: *activate,
+            };
+            let (on_close, on_deployed, error, busy) = (
+                on_close.clone(),
+                on_deployed.clone(),
+                error.clone(),
+                busy.clone(),
+            );
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::deploy(id, &req).await {

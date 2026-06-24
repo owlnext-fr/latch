@@ -1,8 +1,6 @@
 //! Side-panel danger : supprimer une version (inactive).
 
-use shadcn_rs::{
-    Button, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant,
-};
+use shadcn_rs::{Button, Position, SheetContent, SheetFooter, SheetHeader, SheetTitle, Variant};
 use yew::prelude::*;
 
 use crate::api;
@@ -30,8 +28,12 @@ pub fn delete_version_panel(props: &DeleteVersionPanelProps) -> Html {
             props.n,
         );
         Callback::from(move |_| {
-            let (on_close, on_deleted, error, busy) =
-                (on_close.clone(), on_deleted.clone(), error.clone(), busy.clone());
+            let (on_close, on_deleted, error, busy) = (
+                on_close.clone(),
+                on_deleted.clone(),
+                error.clone(),
+                busy.clone(),
+            );
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::delete_version(id, n).await {

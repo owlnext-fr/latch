@@ -28,9 +28,25 @@
 - [x] `controllers/admin.rs` : API JSON écriture `POST /admin/projects`, `PUT /admin/projects/{id}`, `DELETE /admin/projects/{id}`, `POST /admin/projects/{id}/code`, `DELETE /admin/projects/{id}/code` — tous protégés par `AdminAuth` + garde `require_same_origin` — Phase 2 — 2026-06-24
 - [x] `controllers/admin.rs` : `POST /admin/projects/{id}/deploy` (DeployService), `POST /admin/projects/{id}/versions/{n}/activate`, `DELETE /admin/projects/{id}/versions/{n}` (garde actif→400), `GET /admin/projects/{id}/versions/{n}/preview` (HTML brut + `Cache-Control: no-store`, AdminAuth) — Phase 2 — 2026-06-24
 - [x] `backend/tests/security_invariants.rs` : invariants §9.1 (pas de hash) et §9.2 (PIN absent de la liste, présent au détail) — Phase 2 — 2026-06-24
+- [x] Crate `latch-dto` (workspace, serde, cible native + wasm32) — types partagés `ProjectListItem`, `ProjectDetail`, `VersionItem`, `CreateProjectReq`, `UpdateProjectReq`, `SetCodeReq`, `DeployReq` — Phase 3 — 2026-06-24
+- [x] API JSON re-préfixée sous `/api/*` (depuis `/admin/*`) + conversions libres `dto::to_list_item`/`to_detail` — Phase 3 — 2026-06-24
+- [x] `web::spa_dist_dir()` + `nest_service("/admin", ServeDir + ServeFile fallback)` dans `after_routes` — serving SPA Yew sous `/admin` avec fallback `index.html` — Phase 3 — 2026-06-24
 
 ## Frontend (SPA Yew)
 - [x] Crate `latch-ui` (Yew 0.21 CSR) buildée par Trunk → bundle wasm `dist/` — Phase 0 — 2026-06-24
+- [x] Router Yew (yew-router 0.18, BrowserRouter basename="/admin", routes absolues `#[at("/admin/...")]`) + scaffold SPA (AuthProvider, Protected, pages Login/List/Detail) — Phase 3 — 2026-06-24
+- [x] Utilitaires SPA : `pin::generate()`, `url::public_url(slug)` (window.location.origin), `clipboard::copy_to_clipboard(text)` — Phase 3 — 2026-06-24
+- [x] Client API gloo-net 0.6 (`api/client.rs`) : `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`, `set_code`, `clear_code`, `deploy_version`, `activate_version`, `delete_version` + `check_status` / `ApiError` — Phase 3 — 2026-06-24
+- [x] Auth dérivée : `AuthProvider` (contexte global), extracteur `Protected` (redirige → /admin/login si non connecté), `AuthContext::logout()` → `POST /api/auth/logout` — Phase 3 — 2026-06-24
+- [x] Page `Login` (`/admin/login`) : formulaire, erreur sur mauvais credentials, indicateur busy — Phase 3 — 2026-06-24
+- [x] Composants `CopyButton` (bouton-icône copie + « Copié ! » éphémère) et `PinField` (masque `••••••`, œil de révélation, bouton copier) — Phase 3 — 2026-06-24
+- [x] Page `List` (`/admin`) : tableau shadcn-rs (nom, URL publique + CopyButton, badge code, version active, nb versions), état vide, bouton « Nouveau projet », navigation vers détail — Phase 3 — 2026-06-24
+- [x] Side-panel `ProjectForm` (créer/éditer) : champs nom/slug(RO)/code/PIN/brand_name, validation, reset à l'ouverture — Phase 3 — 2026-06-24
+- [x] Side-panel `DeployPanel` : upload fichier HTML, case « activer immédiatement », appel `deploy_version`, reset à l'ouverture — Phase 3 — 2026-06-24
+- [x] Side-panels danger : suppression projet (`DeleteProjectPanel`) et suppression version (`DeleteVersionPanel`) — confirmation texte + bouton destructif — Phase 3 — 2026-06-24
+- [x] Page `Detail` (`/admin/projects/:id`) : accès public (URL + PIN via PinField), actions haut-droite (Modifier/Déployer/Supprimer), liste versions (activer/prévisualiser/supprimer), état vide premier déploiement — Phase 3 — 2026-06-24
+- [x] CSS shadcn-rs vendorisée (5 fichiers `frontend/styles/`, patch `--color-card*`/`--color-popover*` manquants, dark-mode via `.dark`) — Phase 3 — 2026-06-24
+- [x] Tests wasm-bindgen-test (3 tests T5 : pin, url, clipboard) verts — Phase 3 — 2026-06-24
 
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24
@@ -42,7 +58,7 @@
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
 - [x] Phase 2 — adaptateur web admin — 2026-06-24
-- [ ] Phase 3 — SPA Yew admin
+- [x] Phase 3 — SPA Yew admin — 2026-06-24
 - [ ] Phase 4 — serving `/c/<slug>`
 - [ ] Phase 5 — endpoint MCP
 - [ ] Phase 6 — e2e, durcissement, packaging

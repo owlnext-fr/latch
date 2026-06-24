@@ -146,3 +146,27 @@ admin, utiliser **`session.destroy()`** (contrat §4). `session.purge()` n'exist
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on
 fuit en remplaçant le Basic Auth).
+
+## `yew-router = 0.18` (PAS 0.21) pour `yew 0.21` — numérotation divergente (2026-06-24)
+La numérotation de `yew-router` **diverge** de `yew` : `yew-router 0.18` correspond à `yew 0.21`, `yew-router 0.19` à `yew 0.22`, `yew-router 0.20` à `yew 0.23`. Piège classique : chercher `yew-router = "0.21"` → introuvable ou mauvaise version. Épingler `yew-router = "0.18"` avec `yew = "0.21"`.
+
+## `gloo-net` 0.6 : un HTTP 401/404 est `Ok(Response)`, pas une `Err` (2026-06-24)
+Avec `gloo-net 0.6`, une réponse HTTP avec status 401 ou 404 est **`Ok(Response)`**, pas une `Err`. Il faut **toujours** inspecter `resp.status()` après `.send().await?`. De plus, `.json(&body)?` sur le `RequestBuilder` **consomme** le builder (retourne `Result<Request>`) **avant** le `.send().await?` — ne pas appeler `.json()` après avoir déjà enchaîné `.send()`.
+
+## `tower-http` : activer explicitement le feature `fs` même si transitif (2026-06-24)
+`ServeDir` et `ServeFile` de `tower-http` requièrent le feature `fs`. Même si `tower-http` est une dépendance transitive, il faut l'ajouter **explicitement** au `Cargo.toml` du backend avec `features = ["fs"]` — sinon les types `ServeDir`/`ServeFile` ne sont pas disponibles.
+
+## shadcn-rs 0.1 : `<Sheet>` est une coquille, piloter `<SheetContent>` directement (2026-06-24)
+`<Sheet>` (wrapper) est une **coquille qui ignore toutes ses props** — ne pas s'y fier pour passer `open` ou `on_close`. Piloter `<SheetContent open=.. on_close=..>` directement. Il n'existe pas de `SheetClose`. Pas de toast programmatique : `Toast`/`Sonner` sont déclaratifs et `duration` (auto-dismiss) n'est pas implémenté en 0.1. `Switch`/`Dialog` : l'état « contrôlé » retombe sur l'état interne tant que `checked={false}` → gérer le state soi-même. `Switch::onchange` est `Callback<Event>`. `TableRow` n'a pas d'`onclick` → naviguer via `<a onclick>` dans les cellules.
+
+## shadcn-rs.css : variables `--color-card*`/`--color-popover*` manquantes (2026-06-24)
+La lib `shadcn-rs` oublie `--color-card*` et `--color-popover*` dans `variables.css` alors que `components.css` les utilise → patcher la CSS vendorisée (ajoutés en `:root` et `.dark`). La CSS vendorisée est composée de **5 fichiers** sous `frontend/styles/` (imports relatifs) ; dark-mode via classe `.dark`.
+
+## SPA sous `/admin` : configuration Trunk + BrowserRouter + backend (2026-06-24)
+Pour servir la SPA Yew sous `/admin` : (1) `Trunk.toml public_url = "/admin/"` ; (2) `BrowserRouter basename="/admin"` côté Yew ; (3) `#[at("/admin/...")]` absolus dans les routes Yew (pas relatifs) ; (4) `nest_service("/admin", ServeDir::new(dir).fallback(ServeFile::new(index)))` côté backend (**PAS** `fallback_service`, qui masquerait les 404 sur `/api`).
+
+## Orphan rule : conversions DTO en fonctions libres côté backend (2026-06-24)
+`From<&Model>` pour un type de `latch-dto` est interdit par la règle d'orphelin (le type `Model` est dans `latch` backend, le type DTO dans `latch-dto` — ni l'un ni l'autre n'est local au site de l'impl). Solution : conversions en **fonctions libres** côté backend (`dto::to_list_item(model)` / `dto::to_detail(model, versions)`), pas de trait impl.
+
+## Side-panels Yew montés en permanence — réinitialiser à la (ré)ouverture (2026-06-24)
+Les side-panels Yew sont montés en permanence dans le DOM (prop `open` contrôle la visibilité). Les `use_state` internes **persistent** entre ouvertures : si l'utilisateur ouvre un panel, le ferme sans soumettre, puis le rouvre, les champs peuvent contenir des valeurs périmées. Solution : `use_effect_with(props.open, |open| { if *open { /* reset fields */ } })` à l'ouverture du panel. S'applique aussi au re-déploiement (évite qu'un fichier obsolète soit re-soumis).

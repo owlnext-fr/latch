@@ -48,22 +48,32 @@ pub async fn create_project(body: &CreateProjectReq) -> Result<ProjectDetail, Ap
 }
 
 pub async fn update_project(id: i32, body: &UpdateProjectReq) -> Result<(), ApiError> {
-    let resp = Request::put(&format!("/api/projects/{id}")).json(body)?.send().await?;
+    let resp = Request::put(&format!("/api/projects/{id}"))
+        .json(body)?
+        .send()
+        .await?;
     check_status(resp.status())
 }
 
 pub async fn delete_project(id: i32) -> Result<(), ApiError> {
-    let resp = Request::delete(&format!("/api/projects/{id}")).send().await?;
+    let resp = Request::delete(&format!("/api/projects/{id}"))
+        .send()
+        .await?;
     check_status(resp.status())
 }
 
 pub async fn set_code(id: i32, body: &SetCodeReq) -> Result<(), ApiError> {
-    let resp = Request::post(&format!("/api/projects/{id}/code")).json(body)?.send().await?;
+    let resp = Request::post(&format!("/api/projects/{id}/code"))
+        .json(body)?
+        .send()
+        .await?;
     check_status(resp.status())
 }
 
 pub async fn clear_code(id: i32) -> Result<(), ApiError> {
-    let resp = Request::delete(&format!("/api/projects/{id}/code")).send().await?;
+    let resp = Request::delete(&format!("/api/projects/{id}/code"))
+        .send()
+        .await?;
     check_status(resp.status())
 }
 

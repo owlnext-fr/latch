@@ -30,6 +30,7 @@ COPY --from=backend  /src/target/release/latch-cli  /app/latch-cli
 COPY --from=backend  /src/backend/config            /app/config
 COPY --from=frontend /src/frontend/dist             /app/frontend/dist
 ENV LOCO_ENV=production
+ENV LATCH_SPA_DIST=/app/frontend/dist
 EXPOSE 5150
 # auto_migrate=true dans config/production.yaml → migrations jouées au boot.
 # Pas de `migrate && start` (distroless n'a pas de shell pour chaîner).

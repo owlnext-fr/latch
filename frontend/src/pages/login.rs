@@ -39,9 +39,16 @@ pub fn login_page() -> Html {
         let set_auth = auth.set_authenticated.clone();
         let navigator = navigator.clone();
         Callback::from(move |_: MouseEvent| {
-            let body = latch_dto::LoginReq { user: (*user).clone(), pass: (*pass).clone() };
-            let (error, busy, set_auth, navigator) =
-                (error.clone(), busy.clone(), set_auth.clone(), navigator.clone());
+            let body = latch_dto::LoginReq {
+                user: (*user).clone(),
+                pass: (*pass).clone(),
+            };
+            let (error, busy, set_auth, navigator) = (
+                error.clone(),
+                busy.clone(),
+                set_auth.clone(),
+                navigator.clone(),
+            );
             busy.set(true);
             wasm_bindgen_futures::spawn_local(async move {
                 match api::client::login(&body).await {

@@ -138,8 +138,13 @@ pub fn project_form(props: &ProjectFormProps) -> Html {
                 Some((*brand).clone())
             };
             let (name_v, code_v, pin_v) = ((*name).clone(), *code_on, (*pin_val).clone());
-            let (on_saved, on_close, error, mode, busy) =
-                (on_saved.clone(), on_close.clone(), error.clone(), mode.clone(), busy.clone());
+            let (on_saved, on_close, error, mode, busy) = (
+                on_saved.clone(),
+                on_close.clone(),
+                error.clone(),
+                mode.clone(),
+                busy.clone(),
+            );
 
             // Fix B: mark busy before the async call to prevent duplicate submits.
             busy.set(true);

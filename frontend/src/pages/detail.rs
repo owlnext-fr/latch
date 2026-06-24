@@ -74,9 +74,18 @@ pub fn detail_page(props: &DetailProps) -> Html {
                 let nav = navigator.clone();
                 Callback::from(move |_| nav.push(&Route::Home))
             };
-            let open_edit = { let e = editing.clone(); Callback::from(move |_| e.set(true)) };
-            let open_deploy = { let d = deploying.clone(); Callback::from(move |_| d.set(true)) };
-            let open_delete = { let d = deleting.clone(); Callback::from(move |_| d.set(true)) };
+            let open_edit = {
+                let e = editing.clone();
+                Callback::from(move |_| e.set(true))
+            };
+            let open_deploy = {
+                let d = deploying.clone();
+                Callback::from(move |_| d.set(true))
+            };
+            let open_delete = {
+                let d = deleting.clone();
+                Callback::from(move |_| d.set(true))
+            };
 
             let access = html! {
                 <Card>

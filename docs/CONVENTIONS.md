@@ -244,7 +244,132 @@ _(à remplir : un tool qui valide `deploy_token` en premier, puis appelle le ser
 puis mappe l'erreur en tool error.)_
 
 ## Composant Yew (shadcn-rs) type
-_(à remplir : un écran admin type, side-panel + appel API JSON.)_
+
+Une **page** charge ses données via `use_state` + `use_effect_with((), ...)` (spawn_local + client API), gère trois états (`Loading` / `Ready(data)` / `Failed(msg)`), et bascule l'auth sur `ApiError::Unauthorized`.
+Un **side-panel** utilise `<SheetContent open on_close>` piloté manuellement + `use_effect_with(props.open, ...)` pour réinitialiser les champs à la (ré)ouverture.
+
+```rust
+// Extrait représentatif — pages/list.rs (page liste)
+#[function_component(ListPage)]
+pub fn list_page() -> Html {
+    let auth = use_context::<AuthContext>().unwrap();
+    let projects: UseStateHandle<Load<Vec<ProjectListItem>>> = use_state(|| Load::Loading);
+
+    {
+        let projects = projects.clone();
+        let auth = auth.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                match api::list_projects().await {
+                    Ok(items) => projects.set(Load::Ready(items)),
+                    Err(ApiError::Unauthorized) => auth.logout(),
+                    Err(e) => projects.set(Load::Failed(e.to_string())),
+                }
+            });
+        });
+    }
+
+    match (*projects).clone() {
+        Load::Loading => html! { <p>{ "Chargement…" }</p> },
+        Load::Failed(msg) => html! { <p>{ msg }</p> },
+        Load::Ready(items) => html! { /* tableau shadcn-rs */ },
+    }
+}
+
+// Extrait représentatif — panels/project_form.rs (side-panel création/édition)
+#[derive(Properties, PartialEq)]
+pub struct ProjectFormProps {
+    pub open: bool,
+    pub on_close: Callback<()>,
+    // ...
+}
+
+#[function_component(ProjectForm)]
+pub fn project_form(props: &ProjectFormProps) -> Html {
+    let name = use_state(String::new);
+
+    // Réinitialiser les champs à chaque ouverture du panel
+    {
+        let name = name.clone();
+        use_effect_with(props.open, move |open| {
+            if *open {
+                name.set(String::new());
+            }
+        });
+    }
+
+    html! {
+        // PAS <Sheet> (coquille) — piloter <SheetContent> directement
+        <SheetContent open={props.open} on_close={props.on_close.clone()}>
+            // champs du formulaire…
+        </SheetContent>
+    }
+}
+```
+
+**Règles :**
+- `use_effect_with((), ...)` pour le chargement initial (dépendance vide = une seule fois au mount).
+- `use_effect_with(props.open, ...)` pour réinitialiser les champs à la (ré)ouverture.
+- Basculer l'auth via `auth.logout()` sur `ApiError::Unauthorized` (pas de redirect manuel).
+- `<SheetContent open on_close>` directement — `<Sheet>` ignore ses props (cf. QUIRKS).
+- Ne pas oublier `use_context::<AuthContext>()` dans tout composant qui appelle l'API.
+
+## Client API SPA type
+
+Une fonction `async` par endpoint. Le pattern `gloo-net 0.6` : construire la requête, appeler `.json(&body)?` **avant** `.send().await?` (le builder est consommé), puis inspecter `resp.status()` (un 401/404 est `Ok(Response)`, pas une `Err`).
+
+```rust
+// Extrait représentatif — api/client.rs
+
+#[derive(Debug)]
+pub enum ApiError {
+    Unauthorized,
+    NotFound,
+    Server(String),
+    Network(String),
+}
+
+/// Vérifie le status HTTP et produit un ApiError approprié.
+fn check_status(status: u16) -> Result<(), ApiError> {
+    match status {
+        200..=299 => Ok(()),
+        401 => Err(ApiError::Unauthorized),
+        404 => Err(ApiError::NotFound),
+        _ => Err(ApiError::Server(format!("HTTP {status}"))),
+    }
+}
+
+pub async fn list_projects() -> Result<Vec<ProjectListItem>, ApiError> {
+    let resp = Request::get("/api/projects")
+        .send()
+        .await
+        .map_err(|e| ApiError::Network(e.to_string()))?;
+    check_status(resp.status())?;
+    resp.json::<Vec<ProjectListItem>>()
+        .await
+        .map_err(|e| ApiError::Network(e.to_string()))
+}
+
+pub async fn create_project(req: &CreateProjectReq) -> Result<ProjectDetail, ApiError> {
+    // .json(&body)? consomme le builder (retourne Result<Request>) AVANT .send()
+    let resp = Request::post("/api/projects")
+        .json(req)
+        .map_err(|e| ApiError::Network(e.to_string()))?
+        .send()
+        .await
+        .map_err(|e| ApiError::Network(e.to_string()))?;
+    check_status(resp.status())?;
+    resp.json::<ProjectDetail>()
+        .await
+        .map_err(|e| ApiError::Network(e.to_string()))
+}
+```
+
+**Règles :**
+- Une fonction `async` par endpoint — pas de client générique / wrapper magique.
+- `.json(&body)?` **avant** `.send().await?` (builder consommé à l'appel de `.json()`).
+- Toujours `check_status(resp.status())?` — un 401/404 est `Ok(Response)`, pas une `Err`.
+- `ApiError::Unauthorized` doit être propagé jusqu'au composant qui appelle `auth.logout()`.
 
 ## Test d'intégration type
 

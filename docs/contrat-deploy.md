@@ -119,6 +119,16 @@ latch/                 # workspace
 - **Rendu** : la SPA Yew est buildée par Trunk et servie en **statique** par Loco,
   avec **fallback SPA** (toute route admin inconnue → `index.html`). Les opérations
   passent par l'**API JSON** de `controllers/admin.rs`.
+- **Préfixage des routes** : l'API JSON est servie sous le préfixe **`/api/*`**
+  (re-préfixée depuis `/admin/*`) ; la SPA Yew est servie en statique sous **`/admin/*`**
+  via `nest_service("/admin", ServeDir + fallback index.html)` câblé dans `after_routes`,
+  avec un routeur client `BrowserRouter basename="/admin"` côté Yew. **`/admin`** et
+  **`/api`** coexistent sur le même binaire Loco sans conflit.
+- **Contrat de fil (DTO partagé)** : les types sérialisés échangés entre backend et frontend
+  sont définis dans la crate **`latch-dto`** (membre du workspace, cible native + wasm32),
+  source unique de vérité. Les conversions `Model → DTO` sont des **fonctions libres**
+  côté backend (`dto::to_list_item` / `dto::to_detail`) — l'orphan rule interdit
+  `From<&Model>` pour un type étranger.
 
 ## 5. Surface `/mcp` — Modèle 1
 
@@ -165,31 +175,39 @@ la dernière version active.
 ## 7. Admin — rails par page (contenu + comportement, pas layout)
 
 Le rendu fin est laissé à `shadcn-rs`. Grammaire d'interaction : **création/édition
-en side-panel** (scrim + Escape), **confirmations destructives en modale**.
+en side-panel** (scrim + Escape), **confirmations destructives en side-panels *danger***
+(remplace la mention « modale » — les confirmations irréversibles sont des SheetContent
+danger, pas des Dialog/Modal). La page détail est en **lecture seule** (toute édition passe
+par un side-panel dédié, jamais inline). Actions principales en haut à droite, actions de
+ligne et copie en **boutons-icône**. **Le slug est en lecture seule** en v1 (base éditable
+reportée au BACKLOG). L'URL publique est construite côté SPA via `window.location.origin`
+(pas de variable d'env `PUBLIC_BASE_URL` en v1 — admin et serving `/c` partagent la même
+origine).
 
 - **Login** `/admin/login` — identifiant + mot de passe (couple env), erreur sur
   mauvais credentials, rate-limit. → pose le cookie de session.
 - **Liste** `/admin` — tableau : nom, URL publique, badge code activé/libre, version
   active (n° + date), nb de versions. État vide conçu. Actions : « Nouveau projet »
-  (side-panel), clic ligne → détail, copie rapide de l'URL par ligne.
-- **Créer / éditer** — **side-panel**. Champs : nom (requis) ; slug (base éditable +
-  suffixe montré) ; **code activé par défaut**, PIN **auto-généré** (6 chiffres,
-  bouton régénérer, éditable) ; `brand_name` (optionnel, texte). Validation : nom
-  requis, PIN à 6 chiffres si code activé.
-- **Détail** `/admin/projects/<id>` — dans cet ordre :
+  (side-panel), clic ligne → détail, copie rapide de l'URL par ligne en **bouton-icône**.
+- **Créer / éditer** — **side-panel dédié** (`ProjectForm`). Champs : nom (requis) ;
+  slug (affiché en lecture seule, suffixe aléatoire — base non éditable en v1) ;
+  **code activé par défaut**, PIN **auto-généré** (6 chiffres, bouton régénérer,
+  éditable via `PinField`) ; `brand_name` (optionnel, texte). Validation : nom requis,
+  PIN à 6 chiffres si code activé.
+- **Détail** `/admin/projects/<id>` — page en **lecture seule** ; dans cet ordre :
   - *Accès public* : URL publique en lecture seule + **bouton copier** (confirmation
-    « Copié ! »). Si code activé : **PIN masqué `••••••`, œil de révélation + bouton
-    copier**. Si libre : indicateur « accès libre ».
-  - *Config* : nom (éditable), toggle code on/off + définir/changer le PIN,
-    `brand_name`. *Danger zone* : supprimer le projet (modale de confirmation,
-    vocabulaire d'irréversibilité).
+    « Copié ! »). Si code activé : **PIN masqué `••••••`** (`PinField`), œil de
+    révélation + bouton copier. Si libre : indicateur « accès libre ».
+  - *Actions* (haut à droite) : « Modifier » (ouvre le side-panel `ProjectForm` en mode
+    édition), « Déployer » (ouvre `DeployPanel`), « Supprimer » (ouvre le
+    **side-panel danger** de suppression projet).
   - *Versions* : liste (n°, date, badge « active »). Par ligne : activer (UPDATE
     transactionnel du pointeur), **prévisualiser** (route admin-only
-    `/admin/projects/<id>/versions/<n>/preview`, `no-store`, derrière la session),
-    supprimer une ancienne (confirmation).
-  - *Déploiement* : upload manuel d'un HTML → nouvelle version, case « activer
-    immédiatement ». Même `services::deploy()` que le tool MCP. État vide : ce bloc
-    passe au premier plan.
+    `/api/projects/<id>/versions/<n>/preview`, `no-store`, derrière la session),
+    supprimer via **side-panel danger** (refuse si version active → 400).
+  - *Déploiement* : upload manuel d'un HTML → `DeployPanel` (side-panel) → nouvelle
+    version, case « activer immédiatement ». Même `services::deploy()` que le tool MCP.
+    État vide : ce bloc passe au premier plan.
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
   titre cliquable + logout. Compte unique → pas de menu utilisateur.
 - **Logout** — action : détruit la session → redirige vers le login.

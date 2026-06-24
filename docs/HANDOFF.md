@@ -4,6 +4,33 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Phase 3 TERMINÉE (SPA Yew admin)
+
+### Dernière chose faite
+- Phase 3 (SPA Yew admin) complète et clôturée.
+- Livrables principaux : crate `latch-dto` (DTO partagés back+front) ; API JSON re-préfixée sous `/api/*` ; serving SPA sous `/admin` via `nest_service` (ServeDir + fallback `index.html`, `LATCH_SPA_DIST`) ; SPA Yew complète (yew-router 0.18, BrowserRouter basename="/admin", gloo-net 0.6) : AuthProvider/Protected, pages Login/List/Detail, side-panels ProjectForm/DeployPanel/DeleteProjectPanel/DeleteVersionPanel, composants CopyButton/PinField, CSS shadcn-rs vendorisée (5 fichiers patchés).
+- Parcours admin vérifié end-to-end : login → créer projet → détail + PIN → déployer → preview no-store → activer → supprimer version active refusée (400) → supprimer version inactive → cross-origin 403 → supprimer projet → logout 401. PIN absent de la liste confirmé. wasm-bindgen-test : 3 verts (T5). Backend nextest : 82 verts.
+- Contrat `docs/contrat-deploy.md` amendé (§4 : API `/api/*`, SPA `/admin`, `latch-dto` ; §7 : side-panels, page détail RO, slug RO, URL via `window.location.origin`).
+- Dockerfile + `.env.example` + `docs/ENVIRONMENT.md` documentent `LATCH_SPA_DIST`.
+
+### Trucs en suspens
+- e2e Playwright (Phase 4/6) : non exécutés (Phase 4 introduit `/c/<slug>`). Parcours vérifiés manuellement en Phase 3.
+- `deploy_version` renvoie `{id, n}` côté backend — la SPA ignores le corps de réponse (reload de la page après déploiement). Comportement acceptable en v1.
+- Minors déférés au BACKLOG : base de slug éditable, override `PUBLIC_BASE_URL`, couche de toast globale, remontée d'erreur `activate_version`, polish login.rs (clear error au re-submit).
+
+### Prochaine chose à creuser
+- **Phase 4** : serving `/c/<slug>` — deux états (libre vs. code + cookie), page de déverrouillage stylée (`brand_name`), `POST /c/<slug>/unlock` (verify_code + cookie signé HMAC), rate-limit sur unlock, tests d'intégration.
+
+### Notes pour future Claude
+- `yew-router = 0.18` (PAS 0.21) pour `yew 0.21` — numérotation divergente (cf. QUIRKS).
+- `gloo-net 0.6` : un HTTP 401/404 est `Ok(Response)` — inspecter `.status()` ; `.json(&body)?` avant `.send().await?` (cf. QUIRKS).
+- `<Sheet>` shadcn-rs est une coquille — piloter `<SheetContent open on_close>` directement (cf. QUIRKS).
+- CSS shadcn-rs patchée (`--color-card*`/`--color-popover*`) sous `frontend/styles/` (cf. QUIRKS).
+- La SPA est buildée par `trunk build` → `frontend/dist/`. Servie par Loco sous `/admin` via `nest_service`. En dev, lancer le backend depuis `backend/` avec `LATCH_SPA_DIST=../frontend/dist` (ou valeur par défaut). En prod, `LATCH_SPA_DIST=/app/frontend/dist` posé par le Dockerfile.
+- Side-panels montés en permanence : `use_effect_with(props.open, ...)` pour réinitialiser les champs (cf. QUIRKS + CONVENTIONS).
+
+---
+
 ## 2026-06-24 — Phase 2 TERMINÉE (Task 9 : vérification, env, contrat, clôture mémoire)
 
 ### Dernière chose faite
