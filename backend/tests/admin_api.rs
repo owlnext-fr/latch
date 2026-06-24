@@ -67,6 +67,34 @@ async fn login_then_access_protected_route() {
     .await;
 }
 
+/// Cross-origin sur une mutation admin doit retourner 403 (contrat §4/§9.6).
+/// `POST /admin/projects` n'est pas encore implémentée (Task 7) ; le test sera
+/// activé quand la route existera.
+#[tokio::test]
+#[serial]
+#[ignore = "needs POST /admin/projects (Task 7)"]
+async fn mutation_rejected_on_cross_origin() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    request::<App, _, _>(|request, _ctx| async move {
+        // login d'abord (sinon 401 masquerait le 403)
+        request
+            .post("/admin/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let res = request
+            .post("/admin/projects")
+            .add_header(
+                axum::http::HeaderName::from_static("origin"),
+                axum::http::HeaderValue::from_static("https://evil.example"),
+            )
+            .json(&serde_json::json!({"name": "X"}))
+            .await;
+        assert_eq!(res.status_code(), 403, "Origin étranger sur mutation ⇒ 403");
+    })
+    .await;
+}
+
 /// Le login doit être rate-limité : après plusieurs tentatives échouées,
 /// on doit recevoir un 429. Header X-Forwarded-For injecté pour garantir
 /// que SmartIpKeyExtractor peut extraire une clé stable.
