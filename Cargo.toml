@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["backend", "backend/migration", "frontend", "latch-dto"]
-# Le frontend cible wasm32 et ne compile pas pour l'hôte natif. On l'exclut des
-# membres par défaut : `cargo build`/`clippy`/`test` (sans --workspace) ne touchent
-# que le backend natif. Le frontend se build via `trunk` / `--target wasm32`.
+# Admin SPA migrée Yew → React/Vite (cf. docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md).
+# La crate Yew `frontend/` a été retirée ; le nouvel admin React vivra hors workspace Cargo
+# (app Node/Vite buildée en statique, servie sous /admin). Backend + `latch-dto` inchangés.
+members = ["backend", "backend/migration", "latch-dto"]
 default-members = ["backend", "backend/migration", "latch-dto"]
 
 [workspace.dependencies]

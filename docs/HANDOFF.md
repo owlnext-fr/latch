@@ -4,7 +4,46 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — DÉCISION : migration admin Yew → React/Vite/shadcn (pause, reprise à froid)
+
+### Dernière chose faite
+- **Décision actée** (après le polish Yew) : **migrer l'admin SPA de Yew vers React + Vite +
+  shadcn/ui + Tailwind**. Raison : `shadcn-rs` 0.1 + outillage wasm = trop de friction pour
+  peu de gain ; écosystème JS mature = vélocité + qualité produit ; cohérent avec Fumadocs prévu.
+  **Le backend reste Rust.** Discussion complète + périmètre + recyclage + questions ouvertes :
+  **`docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`** (à lire en premier).
+- **Fait cette session** : branche **`feat/admin-react`** créée ; crate Yew **`frontend/` supprimée**
+  (`git rm`), retirée des `members` du workspace racine. Backend compile, **86 tests verts**.
+  Le backend Phase 3 (API `/api/*`, serving `/admin`, garde Origin, session, `latch-dto`, tests
+  `spa_serving`/`security_invariants`) est **gardé** (agnostique du front).
+- **Branche Yew `feat/phase-3-spa-yew-admin`** conservée comme référence (conserve `frontend/`
+  Yew + locales + composants). `main` intouché.
+
+### Trucs en suspens (volontairement, pour la session neuve)
+- **CI/Docker rouges attendus** sur `feat/admin-react` : Dockerfile stage `trunk`, job CI
+  `frontend` (wasm), `web/mod.rs` défaut `../frontend/dist`, `.env.example`/`.gitignore` — à
+  retravailler vers un pipeline **node/pnpm (vite build)** PENDANT la migration (cf. doc §6).
+- BOOTSTRAP/contrat §4 (stack/rendu) à mettre à jour une fois la stack React tranchée.
+
+### Prochaine chose à creuser (SESSION NEUVE, contexte vide)
+- Brainstormer la **base technique React** (routeur, types TS depuis `latch-dto`, data layer,
+  i18n lib, tests/MSW, pipeline build, dossier) — cf. doc §5. Puis spec → plan → impl.
+- **Recycler** : contrat §7 (UX exacte), catalogue i18n FR/EN (depuis la branche Yew), endpoints
+  `/api/*`, shapes `latch-dto`, thème oklch (se colle direct dans shadcn — plus de conversion),
+  décisions UX du polish (badges, toasts, PIN/slug disabled, dropzone, a11y, sélecteur langue).
+- **Fumadocs** (landing + doc GH Pages) = chantier séparé, après l'admin React.
+
+### Notes pour future Claude
+- Ne PAS repartir de `main` (n'a pas le backend Phase 3 : ni `/api`, ni serving SPA, ni `latch-dto`).
+  Partir de `feat/admin-react` (backend Phase 3 + thème, sans le front Yew).
+- Le serving Loco sert n'importe quel dist statique sous `/admin` (`spa_serving.rs` = faux dist).
+  Le React Vite : `base: '/admin/'` + basename routeur ; cookies envoyés (same-origin), pas de token.
+
+---
+
 ## 2026-06-25 — Polish UX + i18n SPA TERMINÉ (punch-list post-test-live, 10 tâches SDD)
+> ⚠️ Réalisé en **Yew** — désormais **superseed** par la migration React (voir entrée ci-dessus).
+> Reste la **référence comportementale/UX** à porter en React (contrat §7 + catalogue i18n).
 
 ### Dernière chose faite
 - Chantier **polish UX + i18n** clos sur `feat/phase-3-spa-yew-admin` (spec

@@ -86,7 +86,14 @@ latch/                 # workspace
 > repointe `projects.active_version_id`, le tout dans une transaction. Jamais un
 > projet qui pointe vers une version à moitié écrite.
 
-## 4. Surface `/admin` — session cookie, API JSON + SPA Yew
+## 4. Surface `/admin` — session cookie, API JSON + SPA
+
+> **⚠️ Migration en cours (2026-06-25)** : la SPA admin passe de **Yew** à **React/Vite/shadcn-ui**.
+> Tout ce qui suit (auth cookie, API `/api/*`, serving statique sous `/admin`, garde Origin,
+> invariants sécu) **reste valable** — c'est agnostique du framework front. Seul le **rendu**
+> (Yew → React) change. Détail : `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
+> Les mentions « Yew / shadcn-rs / Trunk / `latch-dto` partagé front » ci-dessous sont à relire
+> à cette aune (le partage de DTO Rust front↔back disparaît : côté React, types TS).
 
 - **Auth = cookie de session same-origin** (l'équivalent du cookie Symfony), montée
   via `axum-session` dans `after_routes`, store table SQLite. **Pas** le système

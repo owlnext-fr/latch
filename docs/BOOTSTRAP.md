@@ -9,8 +9,11 @@
   `libsqlite3-sys` en feature **`bundled`** → le binaire embarque SQLite, l'image
   runtime n'a aucune lib système à fournir.
 - **MCP** : `rmcp` (transport `transport-streamable-http-server`), **≥ 1.4.0**.
-- **Frontend** : crate Yew (`latch-ui`) + `shadcn-rs`, buildée par **Trunk**
-  (cible `wasm32-unknown-unknown`), servie en statique par Loco.
+- **Frontend** : ⚠️ **migration en cours Yew → React/Vite/shadcn-ui/Tailwind** (2026-06-25 ;
+  crate Yew `frontend/` retirée, stack React à figer en session neuve — cf.
+  `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`). Reste servi en
+  **statique** par Loco sous `/admin` (mécanisme inchangé). _(Ancien : crate Yew `latch-ui` +
+  `shadcn-rs`, build Trunk wasm.)_
 - **Cookie signé** (déverrouillage client) : `axum-extra` (`SignedCookieJar`) ou
   `cookie` — résoudre l'API exacte via Context7.
 - Pas de hachage de mot de passe : le PIN est récupérable (contrat §3), l'`ADMIN_PASS`

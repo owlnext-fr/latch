@@ -53,9 +53,15 @@ ni `use loco_rs` dans `src/services/`.
 401 sans session, deploy transactionnel, switch, **test-invariant de sécu** (pas de
 hash en réponse, pas de PIN en liste).
 
-## Phase 3 — SPA Yew admin
+## Phase 3 — SPA admin
 
-Implémenter les rails du contrat §7 avec `shadcn-rs`.
+> **⚠️ 2026-06-25** : livrée en **Yew** (Phase 3 + polish UX/i18n complets), puis **décision de
+> migrer vers React/Vite/shadcn-ui** (friction `shadcn-rs` 0.1 + wasm). Crate Yew retirée ;
+> migration React = chantier en cours sur `feat/admin-react`. Le **comportement (contrat §7)
+> ne change pas** — seul le rendu. Voir `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
+> **Item futur** : Fumadocs (mini-landing + doc complète, GH Pages) — chantier séparé.
+
+Implémenter les rails du contrat §7 (à l'origine avec `shadcn-rs`, désormais shadcn/ui React).
 - Login, liste, détail (accès / config / versions / déploiement), side-panel
   création/édition, modales de confirmation destructive, copie URL + PIN, prévisualisation.
 - Build Trunk servi en statique par Loco + fallback SPA.
