@@ -431,3 +431,16 @@ async fn detail_returns_404_for_unknown_id() {
     })
     .await;
 }
+
+/// GET /admin/projects/{id}/versions/{n}/preview sans session doit renvoyer 401.
+/// `AdminAuth` rejette avant toute logique handler → pas besoin de créer un projet.
+/// Invariant de sécurité : le HTML ne doit jamais être servi à un appelant non authentifié.
+#[tokio::test]
+#[serial]
+async fn preview_requires_auth() {
+    request::<App, _, _>(|request, _ctx| async move {
+        let res = request.get("/admin/projects/1/versions/1/preview").await;
+        assert_eq!(res.status_code(), 401, "preview sans session doit être 401");
+    })
+    .await;
+}
