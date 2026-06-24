@@ -30,8 +30,11 @@
 - **Lancer le serveur depuis `backend/`** (Loco lit `./config` au CWD) — cf. QUIRKS.
 - `default-members = [backend, backend/migration]` : le frontend wasm est exclu des
   commandes natives (sinon `cargo build` tente de le compiler pour l'hôte) — cf. QUIRKS.
-- **CI verte sur `main`** (run confirmé) : fmt/clippy, tests, build SPA, **cargo-deny**
-  (corrigé + désormais **bloquant**), docker build/push GHCR. Tous SUCCESS.
+- **CI verte sur `main`** : pipeline **prouvé intégralement vert** sur le commit `c1b2126`
+  (fmt/clippy, tests, build SPA, **cargo-deny** corrigé + désormais **bloquant**, docker
+  build/push GHCR — tous SUCCESS). Le run du commit de versioning `f9c0361` n'a **pas été
+  attendu** (abandonné sur demande) ; changement à faible risque (config `metadata-action`,
+  YAML validé localement). À jeter un œil au prochain passage si besoin.
 - **Images versionnées** (`docker/metadata-action`) : pour publier une release, **pousser
   un tag git `vX.Y.Z`** → produit `X.Y.Z`/`X.Y`/`latest`/`sha-`. Un push `main` ne produit
   que `main`+`sha-`. Déploiement pin via `LATCH_IMAGE_TAG` (`.env`).
