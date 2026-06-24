@@ -3,6 +3,18 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## cargo-deny = liste blanche stricte (licences) + scope « unmaintained » (2026-06-24)
+**Symptôme** : job CI `cargo-deny` rouge sur des licences pourtant permissives (`0BSD`,
+`CDLA-Permissive-2.0`) et sur des crates « unmaintained » (bincode, fxhash, proc-macro-
+error). **Cause** : cargo-deny **rejette toute licence absente de `allow = [...]`** (modèle
+liste blanche, pas liste noire) ; et par défaut il signale les `unmaintained` même
+transitifs. **Workaround** (`deny.toml`) : ajouter toute licence permissive *réellement
+rencontrée* à `allow` (ex. `0BSD` ← adler, `CDLA-Permissive-2.0` ← webpki-roots) ;
+`unmaintained = "workspace"` pour ne contrôler que nos deps directes. **Aussi** : tout
+crate du workspace doit déclarer `license = "MIT OR Apache-2.0"` (sinon « unlicensed ») —
+piège classique sur le sous-crate `migration`. Vérif locale : binaire cargo-deny prébuilt
+(même version que l'action) → `cargo-deny check licenses advisories`.
+
 ## Loco lit `config/` depuis le CWD → lancer le serveur depuis `backend/` (2026-06-24)
 **Symptôme** : `cargo loco start` depuis la racine du repo → `Error: no configuration
 file found in folder: config`. **Cause** : Loco résout `./config/<env>.yaml` relativement

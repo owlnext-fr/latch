@@ -55,8 +55,6 @@ jobs:
   supply-chain:
     name: cargo-deny
     runs-on: ubuntu-latest
-    # Non bloquant tant que le squelette se stabilise (Phase 0). À durcir en Phase 6.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
