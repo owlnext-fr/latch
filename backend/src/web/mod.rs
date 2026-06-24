@@ -22,9 +22,10 @@ pub fn storage_from_ctx(_ctx: &AppContext) -> Arc<dyn Storage> {
 /// Construit le `SessionStore` : pool SQLite dérivé de la connexion Loco, table
 /// `sessions` (déjà migrée), cookie signé + flags adaptés à l'environnement.
 ///
-/// En production, la variable `SESSION_SECRET` doit être définie (≥ 32 bytes).
+/// En production, la variable `SESSION_SECRET` doit être définie (≥ 64 bytes).
 /// En dev, une clé de secours déterministe est utilisée (insécurisée, suffisante pour
-/// le développement local uniquement).
+/// le développement local uniquement). Un `SESSION_SECRET` trop court retourne une
+/// erreur claire au lieu de paniquer.
 pub async fn build_session_store(
     ctx: &AppContext,
 ) -> Result<axum_session::SessionStore<SessionPool>> {
@@ -42,8 +43,14 @@ pub async fn build_session_store(
         // En prod, SESSION_SECRET doit être défini avec ≥ 64 bytes d'entropie.
         "dev-only-insecure-session-secret-please-override-in-production!!".to_string()
     });
-    // `Key::from` exige ≥ 64 bytes ; panique sinon. La clé dev ci-dessus fait 64 chars.
-    // En prod, SESSION_SECRET doit faire ≥ 64 bytes.
+    // Garde explicite : `Key::from` exige ≥ 64 bytes et panique sinon.
+    // On renvoie une erreur claire plutôt qu'un panic au démarrage.
+    if secret.len() < 64 {
+        return Err(loco_rs::Error::Message(format!(
+            "SESSION_SECRET trop court : {} octets (minimum 64)",
+            secret.len()
+        )));
+    }
     let key = axum_session::Key::from(secret.as_bytes());
 
     let config = axum_session::SessionConfig::default()
