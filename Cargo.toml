@@ -2,9 +2,10 @@
 resolver = "2"
 # Admin SPA migrée Yew → React/Vite (cf. docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md).
 # La crate Yew `frontend/` a été retirée ; le nouvel admin React vivra hors workspace Cargo
-# (app Node/Vite buildée en statique, servie sous /admin). Backend + `latch-dto` inchangés.
-members = ["backend", "backend/migration", "latch-dto"]
-default-members = ["backend", "backend/migration", "latch-dto"]
+# (app Node/Vite buildée en statique, servie sous /admin).
+# `latch-dto` a été inlinée dans `backend/src/dto/` (plus de crate partagée).
+members = ["backend", "backend/migration"]
+default-members = ["backend", "backend/migration"]
 
 [workspace.dependencies]
 loco-rs = { version = "0.16" }
