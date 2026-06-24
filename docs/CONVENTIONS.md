@@ -55,6 +55,67 @@ impl ProjectsService {
 _(à remplir : un handler JSON qui extrait, appelle un service, mappe `CoreError` →
 status + JSON, avec la vérif `Origin` sur mutation.)_
 
+## Extracteur d'auth axum (FromRequestParts, axum 0.8)
+
+Pattern `AdminAuth` — pas de `#[async_trait]`, fn async native :
+
+```rust
+pub struct AdminAuth;
+
+impl<S> FromRequestParts<S> for AdminAuth
+where
+    S: Send + Sync,
+{
+    type Rejection = loco_rs::Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> std::result::Result<Self, Self::Rejection> {
+        let session = AdminSession::from_request_parts(parts, state)
+            .await
+            .map_err(|_| loco_rs::Error::Unauthorized("no session".to_string()))?;
+        if session.get::<bool>(ADMIN_FLAG).unwrap_or(false) {
+            Ok(AdminAuth)
+        } else {
+            Err(loco_rs::Error::Unauthorized("not authenticated".to_string()))
+        }
+    }
+}
+```
+
+**Règles :**
+- Pas de `#[async_trait]` en axum 0.8 — async fn in trait est native.
+- `type Rejection = loco_rs::Error` — `loco_rs::Error` implémente `IntoResponse`.
+- `Session<T>` a `Rejection = (StatusCode, &'static str)` → mapper avec `.map_err(|_| loco_rs::Error::Unauthorized(...))`.
+
+## Rate-limit tower_governor (layer par route)
+
+```rust
+// Dans routes() — inline pour éviter l'annotation de type verbeuse
+let login_governor = {
+    let config = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(2)
+            .burst_size(5)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .expect("governor config valide"),
+    );
+    GovernorLayer { config }  // struct literal, pas ::new()
+};
+
+Routes::new()
+    .prefix("/admin")
+    .add("/login", post(login).layer(login_governor))
+```
+
+**Règles :**
+- `GovernorLayer { config: Arc::new(config) }` (struct literal, le champ `config` est public).
+- `.finish()` retourne `Option<_>` → `.expect(...)` acceptable en init de boot.
+- `SmartIpKeyExtractor` lit `X-Forwarded-For` / `X-Real-IP` avant l'IP peer.
+- Dans les tests, injecter `X-Forwarded-For: 1.2.3.4` pour garantir l'extraction de clé.
+
 ## Câblage d'un layer axum dans after_routes (Phase 2)
 
 `after_routes` est le hook Loco pour enrichir le routeur axum avant le démarrage.

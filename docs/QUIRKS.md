@@ -90,6 +90,22 @@ SQLite **n'enforce pas** les contraintes `FOREIGN KEY` par défaut. Le `ON DELET
 ## `SESSION_SECRET` — minimum 64 bytes en prod (2026-06-24)
 `Key::from(bytes)` exige ≥ 64 bytes (signing 32 + encryption 32). En dessous, panique au démarrage. En dev, une clé de 64 chars est codée en dur dans `build_session_store`. En prod, `SESSION_SECRET` doit faire ≥ 64 bytes d'entropie (clé aléatoire, pas un mot de passe).
 
+## tower_governor — GovernorLayer construit avec struct literal, pas ::new() (2026-06-24)
+`GovernorLayer` expose un champ public `config: Arc<GovernorConfig<K, M>>` et se construit
+avec `GovernorLayer { config: Arc::new(config) }`. Il n'y a pas de méthode `::new()` sur
+`GovernorLayer`. De plus, l'annotation explicite du type de retour est verbeuse car
+`NoOpMiddleware` vient de la sous-dépendance `governor` (non réexportée dans la crate root
+de `tower_governor`) — construire inline dans `routes()` pour éviter ce problème.
+
+## tower_governor — finish() retourne Option, pas Result (2026-06-24)
+`GovernorConfigBuilder::finish()` retourne `Option<GovernorConfig<K, M>>` (None si burst_size=0
+ou period=0). Utiliser `.expect("governor config valide")` (acceptable en init de boot).
+
+## tower_governor — Session::from_request_parts rejection type (2026-06-24)
+`axum_session::Session<T>` implémente `FromRequestParts` avec `Rejection = (http::StatusCode, &'static str)`.
+Pour l'utiliser dans un extracteur custom dont le `Rejection = loco_rs::Error`, mapper avec
+`.map_err(|_| loco_rs::Error::Unauthorized("..."))`.
+
 ## Page de déverrouillage en 200, pas 401
 `/c/<slug>` protégé sans cookie rend la page-code en **HTTP 200** (formulaire
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on

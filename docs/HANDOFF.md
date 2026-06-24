@@ -4,6 +4,53 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 4 Phase 2 : auth admin (login/logout, AdminAuth, rate-limit)
+
+### Dernière chose faite
+- `controllers/auth.rs` créé : `login`/`logout` handlers + extracteur `AdminAuth` (FromRequestParts sans async_trait, retourne 401 si session sans flag admin).
+- Rate-limit `tower_governor 0.7` sur `/admin/login` uniquement via `.add("/login", post(login).layer(GovernorLayer { config }))` — type de retour inline pour éviter l'annotation verbeuse de `NoOpMiddleware`.
+- `controllers/mod.rs` mis à jour : déclare `pub mod auth`.
+- `app.rs` mis à jour : `.add_route(controllers::auth::routes())`.
+- 3 tests actifs verts (boots, login_rejects_bad_credentials, login_is_rate_limited), 2 ignorés avec raison explicite (attendent Task 6 `/admin/projects`). Suite complète 43/43 passés, 2 ignorés. fmt + clippy clean. Commit en cours.
+
+### Trucs en suspens
+- Task 6 (controllers/admin.rs : CRUD projets JSON) est la prochaine étape.
+- Les 2 tests ignorés (`protected_route_is_401_without_session`, `login_then_access_protected_route`) seront activés après Task 6.
+
+### Prochaine chose à creuser
+- Task 5 ou Task 6 selon l'ordre du plan : `controllers/admin.rs` — handlers GET/POST/PATCH/DELETE projets + deploy, protected par `AdminAuth`.
+
+### Notes pour future Claude
+- `GovernorLayer` se construit avec `GovernorLayer { config: Arc::new(...) }` (pas de `::new()`), le champ `config` est `pub`.
+- `GovernorConfigBuilder::finish()` retourne `Option<GovernorConfig<K, M>>`, pas `Result` — utiliser `.expect(...)`.
+- `Session<T>::from_request_parts` a un `Rejection = (StatusCode, &'static str)` → mapper avec `.map_err(|_| loco_rs::Error::Unauthorized(...))`.
+- Annotation de type `GovernorLayer<SmartIpKeyExtractor, governor::middleware::NoOpMiddleware>` échoue car `governor` (sous-dep) n'est pas dans la crate root — construire inline dans `routes()` ou éviter l'annotation.
+- `secure_compare` compare TOUJOURS les deux champs (user et pass) avant de décider, pour ne pas révéler quel champ a échoué (contrat §9).
+
+---
+
+## 2026-06-24 — Task 3 Phase 2 : mapping CoreError→HTTP + DTOs admin
+
+### Dernière chose faite
+- `controllers/error.rs` créé : `into_response(CoreError) → loco_rs::Error` (NotFound→404, Validation→400, Db/Io→500).
+- `controllers/dto.rs` créé : `ProjectListItem` (sans PIN), `ProjectDetail` (avec PIN via `from_model`), `VersionItem`, `CreateProjectReq`, `UpdateProjectReq`, `SetCodeReq`, `DeployReq`.
+- `controllers/mod.rs` mis à jour : déclare `dto` + `error` + `home` (pas encore `admin`/`auth`/`middleware`).
+- 4 nouveaux tests verts (2 PIN-scoping, 2 error-mapping) ; suite totale 39/39. fmt + clippy clean. Commit `c61a817`.
+
+### Trucs en suspens
+- Task 4 (controllers/admin.rs : CRUD projets JSON) est la prochaine étape.
+- `admin`/`auth`/`middleware` modules déclarés dans `mod.rs` quand créés par Tasks 4/5/6.
+
+### Prochaine chose à creuser
+- Task 4 : `controllers/admin.rs` — handlers GET/POST/PATCH/DELETE projets + deploy, utilise `ProjectListItem`/`ProjectDetail`/`DeployReq` etc., guard origin.
+
+### Notes pour future Claude
+- `loco_rs::Error` variantes confirmées via source 0.16.4 : `NotFound` (404), `BadRequest(String)` (400), `Message(String)` (500), `InternalServerError` (500 sans message).
+- `ProjectListItem` n'a structurellement PAS de champ `pin` — invariant §9.2 renforcé par la structure de type, pas juste par un `#[serde(skip)]`.
+- Déclarer dans `mod.rs` seulement les modules dont les fichiers existent (évite échec de compilation entre tâches).
+
+---
+
 ## 2026-06-24 — Task 2 Phase 2 : câblage axum-session (after_routes + helpers web)
 
 ### Dernière chose faite
