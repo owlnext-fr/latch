@@ -23,7 +23,7 @@ async fn login_rejects_bad_credentials() {
     std::env::set_var("ADMIN_PASS", "s3cret");
     request::<App, _, _>(|request, _ctx| async move {
         let res = request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "wrong"}))
             .await;
         assert_eq!(res.status_code(), 401);
@@ -36,7 +36,7 @@ async fn login_rejects_bad_credentials() {
 #[serial]
 async fn protected_route_is_401_without_session() {
     request::<App, _, _>(|request, _ctx| async move {
-        let res = request.get("/admin/projects").await;
+        let res = request.get("/api/projects").await;
         assert_eq!(res.status_code(), 401);
     })
     .await;
@@ -52,12 +52,12 @@ async fn login_then_access_protected_route() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         let login = request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         assert_eq!(login.status_code(), 200);
         // axum-test propage le cookie de session grâce à save_cookies(true).
-        let listed = request.get("/admin/projects").await;
+        let listed = request.get("/api/projects").await;
         assert_eq!(listed.status_code(), 200);
     })
     .await;
@@ -75,11 +75,11 @@ async fn mutation_rejected_on_cross_origin() {
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         // login d'abord (sinon 401 masquerait le 403)
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let res = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header(
                 axum::http::HeaderName::from_static("origin"),
                 axum::http::HeaderValue::from_static("https://evil.example"),
@@ -103,7 +103,7 @@ async fn login_is_rate_limited() {
         let mut saw_429 = false;
         for _ in 0..20 {
             let res = request
-                .post("/admin/login")
+                .post("/api/login")
                 .add_header(
                     axum::http::HeaderName::from_static("x-forwarded-for"),
                     axum::http::HeaderValue::from_static("1.2.3.4"),
@@ -134,13 +134,13 @@ async fn logout_rejected_on_cross_origin() {
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         // Login préalable pour avoir une session valide.
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
 
         // Cross-origin → 403.
         let cross = request
-            .post("/admin/logout")
+            .post("/api/logout")
             .add_header(
                 axum::http::HeaderName::from_static("origin"),
                 axum::http::HeaderValue::from_static("https://evil.example"),
@@ -150,7 +150,7 @@ async fn logout_rejected_on_cross_origin() {
 
         // Same-origin → 200 (la garde laisse passer).
         let same = request
-            .post("/admin/logout")
+            .post("/api/logout")
             .add_header(
                 axum::http::HeaderName::from_static("origin"),
                 axum::http::HeaderValue::from_static("http://127.0.0.1"),
@@ -171,10 +171,10 @@ async fn list_projects_returns_empty_array_when_none() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
-        let res = request.get("/admin/projects").await;
+        let res = request.get("/api/projects").await;
         assert_eq!(res.status_code(), 200);
         assert_eq!(res.json::<serde_json::Value>(), serde_json::json!([]));
     })
@@ -191,28 +191,28 @@ async fn create_then_get_and_delete_project() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
 
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
         assert_eq!(created.status_code(), 200);
         let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
 
-        let got = request.get(&format!("/admin/projects/{id}")).await;
+        let got = request.get(&format!("/api/projects/{id}")).await;
         assert_eq!(got.status_code(), 200);
 
         let deleted = request
-            .delete(&format!("/admin/projects/{id}"))
+            .delete(&format!("/api/projects/{id}"))
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(deleted.status_code(), 200);
 
-        let gone = request.get(&format!("/admin/projects/{id}")).await;
+        let gone = request.get(&format!("/api/projects/{id}")).await;
         assert_eq!(gone.status_code(), 404);
     })
     .await;
@@ -227,18 +227,18 @@ async fn set_and_clear_code_via_api() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
         let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
 
         let set = request
-            .post(&format!("/admin/projects/{id}/code"))
+            .post(&format!("/api/projects/{id}/code"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"pin": "135790"}))
             .await;
@@ -246,7 +246,7 @@ async fn set_and_clear_code_via_api() {
         assert!(set.text().contains("135790"));
 
         let clear = request
-            .delete(&format!("/admin/projects/{id}/code"))
+            .delete(&format!("/api/projects/{id}/code"))
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(clear.status_code(), 200);
@@ -263,11 +263,11 @@ async fn update_project_changes_name_and_rejects_empty() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
@@ -275,7 +275,7 @@ async fn update_project_changes_name_and_rejects_empty() {
 
         // Renommage valide.
         let updated = request
-            .put(&format!("/admin/projects/{id}"))
+            .put(&format!("/api/projects/{id}"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Renommé"}))
             .await;
@@ -289,7 +289,7 @@ async fn update_project_changes_name_and_rejects_empty() {
 
         // Nom vide (whitespace) → 400.
         let bad = request
-            .put(&format!("/admin/projects/{id}"))
+            .put(&format!("/api/projects/{id}"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "   "}))
             .await;
@@ -311,18 +311,18 @@ async fn deploy_creates_version_and_preview_serves_html() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
         let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
 
         let deployed = request
-            .post(&format!("/admin/projects/{id}/deploy"))
+            .post(&format!("/api/projects/{id}/deploy"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"html": "<h1>v1</h1>", "activate": true}))
             .await;
@@ -331,7 +331,7 @@ async fn deploy_creates_version_and_preview_serves_html() {
         assert_eq!(v["n"], 1);
 
         let preview = request
-            .get(&format!("/admin/projects/{id}/versions/1/preview"))
+            .get(&format!("/api/projects/{id}/versions/1/preview"))
             .await;
         assert_eq!(preview.status_code(), 200);
         assert!(preview.text().contains("<h1>v1</h1>"));
@@ -354,11 +354,11 @@ async fn activate_switches_active_version() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
@@ -366,25 +366,25 @@ async fn activate_switches_active_version() {
 
         // Déployer v1 active, puis v2 inactive.
         request
-            .post(&format!("/admin/projects/{id}/deploy"))
+            .post(&format!("/api/projects/{id}/deploy"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"html": "a", "activate": true}))
             .await;
         request
-            .post(&format!("/admin/projects/{id}/deploy"))
+            .post(&format!("/api/projects/{id}/deploy"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"html": "b", "activate": false}))
             .await;
 
         // Basculer vers v2.
         let act = request
-            .post(&format!("/admin/projects/{id}/versions/2/activate"))
+            .post(&format!("/api/projects/{id}/versions/2/activate"))
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(act.status_code(), 200);
 
         // Vérifier que le détail reflète le changement de pointeur.
-        let detail = request.get(&format!("/admin/projects/{id}")).await;
+        let detail = request.get(&format!("/api/projects/{id}")).await;
         let v = detail.json::<serde_json::Value>();
         let active_id = v["active_version_id"].as_i64().unwrap();
         let v2 = v["versions"]
@@ -411,11 +411,11 @@ async fn delete_version_refuses_active_and_removes_inactive() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
             .await;
@@ -423,26 +423,26 @@ async fn delete_version_refuses_active_and_removes_inactive() {
 
         // v1 active, v2 inactive.
         request
-            .post(&format!("/admin/projects/{id}/deploy"))
+            .post(&format!("/api/projects/{id}/deploy"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"html": "a", "activate": true}))
             .await;
         request
-            .post(&format!("/admin/projects/{id}/deploy"))
+            .post(&format!("/api/projects/{id}/deploy"))
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"html": "b", "activate": false}))
             .await;
 
         // Refus de supprimer la version active (v1).
         let refused = request
-            .delete(&format!("/admin/projects/{id}/versions/1"))
+            .delete(&format!("/api/projects/{id}/versions/1"))
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(refused.status_code(), 400);
 
         // Suppression de la version inactive (v2) : 200.
         let deleted = request
-            .delete(&format!("/admin/projects/{id}/versions/2"))
+            .delete(&format!("/api/projects/{id}/versions/2"))
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(deleted.status_code(), 200);
@@ -461,10 +461,10 @@ async fn detail_returns_404_for_unknown_id() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
-        let res = request.get("/admin/projects/999999").await;
+        let res = request.get("/api/projects/999999").await;
         assert_eq!(res.status_code(), 404);
     })
     .await;
@@ -477,7 +477,7 @@ async fn detail_returns_404_for_unknown_id() {
 #[serial]
 async fn preview_requires_auth() {
     request::<App, _, _>(|request, _ctx| async move {
-        let res = request.get("/admin/projects/1/versions/1/preview").await;
+        let res = request.get("/api/projects/1/versions/1/preview").await;
         assert_eq!(res.status_code(), 401, "preview sans session doit être 401");
     })
     .await;

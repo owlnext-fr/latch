@@ -7,22 +7,16 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum::middleware::from_fn;
 use loco_rs::prelude::*;
-use serde::Deserialize;
 use tower_governor::{
     governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor, GovernorLayer,
 };
 
 use crate::services::security::secure_compare;
 use crate::web::AdminSession;
+use latch_dto::LoginReq;
 
 /// Clé de session portant le flag d'authentification admin.
 pub const ADMIN_FLAG: &str = "admin";
-
-#[derive(Debug, Deserialize)]
-pub struct LoginReq {
-    pub user: String,
-    pub pass: String,
-}
 
 /// Extracteur axum : présent ⇒ session authentifiée (flag `admin == true`). Sinon 401.
 /// Consommé par tous les handlers de `admin.rs`.
@@ -98,7 +92,7 @@ pub fn routes() -> Routes {
     };
 
     Routes::new()
-        .prefix("/admin")
+        .prefix("/api")
         .add("/login", post(login).layer(login_governor))
         // Garde same-origin sur logout (CSRF, contrat §4/§9.6). Pas d'AdminAuth :
         // logout reste accessible sans session valide (idempotent/sans effet), mais

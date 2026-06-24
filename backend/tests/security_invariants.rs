@@ -12,16 +12,16 @@ async fn pin_never_appears_in_project_list() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         // Crée un projet protégé via l'API admin (Task 7).
         request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": true, "pin": "424242"}))
             .await;
-        let list = request.get("/admin/projects").await;
+        let list = request.get("/api/projects").await;
         let body = list.text();
         assert!(
             !body.contains("424242"),
@@ -45,16 +45,16 @@ async fn pin_appears_on_project_detail() {
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
-            .post("/admin/login")
+            .post("/api/login")
             .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
             .await;
         let created = request
-            .post("/admin/projects")
+            .post("/api/projects")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": true, "pin": "424242"}))
             .await;
         let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
-        let detail = request.get(&format!("/admin/projects/{id}")).await;
+        let detail = request.get(&format!("/api/projects/{id}")).await;
         assert!(
             detail.text().contains("424242"),
             "le détail doit exposer le PIN"

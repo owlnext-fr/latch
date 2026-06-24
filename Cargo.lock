@@ -2583,6 +2583,7 @@ dependencies = [
  "axum_session_sqlx",
  "chrono",
  "insta",
+ "latch-dto",
  "libsqlite3-sys",
  "loco-rs",
  "migration",
@@ -2604,6 +2605,14 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "validator",
+]
+
+[[package]]
+name = "latch-dto"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
