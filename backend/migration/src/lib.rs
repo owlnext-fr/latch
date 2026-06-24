@@ -4,6 +4,7 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20260624_000001_create_projects;
 mod m20260624_000002_create_versions;
+mod m20260624_000003_create_sessions;
 
 pub struct Migrator;
 
@@ -13,6 +14,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20260624_000001_create_projects::Migration),
             Box::new(m20260624_000002_create_versions::Migration),
+            Box::new(m20260624_000003_create_sessions::Migration),
             // inject-above (do not remove this comment)
         ]
     }

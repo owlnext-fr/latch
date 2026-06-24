@@ -18,6 +18,20 @@ mod migration_tests {
     use sea_orm::{ActiveModelTrait, Set};
 
     #[tokio::test]
+    async fn sessions_table_has_axum_session_schema() {
+        use sea_orm::{ConnectionTrait, Statement};
+        let db = test_db().await;
+        // INSERT au schéma axum-session : id TEXT PK, expires INTEGER NULL, session TEXT NOT NULL.
+        let stmt = Statement::from_string(
+            db.get_database_backend(),
+            "INSERT INTO sessions (id, expires, session) VALUES ('abc', NULL, '{}')".to_string(),
+        );
+        db.execute(stmt)
+            .await
+            .expect("insert dans sessions doit réussir");
+    }
+
+    #[tokio::test]
     async fn unique_project_n_is_enforced() {
         let db = test_db().await;
 
