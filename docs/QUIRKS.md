@@ -3,6 +3,21 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Tests d'intégration Loco : DB de test **in-memory**, sinon course sous nextest (2026-06-24)
+**Symptôme** : `cargo test -p latch` vert en local, mais `cargo nextest run` (CI) rouge sur
+les tests qui bootent l'app (`request::<App>`) avec `UNIQUE constraint failed:
+seaql_migrations.version` ou `no such table: seaql_migrations` (panic `loco-rs .../testing/request.rs:360`).
+**Cause** : `cargo test` exécute tous les tests **dans un seul process** (threads), donc `#[serial]`
+les sérialise. `cargo nextest` lance **un process par test** : `#[serial]` (lock intra-process)
+**ne sérialise PAS** entre process. Avec une DB de test sur **fichier partagé** (`latch_test.sqlite`)
+et `auto_migrate + dangerously_recreate/truncate`, plusieurs process bootent en parallèle et
+drop/recréent le schéma en même temps → course sur `seaql_migrations`.
+**Workaround** : `config/test.yaml` → `uri: sqlite::memory:` (chaque process a sa base isolée ;
+`max_connections=1` reste load-bearing). **La valeur DOIT être quotée** (`'{{ ... }}'`) car
+`sqlite::memory:` finit par `:` que YAML lirait comme un mapping → `mapping values are not allowed`.
+**Règle de vérif** : valider en local avec **`cargo nextest run`** (même runner que la CI),
+pas `cargo test` — sinon ce type de course inter-process passe inaperçu.
+
 ## Loco tests — Host header `127.0.0.1:PORT`, pas `localhost` (2026-06-24)
 Le harness Loco 0.16 utilise `routes.into_make_service_with_connect_info::<SocketAddr>()`, ce qui force axum-test à utiliser un vrai serveur TCP (pas mock). Dans ce mode, hyper injecte `Host: 127.0.0.1:PORT` (port aléatoire, ex. 8000). Les tests qui envoient `Origin: http://localhost` reçoivent 403 car `127.0.0.1 != localhost` dans `same_host`. **Workaround** : envoyer `Origin: http://127.0.0.1` dans les tests de mutation. `same_host("127.0.0.1:PORT", "127.0.0.1")` passe car hôtes égaux et l'Origin n'a pas de port explicite. Cf. contrat §4/§9.6 et le test `mutation_rejected_on_cross_origin` qui envoie délibérément `Origin: https://evil.example` pour valider le 403.
 

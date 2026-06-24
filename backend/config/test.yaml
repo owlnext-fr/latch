@@ -32,8 +32,12 @@ server:
 
 # Database Configuration
 database:
-  # Database connection URI
-  uri: {{ get_env(name="DATABASE_URL", default="sqlite://latch_test.sqlite?mode=rwc") }}
+  # Database connection URI. In-memory par defaut : chaque process de test
+  # (cargo nextest = un process/test) a sa propre base isolee, ce qui evite la
+  # course inter-process sur un fichier partage au boot (cf. QUIRKS). Quote
+  # obligatoire : la valeur rendue se termine par ':' (sinon YAML la lit comme un
+  # mapping). max_connections=1 (plus bas) est load-bearing pour le in-memory.
+  uri: '{{ get_env(name="DATABASE_URL", default="sqlite::memory:") }}'
   # When enabled, the sql query will be logged.
   enable_logging: false
   # Set the timeout duration when acquiring a connection.
