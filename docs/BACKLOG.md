@@ -23,6 +23,13 @@ changement non-breaking : seul l'input de la page de déverrouillage change.
 Retenu directement en v1 : **8 chars base62** (≈ 47 bits) comme défaut, cf. QUIRKS.
 Plus dans le backlog.
 
+## Nettoyage du fichier HTML sur `delete_version` (2026-06-24)
+`DELETE /admin/projects/{id}/versions/{n}` supprime la ligne DB mais laisse le fichier
+HTML dans le storage. Orphelin inoffensif pour la v1 (petits volumes). Amélioration
+future : appeler `storage.delete(&version.html_path)` après la suppression DB. À ne
+faire qu'après que le storage expose une méthode `delete` (non encore déclarée dans le
+trait `Storage`).
+
 ## `/admin` restreint en IP / Tailscale
 Durcissement « hide » supplémentaire : `/admin` n'a pas besoin d'être public (accès
 navigateur des designers). `/mcp`, lui, doit rester public (cloud Anthropic). Non

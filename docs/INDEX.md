@@ -26,6 +26,7 @@
 - [x] `controllers/middleware/origin.rs` : middleware `require_same_origin` (axum from_fn), 403 sur cross-origin, helpers `url_host`/`same_host` testés unitairement — Phase 2 — 2026-06-24
 - [x] `controllers/admin.rs` : API JSON lecture `GET /admin/projects` + `GET /admin/projects/{id}`, protégés par `AdminAuth` — Phase 2 — 2026-06-24
 - [x] `controllers/admin.rs` : API JSON écriture `POST /admin/projects`, `PUT /admin/projects/{id}`, `DELETE /admin/projects/{id}`, `POST /admin/projects/{id}/code`, `DELETE /admin/projects/{id}/code` — tous protégés par `AdminAuth` + garde `require_same_origin` — Phase 2 — 2026-06-24
+- [x] `controllers/admin.rs` : `POST /admin/projects/{id}/deploy` (DeployService), `POST /admin/projects/{id}/versions/{n}/activate`, `DELETE /admin/projects/{id}/versions/{n}` (garde actif→400), `GET /admin/projects/{id}/versions/{n}/preview` (HTML brut + `Cache-Control: no-store`, AdminAuth) — Phase 2 — 2026-06-24
 
 ## Frontend (SPA Yew)
 - [x] Crate `latch-ui` (Yew 0.21 CSR) buildée par Trunk → bundle wasm `dist/` — Phase 0 — 2026-06-24

@@ -4,6 +4,34 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-24 — Task 8 Phase 2 : déploiement + versions (activate/delete/preview)
+
+### Dernière chose faite
+- 4 handlers ajoutés à `controllers/admin.rs` : `deploy`, `activate_version`, `delete_version`, `preview_version`.
+- `deploy` : appelle `DeployService::new(ctx.db, storage_from_ctx(&ctx)).deploy(...)`, répond `{id, n}`.
+- `activate_version` : charge la version par (project_id, n) → 404 si absente ; met `active_version_id` + `updated_at` manuellement sur le projet.
+- `delete_version` : charge version → 404 si absente ; refuse si c'est la version active (400) ; sinon `delete_by_id`.
+- `preview_version` : charge version → 404 ; lit le HTML via `storage.read(&version.html_path)` ; répond avec tuple axum `([(CACHE_CONTROL, "no-store"), (CONTENT_TYPE, "text/html; charset=utf-8")], html).into_response()` — sans passer par `format::html` (qui ne permet pas d'injecter un header custom sans builder).
+- Routes câblées : 3 mutations avec `.layer(from_fn(require_same_origin))`, preview GET derrière `AdminAuth` sans garde Origin.
+- Import ajouté : `axum::response::IntoResponse`, `DeployReq`, `DeployService`.
+- 3 nouveaux tests d'intégration : `deploy_creates_version_and_preview_serves_html`, `activate_switches_active_version`, `delete_version_refuses_active_and_removes_inactive`.
+- Suite complète 76/76 verts, 0 ignorés. fmt + clippy clean. Commit `6c732c1`.
+
+### Trucs en suspens
+- Nettoyage du fichier HTML sur le storage lors d'un `delete_version` : non implémenté (cf. BACKLOG).
+- Phase 2 adaptateur web admin : toutes les routes sont maintenant couvertes.
+
+### Prochaine chose à creuser
+- Phase 3 : SPA Yew admin (login, liste projets, détail, side-panel création/édition, déploiement depuis l'interface).
+
+### Notes pour future Claude
+- `preview_version` utilise le pattern axum brut `(headers_array, body).into_response()` enveloppé dans `Ok(...)`. `IntoResponse` doit être importé explicitement (`use axum::response::IntoResponse`). `loco_rs::prelude::*` importe `Response` (= `axum::response::Response`) mais pas le trait `IntoResponse`.
+- Les tests deploy/preview/activate/delete nécessitent `LATCH_STORAGE_ROOT` pointé sur un `tempfile::tempdir()` — garder la variable `tmp` vivante jusqu'à la fin du test (drop explicite à la fin ou par scope), sinon le répertoire est supprimé avant la fin des requêtes HTTP.
+- `save_cookies(true)` est obligatoire pour les tests avec session (login → accès protégé).
+- `Origin: http://127.0.0.1` (sans port) dans tous les tests de mutation.
+
+---
+
 ## 2026-06-24 — Task 7 Phase 2 : API admin écriture (CRUD + code) + garde Origin
 
 ### Dernière chose faite
