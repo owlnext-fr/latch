@@ -1,3 +1,4 @@
+pub mod deploy;
 pub mod errors;
 pub mod pin;
 pub mod projects;
