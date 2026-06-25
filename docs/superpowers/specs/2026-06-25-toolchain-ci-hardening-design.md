@@ -112,7 +112,7 @@ CI/Docker). **64 issues, ~6 patterns mécaniques :**
 | 4 | typescript:S7764 — `globalThis` vs `window` | Smell | front | mécanique |
 | 4 | typescript:S3358 — ternaires imbriqués | Smell | front | dé-imbriquer |
 | 1 | docker:S8549 — deps Rust `--locked` | Vuln | `Dockerfile` | **fold** (cargo-chef `--locked`) |
-| 1 | docker:S6471 — conteneur non-root | Vuln | `Dockerfile` | **triage** : fix (distroless `:nonroot`) ou *won't-fix* justifié (item BACKLOG assumé) |
+| 1 | docker:S6471 — conteneur non-root | Vuln | `Dockerfile` | **fix ici** (distroless `:nonroot` + ownership `/data`) → raye l'item BACKLOG |
 | 1 | docker:S6596 — tag d'image figé | Smell | `Dockerfile` | **fold** (pin `rust:1.x`) |
 | 4 | divers (S1874, S7735, S5906, S6819) | Smell | front | singletons |
 
@@ -155,6 +155,18 @@ RUN cargo build -p latch --release                   # ← ne recompile que le c
   en CI tant que `Cargo.toml`/`Cargo.lock` ne changent pas.
 - **Gain attendu** : build « code seul » de plusieurs minutes → quelques secondes.
 - Aucune autre étape de la CI à modifier (le job `docker` garde `cache-from/to: type=gha`).
+- **`cargo install cargo-chef --locked`** + build sur `Cargo.lock` → corrige aussi docker:S8549.
+- **Pin du tag de base** `rust:1.NN-bookworm` (version mineure figée) → corrige docker:S6596.
+
+### Runtime non-root (corrige docker:S6471 + raye le BACKLOG)
+
+Le **stage 3** passe en **`gcr.io/distroless/cc-debian12:nonroot`** (uid 65532). Le binaire et
+les assets sont copiés en `--chown=nonroot:nonroot`. Le volume `/data` (SQLite + HTML des
+versions) doit être **inscriptible par 65532** : préparer un répertoire `/data` possédé par
+nonroot (mkdir+chown dans un stage avec shell, puis `COPY --from --chown`, distroless n'ayant
+pas de shell), et documenter dans `docker-compose.yml` / `deploy.sh` que le volume hérite de
+cet ownership au premier boot. C'est précisément la **friction d'ownership** notée au BACKLOG —
+résolue ici. À valider : boot du conteneur + écriture migration/HTML OK en non-root.
 
 ---
 
@@ -214,7 +226,8 @@ Comme la CI fait `clippy -D warnings`, ces lints deviennent **bloquants**.
 - `QUIRKS.md` — Automatic-Analysis exclusif du scanner CI ; chemin `lcov.info` ; layer
   cargo-chef `cook` ; `[lints] workspace=true` à répliquer par crate.
 - `ENVIRONMENT.md` — `SONAR_TOKEN` (secret GitHub), `sonar.organization`, `sonar.projectKey`.
-- `BACKLOG.md` — rayer l'item « Cache de build Docker (cargo-chef) » (livré).
+- `BACKLOG.md` — rayer « Cache de build Docker (cargo-chef) » **et** « Conteneur en
+  utilisateur non-root » (les deux livrés).
 - `BOOTSTRAP.md` §6 — documenter l'étape Sonar dans la liste des jobs CI.
 
 ## Hors périmètre
