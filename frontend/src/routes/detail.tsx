@@ -59,7 +59,9 @@ export function DetailPage() {
           <button
             type="button"
             className="text-sm text-muted-foreground hover:text-foreground"
-            onClick={() => void router.navigate({ to: '/' })}
+            onClick={() => {
+              router.navigate({ to: '/' })
+            }}
           >
             {t('detail.back')}
           </button>

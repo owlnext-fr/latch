@@ -46,7 +46,7 @@ export function useCreateProject() {
       return data
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
       toast.success(t('toast.project_created'))
     },
     onError: () => toast.error(t('error.network')),
@@ -72,8 +72,8 @@ export function useUpdateProject() {
       return data
     },
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.project_updated'))
     },
     onError: () => toast.error(t('error.network')),
@@ -92,8 +92,8 @@ export function useDeleteProject() {
       return data
     },
     onSuccess: (_data, id) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.project_deleted'))
     },
     onError: () => toast.error(t('error.network')),
@@ -124,8 +124,8 @@ export function useSetCode() {
       return data
     },
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       // No toast: the parent form save (updateProject) already toasted once.
     },
     onError: () => toast.error(t('error.network')),
@@ -144,8 +144,8 @@ export function useClearCode() {
       return data
     },
     onSuccess: (_data, id) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       // No toast: the parent form save (updateProject) already toasted once.
     },
     onError: () => toast.error(t('error.network')),
@@ -171,8 +171,8 @@ export function useDeploy() {
       return data
     },
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_deployed'))
     },
     onError: () => toast.error(t('error.network')),
@@ -192,8 +192,8 @@ export function useActivateVersion() {
       return data
     },
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_activated'))
     },
     onError: () => toast.error(t('error.network')),
@@ -213,8 +213,8 @@ export function useDeleteVersion() {
       return data
     },
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: ['projects'] })
-      void qc.invalidateQueries({ queryKey: ['project', id] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_deleted'))
     },
     onError: () => toast.error(t('error.network')),

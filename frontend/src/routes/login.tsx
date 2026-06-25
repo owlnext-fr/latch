@@ -34,7 +34,7 @@ export function LoginPage() {
       { user: data.user, pass: data.pass },
       {
         onSuccess: () => {
-          void navigate({ to: '/' })
+          navigate({ to: '/' })
         },
         onError: () => {
           setError(t('login.error_invalid'))

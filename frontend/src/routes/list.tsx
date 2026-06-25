@@ -61,12 +61,12 @@ export function ListPage() {
                     <button
                       type="button"
                       className="font-medium hover:underline"
-                      onClick={() =>
-                        void router.navigate({
+                      onClick={() => {
+                        router.navigate({
                           to: '/projects/$id',
                           params: { id: String(project.id) },
                         })
-                      }
+                      }}
                     >
                       {project.name}
                     </button>

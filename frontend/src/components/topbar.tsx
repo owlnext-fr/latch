@@ -12,7 +12,7 @@ export function Topbar() {
   function handleLogout() {
     logout.mutate(undefined, {
       onSettled: () => {
-        void router.navigate({ to: '/login' })
+        router.navigate({ to: '/login' })
       },
     })
   }
@@ -23,7 +23,9 @@ export function Topbar() {
         type="button"
         variant="link"
         className="text-lg font-bold"
-        onClick={() => void router.navigate({ to: '/' })}
+        onClick={() => {
+          router.navigate({ to: '/' })
+        }}
       >
         latch
       </Button>

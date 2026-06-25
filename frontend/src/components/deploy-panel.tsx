@@ -97,7 +97,9 @@ function DeployPanelContent({
 
   return (
     <form
-      onSubmit={(e) => void handleSubmit(e)}
+      onSubmit={(e) => {
+        handleSubmit(e)
+      }}
       className="flex flex-1 flex-col gap-5 p-4"
     >
       {/* Dropzone */}

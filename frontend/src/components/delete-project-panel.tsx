@@ -32,7 +32,7 @@ export function DeleteProjectPanel({
     deleteProject.mutate(project.id, {
       onSuccess: () => {
         onOpenChange(false)
-        void router.navigate({ to: '/' })
+        router.navigate({ to: '/' })
       },
     })
   }
