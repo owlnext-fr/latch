@@ -149,13 +149,22 @@ phases métier ; peut s'intercaler selon les priorités produit.
   et sur la page de déverrouillage (ex. « {brand_name} — déverrouillage » / « latch — admin »).
   Aujourd'hui les titres sont statiques (`index.html` = « latch — admin », `unlock.html` = « latch »).
 - **Logo** : générer un logo `latch` et l'appliquer — favicon (les deux entrées Vite ; le
-  `/vite.svg` placeholder a été retiré en Phase 4), en-tête admin (topbar), et page de
-  déverrouillage (au-dessus du `brand_name`).
+  `/vite.svg` placeholder a été retiré en Phase 4), en-tête admin (topbar), **page de login
+  admin**, et page de déverrouillage (au-dessus du `brand_name`). Le SVG est fourni
+  séparément (livraison humaine) ; jusque-là, placeholder substituable en un point.
 - **Menu Settings** : un menu de réglages regroupant **le choix de la locale** (FR/EN, déjà
   géré par `react-i18next` + `LocaleSwitcher`) et **le choix du thème** (`system` / `dark` /
   `light`). `next-themes` est déjà en dépendance mais aucun `ThemeProvider` n'est monté
   (retiré au Plan 2) — à recâbler + persister. NB : la page unlock est en fond clair only
   aujourd'hui (cf. BACKLOG « bordure OTP sans variante dark »).
+- **Sélecteur de langue (vrai)** : remplacer le `LocaleSwitcher` actuel (toggle FR/EN) par un
+  vrai sélecteur (`Select`) dans le side-panel, en prévision d'ajouter d'autres langues. Avec
+  **drapeau** par langue (format à trancher : emoji vs lib d'icônes SVG type `flag-icons`).
+  Fortement couplé à « i18n centralisé » ci-dessous : le sélecteur doit se peupler à partir des
+  locales découvertes (`locales/*.json`), pas d'une liste codée en dur.
+- **Chaque réglage est explicité** : un helper text sous chaque entrée du side-panel Settings
+  (locale, thème, et les infos MCP déjà présentes : `deploy_token` / `mcp_url` /
+  `public_base_url`). Même pattern que le helper text de `ProjectForm`.
 - **Settings en side-panel** : aujourd'hui le panneau Settings (`deploy_token` / `mcp_url` /
   `public_base_url`, livré Phase 5) est une **route plein écran** `/admin/settings`. Le
   transformer en **side-panel** (`<Sheet>`, cohérent avec la grammaire d'interaction admin
@@ -174,12 +183,20 @@ phases métier ; peut s'intercaler selon les priorités produit.
   plutôt que les imports statiques en dur actuels (`import en from './locales/en.json'`).
   S'applique à l'i18n admin **et** au mini-catalogue de la page unlock (`src/unlock/i18n.ts`),
   à harmoniser.
+- **Largeur bornée des pages admin** : aujourd'hui le contenu admin prend 100 % de la viewport.
+  Le borner à un conteneur centré (`mx-auto` + `max-w-*` Tailwind v4 — valeur exacte à trancher,
+  candidat `max-w-6xl`) pour une lecture confortable sur grand écran.
+- **Bouton GitHub sur la page de login** : un bouton/lien (logo GitHub) vers le repo
+  `github.com/owlnext-fr/latch` (« voir le projet »). Pas d'auth OAuth — pur lien sortant
+  (`target="_blank" rel="noopener noreferrer"`) sur une surface non authentifiée.
 
-**Sortie :** titres cohérents par page ; logo présent (favicon + admin + unlock) ; menu
-settings fonctionnel **en side-panel** (locale + thème persistés, défaut thème = `system`, +
-infos MCP) ; serving `/c` rend des **pages d'erreur HTML stylées** (plus de JSON brut sur slug
-inconnu / sans version) ; ajouter une locale = déposer un JSON (ou une config minimale), sans
-toucher au code d'import.
+**Sortie :** titres cohérents par page ; logo présent (favicon + topbar admin + login + unlock) ;
+menu settings fonctionnel **en side-panel** (locale + thème persistés, défaut thème = `system`, +
+infos MCP) avec **chaque réglage explicité** par un helper text ; **vrai sélecteur de langue**
+(drapeau, peuplé depuis les locales découvertes) ; serving `/c` rend des **pages d'erreur HTML
+stylées** (plus de JSON brut sur slug inconnu / sans version) ; ajouter une locale = déposer un
+JSON (ou une config minimale), sans toucher au code d'import ; **pages admin bornées** en largeur
+(conteneur centré) ; **lien GitHub** présent sur la page de login.
 
 ## Phase 8 — Documentation publique (Fumadocs / GitHub Pages)
 
