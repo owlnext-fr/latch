@@ -551,6 +551,41 @@
           }
         }
       }
+    },
+    "/api/public/{slug}": {
+      "get": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "GET /api/public/{slug} — meta publique pour la page de déverrouillage.\nRenvoie `brand_name` + `code_enabled`, jamais le PIN (DTO sans champ pin).",
+        "operationId": "public_meta",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meta publique (sans PIN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMeta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Slug inconnu"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -753,6 +788,24 @@
           }
         }
       },
+      "PublicMeta": {
+        "type": "object",
+        "description": "Meta publique servie à la page de déverrouillage (`GET /api/public/{slug}`).\n**Sans PIN** (invariant §9.2 : structurellement absent) — `brand_name` est fait\npour être affiché publiquement sur la page de code.",
+        "required": [
+          "code_enabled"
+        ],
+        "properties": {
+          "brand_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code_enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetCodeReq": {
         "type": "object",
         "required": [
@@ -821,6 +874,10 @@
     {
       "name": "versions",
       "description": "Déploiement et versions"
+    },
+    {
+      "name": "serving",
+      "description": "Serving client /c et meta publique"
     }
   ]
 }

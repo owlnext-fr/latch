@@ -161,6 +161,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /api/public/{slug} — meta publique pour la page de déverrouillage.
+         *     Renvoie `brand_name` + `code_enabled`, jamais le PIN (DTO sans champ pin).
+         */
+        get: operations["public_meta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -228,6 +248,15 @@ export interface components {
              * @description Nombre total de versions du projet.
              */
             version_count: number;
+        };
+        /**
+         * @description Meta publique servie à la page de déverrouillage (`GET /api/public/{slug}`).
+         *     **Sans PIN** (invariant §9.2 : structurellement absent) — `brand_name` est fait
+         *     pour être affiché publiquement sur la page de code.
+         */
+        PublicMeta: {
+            brand_name?: string | null;
+            code_enabled: boolean;
         };
         SetCodeReq: {
             pin: string;
@@ -772,6 +801,36 @@ export interface operations {
                 content?: never;
             };
             /** @description Version inconnue */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_meta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meta publique (sans PIN) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMeta"];
+                };
+            };
+            /** @description Slug inconnu */
             404: {
                 headers: {
                     [name: string]: unknown;
