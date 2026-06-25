@@ -64,7 +64,7 @@ export function UnlockPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col items-center gap-4">
               <Label htmlFor="pin">{t('unlock.pin_label')}</Label>
               <InputOTP
                 id="pin"
