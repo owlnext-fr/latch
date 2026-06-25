@@ -20,10 +20,12 @@ export function UnlockPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/public/${slug}`)
+    const ac = new AbortController()
+    fetch(`/api/public/${slug}`, { signal: ac.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((meta) => meta && setBrand(meta.brand_name ?? null))
       .catch(() => {})
+    return () => ac.abort()
   }, [slug])
 
   async function submit(e: React.FormEvent) {
