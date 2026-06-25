@@ -3,6 +3,9 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Playwright : `testMatch` par défaut = `*.spec.ts` seulement (2026-06-25)
+Sans configuration explicite, Playwright ne découvre que les fichiers `*.spec.ts` (et `*.spec.js`). Un fichier nommé `*.capture.ts` n'est pas trouvé → `No tests found` silencieux. **Fix** : ajouter `testMatch: /.*\.(spec|capture)\.ts$/` dans `playwright.config.ts`. Cette option étend la découverte sans perturber les specs CI existantes.
+
 ## SonarCloud : Automatic Analysis EXCLUSIVE du scanner CI (2026-06-25)
 SonarCloud propose deux modes d'analyse : **Automatic Analysis** (déclenché par SonarCloud lui-même sur chaque push, sans configuration) et **scanner CI** (job GitHub Actions qui pilote `sonar-scanner`). Les deux sont **mutuellement exclusifs** : activer les deux produit une erreur `You are running CI analysis while Automatic Analysis is enabled`. **Procédure** : désactiver l'Automatic Analysis dans les settings SonarCloud (`Administration > Analysis Method > Automatic Analysis = OFF`) AVANT de créer le job CI. Une fois désactivé, le job CI devient l'unique source de scan.
 

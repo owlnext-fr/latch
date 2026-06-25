@@ -5,6 +5,40 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 6 T5 : captures Playwright (hors CI) — DONE
+
+### Dernière chose faite
+`frontend/e2e/screenshots.capture.ts` créé — 2 tests de capture conditionnels :
+- `capture liste admin` : crée 2 projets fictifs ("Mon Projet" protégé + "ACME" libre)
+  via API, navigue vers `/admin`, prend `docs/assets/admin-list.png`.
+- `capture page unlock` : crée le projet protégé, navigue vers `/c/<slug>`, attend
+  `#pin`, prend `docs/assets/unlock.png`.
+
+Skippés par défaut via `test.skip(!process.env.CAPTURE, …)`. Actifs avec `CAPTURE=1 CI=1`.
+
+`playwright.config.ts` mis à jour : `testMatch: /.*\.(spec|capture)\.ts$/` pour
+que les fichiers `.capture.ts` soient découverts (par défaut Playwright ne cherche que
+`*.spec.ts` — cf. QUIRKS).
+
+PNGs générés et inspectés visuellement : rendu correct, données 100 % fictives.
+Skip sans `CAPTURE` confirmé : 2 skipped. Commit `fb1379b`.
+
+### Trucs en suspens
+- **T6** : CHANGELOG git-cliff
+- **T7** : README refonte
+- **T8** : vérif finale + mémoire
+
+### Prochaine chose à creuser
+- **T6** : CHANGELOG (`git-cliff`, cf. brief `task-6-brief.md`)
+
+### Notes pour future Claude
+- Playwright `testMatch` par défaut : `*.spec.ts` uniquement. Pour découvrir
+  `.capture.ts`, il faut ajouter `testMatch: /.*\.(spec|capture)\.ts$/` dans la
+  config — sinon `No tests found` silencieux.
+- Régénérer les captures : `cd frontend && CAPTURE=1 CI=1 pnpm exec playwright test screenshots.capture`
+
+---
+
 ## 2026-06-25 — Phase 6 T3 : tests e2e Playwright serving `/c` + unlock + bascule (4/4 verts)
 
 ### Dernière chose faite
