@@ -4,6 +4,39 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — Phase 7 Lot 1 : Fondations i18n/thème — LIVRÉE
+
+### Dernière chose faite
+**Phase 7 Lot 1 clôturée et prête à merge.** Vérification finale complète de **toutes les gates** depuis `frontend/` :
+- `rtk lint` : **0 erreur**
+- `pnpm typecheck` : **0 erreur**
+- `rtk vitest run --coverage` : **69/69 tests verts**, couverture `src/i18n/available-locales.ts` = **100%**, `src/i18n` = **100%**, new-code total = **79.82%** (porte → 80% SonarCloud) ; **unlock-CxjyuO2k.js n'a pas les clés admin** (vérification `grep "common.new_project" dist/assets/unlock-*.js` → 0 matches) ; **anti-FOUC script dans index.html (1 occurrence), absent de unlock.html** ✓
+- `pnpm build` : **build OK en 205ms**, 2 bundles distincts générés (`main`, `unlock`), assets isolés en `/assets` (~327 kB main-admin, ~14 kB unlock-public)
+
+**Mémoire projet mise à jour :**
+- `docs/CONVENTIONS.md` + section i18n (pattern glob+_meta auto-découverte)
+- `docs/QUIRKS.md` + 2 entrées (import.meta.glob Vitest, anti-FOUC CSR)
+- `docs/INDEX.md` + ligne Phase 7 Lot 1 livrée (8 items)
+- `docs/HANDOFF.md` (cette entrée) + docs spec/plan : corrections 108→**106 clés** (5 références dans les deux docs)
+
+**Commit prêt :** message brief (docs seulement, aucun code changé) ; tous les fichiers sont des `.md`.
+
+### Trucs en suspens
+- **Toggle thème** (Lot 2) : provider monté, défaut `system`, persistance active ; le contrôle UI (bouton) = Lot 2.
+- **Vrai sélecteur langue** (Lot 2) : `locales` exporté prêt, sélecteur déclaratif à implémenter (Lot 2).
+- **Unlock clair-only** : toujours valide, bundle unlock isolé garanti par 2 globs distincts Vite.
+- **Context7 non connecté** : les APIs i18next / next-themes / react-i18next utilisées sans vérif formelle ; pas de régression identifiée.
+
+**Review minors depuis branche (T3/T4)** : T3 premier test unlock (`parseLocales` sync vs async init = benign) ; T4 anti-FOUC script placé près du top de `<head>` (safe, bloquant avant render).
+
+### Prochaine chose à creuser
+**Phase 7 Lot 2** : toggle thème UI (bouton clair/sombre/système), vrai sélecteur langue (Select + flags), `setTheme()`/`changeLanguage()` câblés en composants respectifs.
+
+### Notes pour future Claude
+- **Pattern glob+_meta** : clé réutilisable (Lot 2 l10n flags UI, Lot 3+ autres catalogues) → documenté CONVENTIONS.
+- **Couverture parseLocales** : 100% unitaire. Admin i18n / unlock i18n / theme provider = intégrés, pas de tests unitaires sinon (trivial relay).
+
+---
 
 ## 2026-06-25 — Phase 6 : revue finale opus + polish serverInfo + MERGE main
 

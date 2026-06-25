@@ -142,6 +142,18 @@
 - [x] `frontend/e2e/serve-unlock.spec.ts` + `frontend/e2e/fixtures/proto-v2.html` : 3 tests Playwright navigateur réel sur la surface `/c` (projet libre no-store, unlock par PIN + auto-submit OTP, bascule v1→v2). Setup API-driven (login + create + deploy via `request` fixture, `Origin` on mutations). 4/4 e2e verts (smoke + serve-unlock) — Phase 6 T3 — 2026-06-25
 - [x] `frontend/e2e/screenshots.capture.ts` + `docs/assets/admin-list.png` + `docs/assets/unlock.png` : script de capture Playwright conditionnel (skip sauf `CAPTURE=1` ; `CI=1` active `reuseExistingServer`, indépendant du skip). Captures générées : liste admin (2 projets fictifs, badges d'accès) + page unlock (formulaire OTP). `playwright.config.ts` étendu avec `testMatch: /.*\.(spec|capture)\.ts$/` — Phase 6 T5 — 2026-06-25
 
+## Phase 7 — Peaufinage graphique / web
+
+### Lot 1 — Fondations i18n/thème
+- [x] `src/i18n/available-locales.ts` : fonction pure `parseLocales(glob)` — découverte locales + strip `_meta` + sortage — Phase 7 Lot 1 T1 — 2026-06-25
+- [x] `src/i18n/locales/{admin,unlock}/{en,fr}.json` : 106 clés admin + 8 clés unlock, chacune avec `_meta` (name, flag ISO) — Phase 7 Lot 1 T2-T3 — 2026-06-25
+- [x] `src/i18n/index.ts` réwirée : glob auto-découverte, `locales` exporté, support multi-langue déclaratif — Phase 7 Lot 1 T2 — 2026-06-25
+- [x] `src/unlock/i18n.ts` réwirée : instance séparée, glob auto-découverte `locales/unlock/` — Phase 7 Lot 1 T3 — 2026-06-25
+- [x] `ThemeProvider` (next-themes `^0.4.6`) monté dans `src/main.tsx` (défaut `system`, storageKey `latch.theme`, anti-FOUC script dans `index.html` uniquement) — Phase 7 Lot 1 T4 — 2026-06-25
+- [x] Tests complets : parseLocales (100%), admin i18n, unlock i18n, ThemeProvider, zéro régression 106+8 clés — Phase 7 Lot 1 T1-T4 — 2026-06-25
+- [x] Gate finale SDD : lint/typecheck/test+coverage/build, bundle isolation (admin key ≠ unlock bundle), anti-FOUC script présent/absent (index/unlock) — Phase 7 Lot 1 T5 — 2026-06-25
+- [x] Mémoire projet : CONVENTIONS (pattern glob+_meta), QUIRKS (import.meta.glob, anti-FOUC), INDEX (Lot 1), HANDOFF (entrée datée) — Phase 7 Lot 1 T5 — 2026-06-25
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
@@ -150,3 +162,4 @@
 - [x] Phase 4 — serving `/c/<slug>` — 2026-06-25
 - [x] Phase 5 — endpoint MCP + panneau Settings — 2026-06-25
 - [x] Phase 6 — e2e, durcissement, packaging (robots.txt + X-Robots-Tag, e2e MCP HTTP ×6, e2e /c + unlock ×3, captures Playwright, CHANGELOG git-cliff, README refonte + badges) — 2026-06-25
+- [x] Phase 7 Lot 1 — Fondations i18n/thème (auto-découverte, ThemeProvider, anti-FOUC, mémoire) — 2026-06-25

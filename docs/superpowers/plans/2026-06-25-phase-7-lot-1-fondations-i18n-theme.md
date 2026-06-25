@@ -12,7 +12,7 @@
 
 - **Confidentialité (NON-NÉGOCIABLE)** : aucun nom de client réel dans le code/tests/fixtures. Utiliser des placeholders fictifs (`ACME`, `Mon Projet`).
 - **Bundle public minimal** : l'unlock (`unlock.html` → `src/unlock/*`) ne doit JAMAIS embarquer les clés admin. Garanti par deux globs distincts résolus au build.
-- **Zéro régression i18n** : les 108 clés admin + 8 clés unlock doivent continuer à résoudre. L'export par défaut `i18n` des modules `@/i18n` et `./i18n` (unlock) reste inchangé (9 importeurs en dépendent).
+- **Zéro régression i18n** : les 106 clés admin + 8 clés unlock doivent continuer à résoudre. L'export par défaut `i18n` des modules `@/i18n` et `./i18n` (unlock) reste inchangé (9 importeurs en dépendent).
 - **Couverture** : SonarCloud `new_coverage ≥ 80 %` sur le code neuf (`parseLocales` porte la couverture).
 - **Vérif doc API** : i18next 26 / react-i18next 17 / next-themes 0.4 — APIs utilisées (`init`, `createInstance`, `use`, `supportedLngs`, `ThemeProvider` props) stables sur ces majeures ; vérifier via Context7/doc si un comportement surprend.
 - **Périmètre thème** : admin + login uniquement (`src/main.tsx`). `src/unlock/main.tsx` n'est PAS touché côté thème (unlock reste clair-only).
@@ -26,8 +26,8 @@
 |---|---|---|
 | `frontend/src/i18n/available-locales.ts` | Fonction pure `parseLocales` + types `LocaleInfo`/`ParsedLocales` | **Créer** |
 | `frontend/src/i18n/available-locales.test.ts` | Tests unitaires de `parseLocales` | **Créer** |
-| `frontend/src/i18n/locales/admin/en.json` | 108 clés admin EN + `_meta` | **Déplacer** depuis `locales/en.json` + éditer |
-| `frontend/src/i18n/locales/admin/fr.json` | 108 clés admin FR + `_meta` | **Déplacer** depuis `locales/fr.json` + éditer |
+| `frontend/src/i18n/locales/admin/en.json` | 106 clés admin EN + `_meta` | **Déplacer** depuis `locales/en.json` + éditer |
+| `frontend/src/i18n/locales/admin/fr.json` | 106 clés admin FR + `_meta` | **Déplacer** depuis `locales/fr.json` + éditer |
 | `frontend/src/i18n/locales/unlock/en.json` | 8 clés unlock EN + `_meta` | **Créer** (depuis inline) |
 | `frontend/src/i18n/locales/unlock/fr.json` | 8 clés unlock FR + `_meta` | **Créer** (depuis inline) |
 | `frontend/src/i18n/index.ts` | Init i18next admin via glob, export `i18n` (défaut) + `locales` | **Modifier** |
@@ -317,7 +317,7 @@ export default i18n
 Run: `rtk vitest run src/i18n/i18n.test.ts`
 Expected: PASS (5 tests).
 
-- [ ] **Step 8 : Lancer toute la suite Vitest (non-régression des 108 clés)**
+- [ ] **Step 8 : Lancer toute la suite Vitest (non-régression des 106 clés)**
 
 Run: `rtk vitest run`
 Expected: PASS — tous les tests existants (composants/routes qui consomment `i18n`) restent verts.
@@ -599,7 +599,7 @@ Aucun code à toucher : `parseLocales` (`src/i18n/available-locales.ts`) découv
 fichiers via `import.meta.glob(..., { eager: true })`, strip `_meta`, dérive
 `supportedLngs`, et expose `locales: LocaleInfo[]` (lu par le sélecteur de langue).
 Le drapeau est un code pays ISO (rendu décidé au Lot 2). Deux dossiers/globs distincts
-= séparation garantie admin (108 clés) / unlock (8 clés, bundle public minimal).
+= séparation garantie admin (106 clés) / unlock (8 clés, bundle public minimal).
 ```
 
 - [ ] **Step 4 : Mettre à jour `docs/QUIRKS.md`**

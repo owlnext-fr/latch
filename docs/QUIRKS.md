@@ -408,6 +408,18 @@ dans `openapi.json`. Un doc-comment verbeux (notes QUIRKS, contexte Context7, TO
 **Règle** : garder les doc-comments des handlers courts et orientés API publique. Les notes
 internes vont dans les commentaires `//` (pas `///`) ou dans les docs mémoire.
 
+## import.meta.glob sous Vitest (Phase 7 Lot 1)
+`import.meta.glob` est une primitive Vite — disponible sous Vitest (qui passe par Vite),
+mais la logique de transformation a été isolée en fonction pure `parseLocales(glob)` pour
+être testée avec des maps factices, sans dépendre du glob réel. Les modules JSON eager
+exposent l'objet parsé sous `.default`.
+
+## Thème : anti-FOUC en SPA CSR (Phase 7 Lot 1)
+next-themes n'injecte son script anti-flash qu'en environnement Next.js. En SPA Vite pure
+(CSR), `<html>` n'a pas `.dark` avant le montage React → flash possible. Mitigation : script
+inline bloquant dans `index.html` (lit `localStorage['latch.theme']` / `prefers-color-scheme`
+et pose `.dark` avant le 1er paint). `unlock.html` n'a PAS ce script (clair-only assumé).
+
 ## Quirks React (stack courante)
 
 ## Vitest + `@testing-library/jest-dom` : matchers manquants si `types` absent du tsconfig (2026-06-25)

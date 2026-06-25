@@ -989,6 +989,16 @@ const saving = createProject.isPending || updateProject.isPending || setCode.isP
 - `loading` ne s'applique pas si `asChild` (nav links).
 - Pour un spinner ciblé sur une ligne avec une mutation partagée : `isPending && variables?.<clé> === <valeur>`.
 
+## i18n — locales auto-découvertes (Phase 7 Lot 1)
+
+Ajouter une langue = déposer `src/i18n/locales/{admin,unlock}/<code>.json` avec une
+clé `_meta` en tête : `{ "_meta": { "name": "<Nom natif>", "flag": "<ISO pays>" }, ... }`.
+Aucun code à toucher : `parseLocales` (`src/i18n/available-locales.ts`) découvre les
+fichiers via `import.meta.glob(..., { eager: true })`, strip `_meta`, dérive
+`supportedLngs`, et expose `locales: LocaleInfo[]` (lu par le sélecteur de langue).
+Le drapeau est un code pays ISO (rendu décidé au Lot 2). Deux dossiers/globs distincts
+= séparation garantie admin (106 clés) / unlock (8 clés, bundle public minimal).
+
 ## 2ᵉ entrée Vite (page server-rendered découplée) — Phase 4
 
 Une page publique server-rendered (ex. `unlock.html`) qui réutilise le thème/les composants

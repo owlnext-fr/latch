@@ -20,7 +20,7 @@ Faire ces fondations en premier évite de tout recâbler deux fois.
 ### État actuel (constaté)
 
 - **i18n admin** : `src/i18n/index.ts`, imports statiques `./locales/en.json` + `fr.json`
-  (108 clés plates, `keySeparator: false`), `LanguageDetector` (localStorage `latch.locale`
+  (106 clés plates, `keySeparator: false`), `LanguageDetector` (localStorage `latch.locale`
   puis navigator), `supportedLngs: ['en','fr']` **codé en dur**, `fallbackLng: 'en'`.
   `LocaleSwitcher` = toggle 2 boutons FR/EN.
 - **i18n unlock** : `src/unlock/i18n.ts`, catalogue **inline** (8 clés), instance i18next
@@ -66,7 +66,7 @@ Faire ces fondations en premier évite de tout recâbler deux fois.
 ```
 src/i18n/
   locales/
-    admin/   en.json  fr.json     ← 108 clés + _meta
+    admin/   en.json  fr.json     ← 106 clés + _meta
     unlock/  en.json  fr.json     ← 8 clés + _meta
   available-locales.ts            ← logique pure partagée (parse + strip _meta + fallback)
   index.ts                        ← init i18next admin (glob locales/admin/*.json)
@@ -133,7 +133,7 @@ Règles :
   ```
 - `locales` (avec `_meta`) est **exporté** pour le sélecteur du Lot 2.
 - **Une seule instance** (celle de `initReactI18next`) ; le glob ne change que la *source*
-  des ressources. Les 108 `t('…')` des composants continuent de marcher sans modification.
+  des ressources. Les 106 `t('…')` des composants continuent de marcher sans modification.
 - `LocaleSwitcher` **non modifié** dans ce lot. Conséquence assumée : déposer une 3ᵉ langue
   avant le Lot 2 la rendrait active par détection mais pas encore offerte dans le toggle.
 
@@ -209,7 +209,7 @@ Vitest + Testing Library, lint, typecheck ; e2e Playwright doit rester vert.
 1. **Démontrable par test** : ajouter `locales/admin/<lang>.json` (+ `unlock/<lang>.json`)
    le fait entrer dans `supportedLngs` et la détection **sans toucher au code**.
 2. `ThemeProvider` monté, défaut `system`, persiste sur `latch.theme`, **anti-FOUC** en place.
-3. Les **108 clés admin + 8 unlock résolvent toujours** (zéro régression).
+3. Les **106 clés admin + 8 unlock résolvent toujours** (zéro régression).
 4. `pnpm lint && pnpm typecheck && pnpm test` verts ; **SonarCloud `new_coverage ≥ 80 %`**
    sur le code neuf (`parseLocales`).
 5. Mémoire à jour : `HANDOFF`, `INDEX`, `CONVENTIONS` (pattern glob + `_meta` réutilisable au
@@ -224,7 +224,7 @@ Vitest + Testing Library, lint, typecheck ; e2e Playwright doit rester vert.
   au moment du plan ; vérifier le comportement CSR de l'anti-FOUC.
 - **`react-i18next`** : vérifier via Context7 l'API `init`/`addResourceBundle`/`supportedLngs`
   pour la version épinglée avant d'implémenter.
-- **Régression silencieuse des 108 clés** : le déplacement de fichiers + ajout `_meta` ne doit
+- **Régression silencieuse des 106 clés** : le déplacement de fichiers + ajout `_meta` ne doit
   pas altérer une clé. Couvert par les tests i18n admin + les composants existants.
 
 ## Dépendances vers les lots suivants
