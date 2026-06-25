@@ -3,6 +3,7 @@ pub mod controllers;
 pub mod data;
 pub mod dto;
 pub mod initializers;
+pub mod mcp;
 pub mod models;
 pub mod openapi;
 pub mod services;

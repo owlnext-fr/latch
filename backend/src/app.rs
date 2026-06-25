@@ -98,6 +98,13 @@ impl Hooks for App {
             )
         };
 
+        // MCP (contrat §5) : fail-fast des secrets/config au boot (comme unlock_secret),
+        // puis montage du service Streamable HTTP sous /mcp. allowed_hosts dérivé de
+        // LATCH_PUBLIC_BASE_URL (défense Host-header, CVE rmcp < 1.4.0).
+        crate::web::deploy_token(ctx)?;
+        let mcp = crate::mcp::service(ctx)?;
+        let router = router.nest_service("/mcp", mcp);
+
         Ok(router)
     }
 
