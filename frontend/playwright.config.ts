@@ -8,6 +8,8 @@ const DB = '/tmp/latch-e2e.sqlite'
 // LOCO_ENV non défini → development → cookie session non-Secure (OK en http localhost).
 export default defineConfig({
   testDir: './e2e',
+  // Découverte étendue : *.spec.ts (specs CI) + *.capture.ts (captures manuelles, skip sauf CAPTURE=1).
+  testMatch: /.*\.(spec|capture)\.ts$/,
   timeout: 30_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
