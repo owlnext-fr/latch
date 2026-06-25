@@ -28,6 +28,7 @@ export function Topbar() {
         type="button"
         variant="link"
         className="gap-2 text-lg font-bold"
+        aria-label="latch latch"
         onClick={() => {
           router.navigate({ to: '/' })
         }}

@@ -65,11 +65,11 @@ describe('Topbar', () => {
     // The route component mounts asynchronously (router hydration).
     // The button now contains both the logo (alt="latch") and text "latch", so name is "latch latch".
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /latch/ })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'latch latch' })).toBeInTheDocument(),
     )
 
     // onClick → router.navigate({ to: '/' }).
-    await user.click(screen.getByRole('button', { name: /latch/ }))
+    await user.click(screen.getByRole('button', { name: 'latch latch' }))
 
     await waitFor(() => {
       expect(screen.getByText('Home list')).toBeInTheDocument()
