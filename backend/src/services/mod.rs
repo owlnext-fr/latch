@@ -5,6 +5,7 @@ pub mod projects;
 pub mod security;
 pub mod slug;
 pub mod storage;
+pub mod unlock_cookie;
 
 pub use errors::CoreError;
 
