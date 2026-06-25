@@ -66,8 +66,8 @@ async fn detail(
     format::json(crate::dto::to_detail(project, vers))
 }
 
-/// POST /admin/projects — crée un nouveau projet.
-/// Requiert un Origin same-origin (garde CSRF, contrat §4/§9.6).
+/// POST /api/projects — crée un nouveau projet.
+// Requiert un Origin same-origin (garde CSRF, contrat §4/§9.6).
 #[utoipa::path(
     post, path = "/api/projects", tag = "projects",
     request_body = CreateProjectReq,
@@ -95,11 +95,11 @@ async fn create(
     format::json(crate::dto::to_detail(project, vec![]))
 }
 
-/// PUT /admin/projects/{id} — met à jour le nom ou le brand_name d'un projet.
-/// `UpdateProjectReq.brand_name` est `Option<Option<String>>` :
-///   - `None` → ne pas toucher au champ
-///   - `Some(None)` → effacer la valeur
-///   - `Some(Some(x))` → remplacer par `x`
+/// PUT /api/projects/{id} — met à jour le nom ou le brand_name d'un projet.
+// `UpdateProjectReq.brand_name` est `Option<Option<String>>` :
+//   - `None` → ne pas toucher au champ
+//   - `Some(None)` → effacer la valeur
+//   - `Some(Some(x))` → remplacer par `x`
 #[utoipa::path(
     put, path = "/api/projects/{id}", tag = "projects",
     params(("id" = i32, Path, description = "Identifiant du projet")),
@@ -155,8 +155,8 @@ async fn update(
     format::json(crate::dto::to_detail(saved, vers))
 }
 
-/// DELETE /admin/projects/{id} — supprime un projet et ses versions.
-/// SQLite n'enforce pas les FK sans PRAGMA → suppression explicite en transaction (QUIRKS).
+/// DELETE /api/projects/{id} — supprime un projet et ses versions.
+// SQLite n'enforce pas les FK sans PRAGMA → suppression explicite en transaction (QUIRKS).
 #[utoipa::path(
     delete, path = "/api/projects/{id}", tag = "projects",
     params(("id" = i32, Path, description = "Identifiant du projet")),
@@ -198,7 +198,7 @@ async fn delete(
     format::json(crate::dto::OkResponse::ok())
 }
 
-/// POST /admin/projects/{id}/code — active le code d'accès avec le PIN fourni.
+/// POST /api/projects/{id}/code — active le code d'accès avec le PIN fourni.
 #[utoipa::path(
     post, path = "/api/projects/{id}/code", tag = "projects",
     params(("id" = i32, Path, description = "Identifiant du projet")),
@@ -219,7 +219,7 @@ async fn set_code(
     format::json(crate::dto::to_detail(project, vec![]))
 }
 
-/// DELETE /admin/projects/{id}/code — désactive le code d'accès (PIN effacé).
+/// DELETE /api/projects/{id}/code — désactive le code d'accès (PIN effacé).
 #[utoipa::path(
     delete, path = "/api/projects/{id}/code", tag = "projects",
     params(("id" = i32, Path, description = "Identifiant du projet")),
@@ -238,8 +238,8 @@ async fn clear_code(
     format::json(crate::dto::to_detail(project, vec![]))
 }
 
-/// POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
-/// Si `activate=true`, repointe `active_version_id`. Répond `{id, n}`.
+/// POST /api/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
+// Si `activate=true`, repointe `active_version_id`. Répond `{id, n}`.
 #[utoipa::path(
     post, path = "/api/projects/{id}/deploy", tag = "versions",
     params(("id" = i32, Path, description = "Identifiant du projet")),
@@ -267,8 +267,8 @@ async fn deploy(
     })
 }
 
-/// POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.
-/// Charge la version par (project_id, n) → 404 si absente. Met à jour le projet.
+/// POST /api/projects/{id}/versions/{n}/activate — bascule le pointeur actif.
+// Charge la version par (project_id, n) → 404 si absente. Met à jour le projet.
 #[utoipa::path(
     post, path = "/api/projects/{id}/versions/{n}/activate", tag = "versions",
     params(("id" = i32, Path, description = "Identifiant du projet"),
@@ -315,10 +315,10 @@ async fn activate_version(
     })
 }
 
-/// DELETE /admin/projects/{id}/versions/{n} — supprime une version NON active.
-/// Charge la version par (project_id, n) → 404 si absente.
-/// Refuse la suppression si elle est la version active du projet → 400.
-/// Nettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).
+/// DELETE /api/projects/{id}/versions/{n} — supprime une version NON active.
+// Charge la version par (project_id, n) → 404 si absente.
+// Refuse la suppression si elle est la version active du projet → 400.
+// Nettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).
 #[utoipa::path(
     delete, path = "/api/projects/{id}/versions/{n}", tag = "versions",
     params(("id" = i32, Path, description = "Identifiant du projet"),
@@ -366,11 +366,11 @@ async fn delete_version(
     format::json(crate::dto::OkResponse::ok())
 }
 
-/// GET /admin/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.
-/// Répond avec `Cache-Control: no-store` pour éviter tout cache navigateur en admin.
-/// Protégé par `AdminAuth` (pas de garde Origin : GET est idempotent).
-/// Confirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;
-/// le tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.
+/// GET /api/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.
+// Répond avec `Cache-Control: no-store` pour éviter tout cache navigateur en admin.
+// Protégé par `AdminAuth` (pas de garde Origin : GET est idempotent).
+// Confirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;
+// le tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.
 #[utoipa::path(
     get, path = "/api/projects/{id}/versions/{n}/preview", tag = "versions",
     params(("id" = i32, Path, description = "Identifiant du projet"),

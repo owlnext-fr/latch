@@ -86,3 +86,17 @@ Retours du test manuel (Playwright) avec l'humain. **Détail complet + patchs UX
 - **Self-review produit** (pas seulement code) après les patchs.
 
 ## Dropzone `ondragleave` flicker sur les éléments enfants (Task 8) — fix possible via `pointer-events:none` sur le contenu interne ou check `relatedTarget`. Cosmétique.
+
+## Cookie `SecurityScheme` dans l'OpenAPI (revue finale Plan 1 – 2026-06-25)
+L'admin est protégé par cookie de session same-origin mais `ApiDoc` ne déclare pas de
+`securityScheme`. Sans impact sur le client `openapi-fetch` (cookies envoyés via
+`credentials: 'include'`), mais améliorerait la doc Swagger + l'auto-doc des 401.
+À ajouter via un `Modify`/`modifiers` utoipa (scheme `apiKey` cookie nommé `latch_admin`).
+Non bloquant.
+
+## `deny.toml` — transitives de `utoipa-swagger-ui 9` (revue finale Plan 1 – 2026-06-25)
+`rust-embed`, `zip`, `zlib-rs` (licence **Zlib**), `zopfli`, `arbitrary` sont entrées au
+lockfile avec l'ajout de `utoipa-swagger-ui 9`. L'allowlist stricte de `deny.toml` peut
+rejeter `Zlib` au prochain `cargo deny check licenses` (cf. QUIRKS « cargo-deny = liste
+blanche stricte »). À vérifier/compléter lors de la remise au vert de la supply-chain
+(Plan 3). Non bloquant (CI déjà rouge par design sur cette branche).

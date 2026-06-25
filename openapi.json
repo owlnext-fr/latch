@@ -15,7 +15,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "POST /admin/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.\nLes deux comparaisons sont TOUJOURS effectuées (pas de court-circuit) pour ne pas\nrévéler quel champ a échoué (contrat §9).",
+        "summary": "POST /api/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.",
         "operationId": "login",
         "requestBody": {
           "content": {
@@ -49,7 +49,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).\n`destroy()` marque la session pour suppression en DB à la phase de réponse,\nce qui assure la révocation immédiate côté serveur (contrat §4).",
+        "summary": "POST /api/logout — invalide la session côté serveur (supprime la ligne en DB).",
         "operationId": "logout",
         "responses": {
           "200": {
@@ -98,7 +98,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "POST /admin/projects — crée un nouveau projet.\nRequiert un Origin same-origin (garde CSRF, contrat §4/§9.6).",
+        "summary": "POST /api/projects — crée un nouveau projet.",
         "operationId": "create",
         "requestBody": {
           "content": {
@@ -175,7 +175,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "PUT /admin/projects/{id} — met à jour le nom ou le brand_name d'un projet.\n`UpdateProjectReq.brand_name` est `Option<Option<String>>` :\n  - `None` → ne pas toucher au champ\n  - `Some(None)` → effacer la valeur\n  - `Some(Some(x))` → remplacer par `x`",
+        "summary": "PUT /api/projects/{id} — met à jour le nom ou le brand_name d'un projet.",
         "operationId": "update",
         "parameters": [
           {
@@ -228,7 +228,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "DELETE /admin/projects/{id} — supprime un projet et ses versions.\nSQLite n'enforce pas les FK sans PRAGMA → suppression explicite en transaction (QUIRKS).",
+        "summary": "DELETE /api/projects/{id} — supprime un projet et ses versions.",
         "operationId": "delete",
         "parameters": [
           {
@@ -270,7 +270,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "POST /admin/projects/{id}/code — active le code d'accès avec le PIN fourni.",
+        "summary": "POST /api/projects/{id}/code — active le code d'accès avec le PIN fourni.",
         "operationId": "set_code",
         "parameters": [
           {
@@ -317,7 +317,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "DELETE /admin/projects/{id}/code — désactive le code d'accès (PIN effacé).",
+        "summary": "DELETE /api/projects/{id}/code — désactive le code d'accès (PIN effacé).",
         "operationId": "clear_code",
         "parameters": [
           {
@@ -356,7 +356,7 @@
         "tags": [
           "versions"
         ],
-        "summary": "POST /admin/projects/{id}/deploy — déploie un nouveau HTML, crée une version.\nSi `activate=true`, repointe `active_version_id`. Répond `{id, n}`.",
+        "summary": "POST /api/projects/{id}/deploy — déploie un nouveau HTML, crée une version.",
         "operationId": "deploy",
         "parameters": [
           {
@@ -405,7 +405,7 @@
         "tags": [
           "versions"
         ],
-        "summary": "DELETE /admin/projects/{id}/versions/{n} — supprime une version NON active.\nCharge la version par (project_id, n) → 404 si absente.\nRefuse la suppression si elle est la version active du projet → 400.\nNettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).",
+        "summary": "DELETE /api/projects/{id}/versions/{n} — supprime une version NON active.",
         "operationId": "delete_version",
         "parameters": [
           {
@@ -460,7 +460,7 @@
         "tags": [
           "versions"
         ],
-        "summary": "POST /admin/projects/{id}/versions/{n}/activate — bascule le pointeur actif.\nCharge la version par (project_id, n) → 404 si absente. Met à jour le projet.",
+        "summary": "POST /api/projects/{id}/versions/{n}/activate — bascule le pointeur actif.",
         "operationId": "activate_version",
         "parameters": [
           {
@@ -512,7 +512,7 @@
         "tags": [
           "versions"
         ],
-        "summary": "GET /admin/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.\nRépond avec `Cache-Control: no-store` pour éviter tout cache navigateur en admin.\nProtégé par `AdminAuth` (pas de garde Origin : GET est idempotent).\nConfirmé via Context7 : `loco_rs::prelude::Response = axum::response::Response` ;\nle tuple `(headers_array, body_string).into_response()` est idiomatique axum 0.8.",
+        "summary": "GET /api/projects/{id}/versions/{n}/preview — sert le HTML brut de la version.",
         "operationId": "preview_version",
         "parameters": [
           {

@@ -45,9 +45,9 @@ where
     }
 }
 
-/// POST /admin/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.
-/// Les deux comparaisons sont TOUJOURS effectuées (pas de court-circuit) pour ne pas
-/// révéler quel champ a échoué (contrat §9).
+/// POST /api/login — vérifie ADMIN_USER/ADMIN_PASS à temps constant, pose la session.
+// Les deux comparaisons sont TOUJOURS effectuées (pas de court-circuit) pour ne pas
+// révéler quel champ a échoué (contrat §9).
 #[utoipa::path(
     post, path = "/api/login", tag = "auth",
     request_body = LoginReq,
@@ -72,9 +72,9 @@ async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Resp
     format::json(crate::dto::OkResponse::ok())
 }
 
-/// POST /admin/logout — invalide la session côté serveur (supprime la ligne en DB).
-/// `destroy()` marque la session pour suppression en DB à la phase de réponse,
-/// ce qui assure la révocation immédiate côté serveur (contrat §4).
+/// POST /api/logout — invalide la session côté serveur (supprime la ligne en DB).
+// `destroy()` marque la session pour suppression en DB à la phase de réponse,
+// ce qui assure la révocation immédiate côté serveur (contrat §4).
 #[utoipa::path(
     post, path = "/api/logout", tag = "auth",
     responses((status = 200, description = "Session détruite", body = OkResponse),
