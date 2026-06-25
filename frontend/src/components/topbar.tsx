@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Settings } from 'lucide-react'
+import { Settings, CircleHelp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/logo'
+import { DOCS_URL } from '@/lib/links'
 import { SettingsSheet } from '@/components/settings-sheet'
 import { useLogout } from '@/hooks/use-auth'
 
@@ -25,14 +27,25 @@ export function Topbar() {
       <Button
         type="button"
         variant="link"
-        className="text-lg font-bold"
+        className="gap-2 text-lg font-bold"
         onClick={() => {
           router.navigate({ to: '/' })
         }}
       >
+        <Logo className="size-6" />
         latch
       </Button>
       <div className="flex items-center gap-2">
+        <Button asChild variant="ghost" size="icon-sm">
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('topbar.help')}
+          >
+            <CircleHelp />
+          </a>
+        </Button>
         <Button
           type="button"
           variant="ghost"

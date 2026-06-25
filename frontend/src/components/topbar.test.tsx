@@ -63,12 +63,13 @@ describe('Topbar', () => {
     renderTopbar()
 
     // The route component mounts asynchronously (router hydration).
+    // The button now contains both the logo (alt="latch") and text "latch", so name is "latch latch".
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'latch' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: /latch/ })).toBeInTheDocument(),
     )
 
     // onClick → router.navigate({ to: '/' }).
-    await user.click(screen.getByRole('button', { name: 'latch' }))
+    await user.click(screen.getByRole('button', { name: /latch/ }))
 
     await waitFor(() => {
       expect(screen.getByText('Home list')).toBeInTheDocument()
@@ -115,5 +116,15 @@ describe('Topbar', () => {
     await waitFor(() => {
       expect(screen.getByText('Login screen')).toBeInTheDocument()
     })
+  })
+
+  it('shows the logo and a help link to the docs', async () => {
+    renderTopbar()
+    await waitFor(() =>
+      expect(screen.getByAltText('latch')).toBeInTheDocument(),
+    )
+    const help = screen.getByRole('link', { name: 'Documentation' })
+    expect(help).toHaveAttribute('href', 'https://latch.owlnext.fr/docs')
+    expect(help).toHaveAttribute('target', '_blank')
   })
 })
