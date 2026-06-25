@@ -1,38 +1,20 @@
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import { parseLocales } from '@/i18n/available-locales'
 
-const en = {
-  'unlock.title_brand': 'Prototype prepared for {{brand}}',
-  'unlock.title_neutral': 'Protected prototype',
-  'unlock.instructions':
-    'An access code was shared with this link. Enter it to unlock the prototype.',
-  'unlock.pin_label': 'Access code',
-  'unlock.submit': 'Unlock',
-  'unlock.error_wrong': 'Incorrect code.',
-  'unlock.error_throttled': 'Too many attempts. Please try again in a moment.',
-  'unlock.error_generic': 'Something went wrong. Please try again.',
-}
-const fr = {
-  'unlock.title_brand': 'Prototype préparé pour {{brand}}',
-  'unlock.title_neutral': 'Prototype protégé',
-  'unlock.instructions':
-    "Un code d'accès vous a été transmis avec ce lien. Saisissez-le pour déverrouiller le prototype.",
-  'unlock.pin_label': "Code d'accès",
-  'unlock.submit': 'Déverrouiller',
-  'unlock.error_wrong': 'Code incorrect.',
-  'unlock.error_throttled': 'Trop de tentatives. Réessaie dans un moment.',
-  'unlock.error_generic': "Une erreur s'est produite. Réessaie.",
-}
+const { resources, locales } = parseLocales(
+  import.meta.glob('../i18n/locales/unlock/*.json', { eager: true }),
+)
 
 const instance = i18next.createInstance()
 instance
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: { en: { translation: en }, fr: { translation: fr } },
+    resources,
     fallbackLng: 'en',
-    supportedLngs: ['en', 'fr'],
+    supportedLngs: locales.map((l) => l.code),
     keySeparator: false,
     nsSeparator: false,
     interpolation: { escapeValue: false },

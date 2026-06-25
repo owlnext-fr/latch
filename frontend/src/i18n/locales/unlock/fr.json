@@ -1,0 +1,11 @@
+{
+  "_meta": { "name": "Français", "flag": "FR" },
+  "unlock.title_brand": "Prototype préparé pour {{brand}}",
+  "unlock.title_neutral": "Prototype protégé",
+  "unlock.instructions": "Un code d'accès vous a été transmis avec ce lien. Saisissez-le pour déverrouiller le prototype.",
+  "unlock.pin_label": "Code d'accès",
+  "unlock.submit": "Déverrouiller",
+  "unlock.error_wrong": "Code incorrect.",
+  "unlock.error_throttled": "Trop de tentatives. Réessaie dans un moment.",
+  "unlock.error_generic": "Une erreur s'est produite. Réessaie."
+}

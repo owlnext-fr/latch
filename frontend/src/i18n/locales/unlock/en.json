@@ -1,0 +1,11 @@
+{
+  "_meta": { "name": "English", "flag": "GB" },
+  "unlock.title_brand": "Prototype prepared for {{brand}}",
+  "unlock.title_neutral": "Protected prototype",
+  "unlock.instructions": "An access code was shared with this link. Enter it to unlock the prototype.",
+  "unlock.pin_label": "Access code",
+  "unlock.submit": "Unlock",
+  "unlock.error_wrong": "Incorrect code.",
+  "unlock.error_throttled": "Too many attempts. Please try again in a moment.",
+  "unlock.error_generic": "Something went wrong. Please try again."
+}
