@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         unlock: fileURLToPath(new URL('./unlock.html', import.meta.url)),
+        error: fileURLToPath(new URL('./error.html', import.meta.url)),
       },
     },
   },

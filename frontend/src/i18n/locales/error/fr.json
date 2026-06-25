@@ -1,0 +1,6 @@
+{
+  "_meta": { "name": "Français", "flag": "FR" },
+  "error.title": "Prototype indisponible",
+  "error.message": "Ce prototype n'est pas disponible ou a été retiré.",
+  "error.page_title": "Indisponible — latch"
+}
