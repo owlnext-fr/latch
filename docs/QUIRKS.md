@@ -28,6 +28,21 @@ drop/recréent le schéma en même temps → course sur `seaql_migrations`.
 **Règle de vérif** : valider en local avec **`cargo nextest run`** (même runner que la CI),
 pas `cargo test` — sinon ce type de course inter-process passe inaperçu.
 
+## E2E Playwright flaky : `binding: localhost` → bind IPv6 `::1`, poll IPv4 timeout (2026-06-25)
+**Symptôme** : le job CI `e2e Playwright (smoke admin)` échoue **par intermittence** (runs FAIL/ok alternés)
+avec `Error: Timed out waiting 180000ms from config.webServer.` — alors que le log montre le serveur
+**bien démarré** (`listening on http://localhost:5150`, migrations OK) ~75 s **avant** le timeout. Donc
+ni crash, ni compilation trop lente.
+**Cause** : `development.yaml` avait `binding: localhost`. Sur les runners GitHub, `/etc/hosts` mappe
+`localhost` vers `127.0.0.1` **et** `::1` ; `to_socket_addrs("localhost:5150")` peut renvoyer `::1` en
+premier → le serveur n'écoute qu'en **IPv6**. Or `playwright.config.ts` poll `http://127.0.0.1:5150/_health`
+(**IPv4**) → `ECONNREFUSED` en boucle → timeout. Le flakiness vient de l'ordre de résolution non déterministe.
+**Workaround** : forcer une famille d'adresse cohérente des deux côtés. `binding` rendu réglable par env via
+Tera (`binding: '{{ get_env(name="LATCH_BINDING", default="localhost") }}'`, défaut inchangé pour le dev
+local), et la commande `webServer` de Playwright exporte **`LATCH_BINDING=127.0.0.1`** — cohérent avec le poll
+`127.0.0.1/_health`. Vérifié : le serveur loge alors `listening on http://127.0.0.1:5150` et `/_health` → 200.
+Cf. `docs/ENVIRONMENT.md` (`LATCH_BINDING`).
+
 ## Loco tests — Host header `127.0.0.1:PORT`, pas `localhost` (2026-06-24)
 Le harness Loco 0.16 utilise `routes.into_make_service_with_connect_info::<SocketAddr>()`, ce qui force axum-test à utiliser un vrai serveur TCP (pas mock). Dans ce mode, hyper injecte `Host: 127.0.0.1:PORT` (port aléatoire, ex. 8000). Les tests qui envoient `Origin: http://localhost` reçoivent 403 car `127.0.0.1 != localhost` dans `same_host`. **Workaround** : envoyer `Origin: http://127.0.0.1` dans les tests de mutation. `same_host("127.0.0.1:PORT", "127.0.0.1")` passe car hôtes égaux et l'Origin n'a pas de port explicite. Cf. contrat §4/§9.6 et le test `mutation_rejected_on_cross_origin` qui envoie délibérément `Origin: https://evil.example` pour valider le 403.
 

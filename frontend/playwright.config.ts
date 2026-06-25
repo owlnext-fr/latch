@@ -20,7 +20,10 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `pnpm build && rm -f ${DB} && cd ../backend && LATCH_SPA_DIST=../frontend/dist ADMIN_USER=admin ADMIN_PASS=secret LATCH_STORAGE_ROOT=/tmp/latch-e2e-data DATABASE_URL='sqlite://${DB}?mode=rwc' cargo loco start`,
+    // LATCH_BINDING=127.0.0.1 : force le bind IPv4 explicite, cohérent avec le poll
+    // de `url` ci-dessous. Sinon `binding: localhost` peut résoudre vers ::1 (IPv6)
+    // sur les runners CI → ECONNREFUSED sur 127.0.0.1 → timeout webServer flaky.
+    command: `pnpm build && rm -f ${DB} && cd ../backend && LATCH_BINDING=127.0.0.1 LATCH_SPA_DIST=../frontend/dist ADMIN_USER=admin ADMIN_PASS=secret LATCH_STORAGE_ROOT=/tmp/latch-e2e-data DATABASE_URL='sqlite://${DB}?mode=rwc' cargo loco start`,
     url: `http://127.0.0.1:${PORT}/_health`,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,

@@ -5,6 +5,30 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Fix CI e2e flaky (bind localhost/IPv6 → 127.0.0.1)
+
+### Dernière chose faite
+- **Diagnostic du flake `e2e Playwright (smoke admin)`** (runs FAIL/ok alternés) : le serveur Loco démarrait
+  bien (`listening on http://localhost:5150`) ~75 s avant le `Timed out waiting 180000ms from config.webServer`.
+  Cause : `development.yaml` avait `binding: localhost` → résolution non déterministe vers `::1` (IPv6) sur les
+  runners GitHub, alors que Playwright poll `127.0.0.1/_health` (IPv4) → `ECONNREFUSED` → timeout.
+- **Fix** : `binding` rendu réglable par env (`LATCH_BINDING`, défaut `localhost` inchangé pour le dev) via Tera
+  dans `backend/config/development.yaml` ; la commande `webServer` de `frontend/playwright.config.ts` exporte
+  `LATCH_BINDING=127.0.0.1`. Vérifié local : serveur loge `listening on http://127.0.0.1:5150`, `/_health` → 200,
+  `1 passed` (9.6 s).
+- Mémoire à jour : `QUIRKS.md` (nouvelle entrée), `ENVIRONMENT.md` (`LATCH_BINDING`).
+
+### Trucs en suspens
+- **Pas encore commité/pushé** — les 4 fichiers modifiés sont dans le working-tree (`development.yaml`,
+  `playwright.config.ts`, `QUIRKS.md`, `ENVIRONMENT.md`, `HANDOFF.md`). À committer + push pour valider sur CI.
+- Le flake étant probabiliste, surveiller 2-3 runs CI verts d'affilée pour confirmer la disparition.
+
+### Prochaine chose à creuser
+- Rien de bloquant. Éventuellement aligner `test.yaml`/`production.yaml` si un besoin de bind explicite apparaît
+  (prod bind déjà `0.0.0.0`, OK).
+
+---
+
 ## 2026-06-25 — Post-validation : fixes + enrichissement liste + MERGE main + CI
 
 ### Dernière chose faite
