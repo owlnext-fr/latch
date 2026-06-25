@@ -230,7 +230,18 @@ mod tests {
                 activate: None,
             }))
             .await;
-        assert!(res.is_err(), "token invalide doit être rejeté");
+        // Le rejet doit venir du gate token (vérifié AVANT tout appel DB), pas
+        // d'un chemin DB : on assert le message exact pour exclure toute fuite
+        // d'existence via timing/erreur (contrat §9.3). `Json<DeployResult>`
+        // n'implémente pas `Debug`, donc on `match` plutôt que `unwrap_err`.
+        let err = match res {
+            Err(e) => e,
+            Ok(_) => panic!("token invalide doit être rejeté"),
+        };
+        assert_eq!(
+            err.message, "deploy_token invalide",
+            "le rejet doit venir du gate token, pas d'un chemin DB"
+        );
     }
 
     #[tokio::test]
