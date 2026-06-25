@@ -72,6 +72,23 @@ impl Hooks for App {
         let spa = ServeDir::new(&dist).fallback(ServeFile::new(index));
         let router = router.nest_service("/admin", spa);
 
+        // Swagger UI : confort dev uniquement. Jamais en production (surface + poids).
+        // Fail-secure : exclure Production via le même critère que le cookie Secure.
+        let is_prod = !matches!(
+            ctx.environment,
+            loco_rs::environment::Environment::Development
+                | loco_rs::environment::Environment::Test
+        );
+        let router = if is_prod {
+            router
+        } else {
+            use utoipa::OpenApi;
+            router.merge(
+                utoipa_swagger_ui::SwaggerUi::new("/api-docs")
+                    .url("/api-docs/openapi.json", crate::openapi::ApiDoc::openapi()),
+            )
+        };
+
         Ok(router)
     }
 
