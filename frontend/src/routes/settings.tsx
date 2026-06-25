@@ -6,7 +6,7 @@ import { useSettings } from '@/hooks/use-settings'
 
 export function SettingsPage() {
   const { t } = useTranslation()
-  const { data, isLoading } = useSettings()
+  const { data, isLoading, isError } = useSettings()
 
   return (
     <div className="min-h-screen">
@@ -15,9 +15,11 @@ export function SettingsPage() {
         <h1 className="text-xl font-bold">{t('settings.title')}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t('settings.mcp_intro')}</p>
 
-        {isLoading || !data ? (
+        {isLoading ? (
           <p className="text-muted-foreground mt-6 text-sm">{t('common.loading')}</p>
-        ) : (
+        ) : isError ? (
+          <p className="text-destructive mt-6 text-sm">{t('error.network')}</p>
+        ) : data ? (
           <dl className="mt-6 space-y-6">
             <div>
               <dt className="text-sm font-medium">{t('settings.mcp_url')}</dt>
@@ -37,7 +39,7 @@ export function SettingsPage() {
               <dd className="mt-1 font-mono text-sm">{data.public_base_url}</dd>
             </div>
           </dl>
-        )}
+        ) : null}
       </main>
     </div>
   )

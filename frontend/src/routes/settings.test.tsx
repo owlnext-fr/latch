@@ -33,4 +33,14 @@ describe('SettingsPage', () => {
     await userEvent.click(reveal)
     expect(screen.getByText('tok-abc-123')).toBeInTheDocument()
   })
+
+  it('shows an error message when the settings API fails', async () => {
+    server.use(
+      http.get(`${window.location.origin}/api/settings`, () =>
+        HttpResponse.json({ message: 'boom' }, { status: 500 }),
+      ),
+    )
+    renderWithRouter('/settings')
+    await waitFor(() => expect(screen.getByText(/network|réseau/i)).toBeInTheDocument())
+  })
 })
