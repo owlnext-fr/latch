@@ -68,7 +68,7 @@ describe('UnlockPage', () => {
     await waitFor(() => {
       const inputs = document.querySelectorAll('input[type="text"], input[inputmode="numeric"]')
       const filled = Array.from(inputs).filter((el) => (el as HTMLInputElement).value !== '')
-      expect(filled.length).toBe(0)
+      expect(filled).toHaveLength(0)
     })
   })
 

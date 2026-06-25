@@ -67,7 +67,7 @@ function DeployPanelContent({
     e.target.value = ''
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
     if (!file) {
@@ -89,11 +89,17 @@ function DeployPanelContent({
     )
   }
 
-  const dropzoneText = file
-    ? t('deploy.file_chosen', { name: file.name, size: humanSize(file.size) })
-    : isDragOver
-      ? t('deploy.dropzone_hover')
-      : t('deploy.dropzone_idle')
+  function computeDropzoneText() {
+    if (file) return t('deploy.file_chosen', { name: file.name, size: humanSize(file.size) })
+    if (isDragOver) return t('deploy.dropzone_hover')
+    return t('deploy.dropzone_idle')
+  }
+  const dropzoneText = computeDropzoneText()
+
+  let dropzoneBorder: string
+  if (isDragOver) dropzoneBorder = 'border-primary bg-primary/5 text-primary'
+  else if (file) dropzoneBorder = 'border-green-500 bg-green-50 text-green-700'
+  else dropzoneBorder = 'border-input text-muted-foreground hover:border-primary/50 hover:text-foreground'
 
   return (
     <form
@@ -126,11 +132,7 @@ function DeployPanelContent({
           onDrop={handleDrop}
           className={[
             'flex min-h-[120px] w-full cursor-pointer items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-sm transition-colors',
-            isDragOver
-              ? 'border-primary bg-primary/5 text-primary'
-              : file
-                ? 'border-green-500 bg-green-50 text-green-700'
-                : 'border-input text-muted-foreground hover:border-primary/50 hover:text-foreground',
+            dropzoneBorder,
           ].join(' ')}
           aria-label={t('deploy.dropzone_idle')}
         >

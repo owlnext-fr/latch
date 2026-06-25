@@ -9,7 +9,8 @@ export function LocaleSwitcher() {
   const current = i18n.language.slice(0, 2) as Locale
 
   return (
-    <span className="flex items-center gap-1" role="group" aria-label="Language">
+    <fieldset className="flex items-center gap-1 border-0 p-0 m-0">
+      <legend className="sr-only">Language</legend>
       {LOCALES.map((locale) => (
         <Button
           key={locale}
@@ -22,6 +23,6 @@ export function LocaleSwitcher() {
           {locale.toUpperCase()}
         </Button>
       ))}
-    </span>
+    </fieldset>
   )
 }
