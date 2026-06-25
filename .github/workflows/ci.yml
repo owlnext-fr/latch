@@ -78,8 +78,9 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --audit-level=high
-      # NOTE: l'allowlist peut nécessiter un ajustement au 1er run réel
-      - run: pnpm dlx license-checker-rseidelsohn --production --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0;Unlicense;BlueOak-1.0.0;Python-2.0;CC-BY-4.0' --excludePrivatePackages
+      # Allowlist calibrée sur les licences réellement présentes (mêmes familles que deny.toml) :
+      # OFL-1.1 = police Inter (@fontsource-variable/inter) ; MPL-2.0 = aussi autorisée côté Rust.
+      - run: pnpm dlx license-checker-rseidelsohn --production --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0;Unlicense;BlueOak-1.0.0;Python-2.0;CC-BY-4.0;OFL-1.1;MPL-2.0' --excludePrivatePackages
 
   # 5. Supply-chain backend : licences + advisories (cargo-deny)
   supply-chain:
