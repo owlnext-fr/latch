@@ -39,6 +39,13 @@ retenu en v1 pour ne pas complexifier le branchement.
 Dépend de la formule OWLNEXT (Owner provisionne en Team/Ent vs chacune ajoute l'URL
 en Pro/Max). Hors périmètre build — à traiter au branchement, pas au code.
 
+## `serverInfo.name` MCP advertise `"rmcp"` au lieu de `"latch"` (Phase 6 T2 – 2026-06-25)
+`get_info()` MCP advertise `serverInfo.name = "rmcp"` (défaut `Implementation::from_build_env()`
+de la crate rmcp, qui capture son propre `CARGO_CRATE_NAME` à la compilation) au lieu de `"latch"` —
+un client MCP qui valide le nom du serveur verra `rmcp`. Fix : `with_server_info(Implementation::new("latch", env!("CARGO_PKG_VERSION")))`
+dans `get_info()` (`backend/src/mcp/mod.rs`). Non bloquant (cosmétique d'identité serveur ; les tools
+et le handshake fonctionnent). Découvert en écrivant les tests e2e du transport (Phase 6 T2).
+
 ## ~~Cache de build Docker (cargo-chef)~~ — **LIVRÉ** (Toolchain Task 5 – 2026-06-25)
 Dockerfile réécrit avec `cargo-chef` (couche `cook` cachée par `type=gha`). Build rapide sur rebuild. Cf. `docs/INDEX.md`.
 

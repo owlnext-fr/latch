@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use latch::app::App;
-use latch::models::_entities::projects;
+use latch::models::_entities::{projects, versions};
 use loco_rs::testing::prelude::*;
-use sea_orm::{ActiveModelTrait, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set};
 use serial_test::serial;
 
 const TOKEN: &str = "test-deploy-token";
@@ -54,6 +54,13 @@ async fn mcp_post(
         req = req.add_header("mcp-session-id", sid);
     }
     let res = req.await;
+    // Les erreurs de tool restent en HTTP 200 (isError dans le corps) : ce check
+    // n'attrape que les échecs de transport (403 Host, 4xx/5xx réels).
+    assert!(
+        res.status_code().is_success(),
+        "POST /mcp a échoué : {}",
+        res.status_code()
+    );
     let headers = res.headers().clone();
     let body_text = res.text();
     let value = parse_mcp_body(&body_text);
@@ -82,6 +89,11 @@ async fn mcp_initialize_handshake() {
         assert!(
             headers.get("mcp-session-id").is_some(),
             "initialize doit renvoyer un header de session"
+        );
+        // Preuve structurelle d'un vrai résultat initialize (pas une erreur déguisée).
+        assert!(
+            value["result"]["protocolVersion"].as_str().is_some(),
+            "protocolVersion absent de la réponse initialize"
         );
         // rmcp 1.8 : serverInfo.name = "rmcp" (from_build_env sur la crate rmcp elle-même).
         // On vérifie les instructions (notre texte) comme preuve de bon câblage.
@@ -112,6 +124,7 @@ async fn mcp_tools_list_exposes_two_tools() {
         let (_, value) = mcp_post(&request, body, Some(&sid)).await;
         let tools = value["result"]["tools"].as_array().expect("tools array");
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+        assert_eq!(names.len(), 2, "nombre de tools inattendu : {names:?}");
         assert!(
             names.contains(&"deploy_prototype"),
             "deploy_prototype absent : {names:?}"
@@ -241,6 +254,64 @@ async fn mcp_bad_token_is_rejected() {
         assert!(
             is_error,
             "un deploy_token invalide doit être rejeté : {value}"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn mcp_deploy_bad_token_no_side_effect() {
+    let _dir = setup_env();
+    request::<App, _, _>(|request, ctx| async move {
+        // Projet préexistant : le gate token doit échouer AVANT toute écriture (§9.3).
+        let project = projects::ActiveModel {
+            slug: Set("mon-projet-cccccccc".to_string()),
+            name: Set("Mon Projet".to_string()),
+            code_enabled: Set(true),
+            pin: Set(Some("123456".to_string())),
+            ..Default::default()
+        }
+        .insert(&ctx.db)
+        .await
+        .expect("insert project");
+
+        let (headers, _) = mcp_post(&request, init_body(), None).await;
+        let sid = headers
+            .get("mcp-session-id")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let body = serde_json::json!({
+            "jsonrpc": "2.0", "id": 6, "method": "tools/call",
+            "params": {
+                "name": "deploy_prototype",
+                "arguments": {
+                    "slug": "mon-projet-cccccccc",
+                    "html": "<!doctype html><title>nope</title>",
+                    "deploy_token": "MAUVAIS"
+                }
+            }
+        });
+        let (_, value) = mcp_post(&request, body, Some(&sid)).await;
+        let is_error =
+            value["result"]["isError"].as_bool().unwrap_or(false) || value.get("error").is_some();
+        assert!(
+            is_error,
+            "un deploy_token invalide doit être rejeté : {value}"
+        );
+
+        // Aucune version ne doit avoir été créée pour ce projet (gate AVANT write path).
+        let count = versions::Entity::find()
+            .filter(versions::Column::ProjectId.eq(project.id))
+            .count(&ctx.db)
+            .await
+            .expect("count versions");
+        assert_eq!(
+            count, 0,
+            "un token invalide ne doit créer aucune version (effet de bord sur le write path)"
         );
     })
     .await;
