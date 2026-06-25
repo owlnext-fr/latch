@@ -213,12 +213,19 @@ car `.layer().layer()` chaîné directement sur un `MethodRouter` axum 0.8.9 cas
 type → erreur de compilation obscure. `ServiceBuilder` résout le problème car il compose les layers
 avant de les passer à axum.
 
-## 2ᵉ entrée Vite `unlock.html` : assets tirés de `/admin/assets/*` (2026-06-25)
-`unlock.html` est la 2ᵉ entrée du build Vite (Phase 4). Ses imports `<script src="/admin/assets/...">` et
-`<link href="/admin/assets/...">` pointent vers `/admin/assets/*` (base Vite = `/admin/`) — ils sont
-résolus correctement car le `ServeDir` admin (`nest_service("/admin", ServeDir::new(dist))`) sert
-l'intégralité du dossier `dist/`, y compris `assets/`. Pas de routing spécial supplémentaire
-nécessaire : les assets sont publics (pas derrière `AdminAuth`).
+## 2ᵉ entrée Vite `unlock.html` + assets servis sous `/assets` (base `/`) (2026-06-25)
+`unlock.html` est la 2ᵉ entrée du build Vite (Phase 4) — déclarée dans `vite.config.ts`
+(`build.rollupOptions.input = { main, unlock }`). **Base Vite = `/`** (pas `/admin/`) : les deux
+bundles (`main` admin, `unlock` public) référencent leurs assets en `/assets/...` (JS, CSS **et**
+URLs `@font-face` des polices Inter incluses). Côté backend, `after_routes` monte
+`nest_service("/assets", ServeDir::new(dist.join("assets")))` — assets publics, hors `/admin`.
+**Pourquoi pas `/admin/assets` (état initial)** : la page de déverrouillage est une surface
+**publique** (`/c/<slug>`) ; si elle tirait ses assets de `/admin/...`, un futur durcissement
+« /admin restreint en IP » (BACKLOG) casserait la page pour les clients. Le découplage vers
+`/assets` neutralise ce couplage. L'admin reste servi par `nest_service("/admin", ServeDir.fallback(index))`
+(son routeur TanStack a `basepath: '/admin'`, orthogonal à la base Vite). Conséquence cosmétique
+réglée : le favicon `/vite.svg` (placeholder scaffold) a été retiré d'`index.html` (sinon 404 en `/`).
+Pas de collision de route : `/assets` ne préfixe ni `/api`, `/c`, `/admin`, `/mcp`.
 
 ---
 

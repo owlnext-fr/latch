@@ -112,6 +112,9 @@
 - [x] `vite.config.ts` base `'/'` + mount `/assets` dans `after_routes` (backend) — découplage assets admin/unlock — 2026-06-25
 - [x] `Button` prop `loading` réutilisable (spinner `Loader2` + disabled effectif) + câblage sur 7 sites d'action — itération UX — 2026-06-25
 - [x] OTP auto-submit sur saisie complète (`onComplete`) + clear-on-error (401) dans `unlock-page.tsx` — itération UX — 2026-06-25
+- [x] État d'erreur unlock : cases OTP en rouge (`aria-invalid` par slot) + message centré + reset au re-typage — itération UI — 2026-06-25
+- [x] Bordure OTP foncée (`oklch(0.85 0.003 48.717)`, même teinte que `--input`) + retrait favicon `/vite.svg` — itération UI — 2026-06-25
+- [x] Fix sécu : fail-secure `UNLOCK_COOKIE_SECRET`/`SESSION_SECRET` (`resolve_cookie_secret`, refus de boot prod sans secret) — revue auto — 2026-06-25
 
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24

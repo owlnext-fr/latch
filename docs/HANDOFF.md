@@ -5,6 +5,49 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — PHASE 4 LIVRÉE + itérations UI + revues + Phase 7 planifiée → merge `main`
+
+### Dernière chose faite
+- **Phase 4 (serving `/c/<slug>` + déverrouillage) complète**, exécutée en Subagent-Driven (10 tâches,
+  1 implémenteur + 1 reviewer chacune). Backend : `services/unlock_cookie.rs` (cœur pur, empreinte HMAC du
+  PIN), `controllers/serve.rs` (GET /c arbre de décision, POST /unlock cookie signé `SignedCookieJar`+empreinte,
+  GET /api/public/{slug} meta sans PIN), `controllers/serve_ratelimit.rs` (2 layers governor in-memory IP+slug
+  & slug-global). Front : page de déverrouillage = **2ᵉ entrée Vite isolée** React+shadcn.
+- **Fix sécu HIGH (revue auto)** : `UNLOCK_COOKIE_SECRET` **et** `SESSION_SECRET` étaient fail-OPEN en prod
+  (fallback hardcodé si env absente) → corrigé en **fail-secure** (`resolve_cookie_secret`, refus de boot hors
+  Dev/Test sans secret explicite). Commit `1b309d8`.
+- **Revue finale de branche (opus)** : Ready to merge (fixes appliqués : commentaire rate-limit `auth.rs`, chemins doc).
+- **Itérations UI post-livraison (demande humaine, validées au navigateur)** : InputOTP segmenté (6 cases, collage,
+  auto-submit sur `onComplete`) + texte explicatif + **découplage assets `/admin/assets` → `/assets`** (base Vite `/`
+  + mount backend ; corrige le couplage public↔/admin) + centrage OTP + **boutons `loading`** (spinner + disabled,
+  câblés sur toutes les mutations) + état d'erreur (cases rouges, message centré) + bordure OTP foncée + retrait
+  favicon `/vite.svg`. **Revue ciblée du diff d'itération (opus) : Ready to merge: Yes** (assets vérifiés contre
+  les artefacts réels, e2e admin vert).
+- **Phase 7 ajoutée à la ROADMAP** (peaufinage graphique/web) : titres de page, logo, menu Settings
+  (locale + thème system/dark/light via `next-themes` à recâbler), i18n centralisé (détection JSON de locales).
+- **Mémoire à jour** : ROADMAP (Phase 4 LIVRÉE + Phase 7), QUIRKS (fail-secure, cookie-signed, in-memory RL,
+  elementFromPoint, /assets), CONVENTIONS (adaptateur serve, Button loading, 2ᵉ entrée Vite), INDEX, BACKLOG, ENV.
+
+### Trucs en suspens
+- **CI à surveiller après le push sur `main`** (1ʳᵉ exécution réelle avec les nouvelles deps `axum-extra`/`hmac`/
+  `sha2`/`hex`/`input-otp` + le mount `/assets` + la base Vite `/`). `cargo deny` non vérifiable en local
+  (binaire absent) → contrôlé en CI ; licences nouvelles deps = MIT/Apache (allowlist OK a priori).
+- e2e complet `/c/<slug>` (déverrouillage) en Playwright = reporté **Phase 6** (le smoke admin couvre l'admin).
+
+### Prochaine chose à creuser
+- **Phase 5 — Endpoint MCP** (`mcp/`, `rmcp ≥ 1.4.0`, token sur tous les tools) — prochaine phase métier.
+- OU **Phase 7** (peaufinage) selon priorité produit.
+
+### Notes pour future Claude
+- Secrets cookie : **fail-secure** désormais — en prod, `UNLOCK_COOKIE_SECRET` (≥ 64 o) ET `SESSION_SECRET` sont
+  obligatoires, sinon le boot échoue (volontaire). Dev/Test gardent un fallback déterministe.
+- `axum-extra` feature = **`cookie-signed`** (pas `cookie` — n'expose pas `Key`).
+- `tower_governor` `per_second(n)` = **période de n secondes** (1/n req/s), pas n req/s (source 0.7.0).
+- Rate-limit `/unlock` **in-memory** : compteurs perdus au reboot (limite §9.5 assumée, pas de table).
+- Détail tâche-par-tâche + findings : `.superpowers/sdd/progress.md` (gitignoré).
+
+---
+
 ## 2026-06-25 — Itération UX : Button loading + OTP auto-submit
 
 ### Dernière chose faite

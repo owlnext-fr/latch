@@ -662,3 +662,81 @@ Une cellule/élément cliquable qui navigue via le router (pas une vraie URL) do
 `href` = non focusable, non actionnable au clavier). La classe `.linkish` (app.css) neutralise le
 style bouton et imite un lien. **Garder les vrais `<a href target="_blank">`** (ex. preview de
 version) tels quels — seul leur `aria-label` passe par `t!`.
+
+## Adaptateur entrant "serving public" (`controllers/serve.rs`) — Phase 4
+
+Surface **publique** (pas de session admin) : l'auth est le code projet + cookie signé, la
+barrière est le rate-limit. Le handler décide **côté serveur** quoi renvoyer, et sert le HTML
+stocké en **octets bruts** (jamais du React). Toute réponse `/c` est en `Cache-Control: no-store`.
+
+```rust
+// GET /c/{slug} — arbre de décision (contrat §6)
+let project = svc.get_by_slug(&slug).await.map_err(into_response)?;   // 404 si inconnu
+let Some(active_id) = project.active_version_id else {               // 404 si rien d'actif
+    return Err(loco_rs::Error::NotFound);
+};
+if project.code_enabled {
+    let secret = crate::web::unlock_secret(&ctx)?;                   // PAS de ? dans une closure
+    let ok = match jar.get(UNLOCK_COOKIE_NAME) {
+        Some(c) => verify_token(secret.as_bytes(), &slug, &pin, c.value(), now),
+        None => false,
+    };
+    if !ok { return unlock_page_response().await; }                 // sert unlock.html, HTTP 200
+}
+// libre OU cookie valide → HTML stocké, no-store
+let html = crate::web::storage_from_ctx(&ctx).read(&version.html_path).await.map_err(into_response)?;
+Ok(html_response(html))                                             // (headers no-store, body).into_response()
+```
+
+**Règles :**
+- Vérifier le cookie **avant** de lire le HTML (ne jamais lire/exposer le proto si l'accès échoue).
+- Page de déverrouillage = **HTTP 200** (pas 401, contrat §6 — sinon popup natif du navigateur).
+- Cookie unlock : `SignedCookieJar::from_headers(&headers, key)` (pas d'extracteur `FromRef`/state) ;
+  la valeur signée porte une **empreinte HMAC du PIN courant** (`issue_token`/`verify_token`, cœur pur)
+  → rotation du PIN = révocation. Attributs : `HttpOnly`, `Secure`(prod via `cookie_secure(&ctx)`),
+  `SameSite=Lax`, `Path=/c/{slug}`, `Max-Age`. Succès = **204** (pas 303 — incompatible avec un client `fetch`).
+- Secrets cookie via `web::resolve_cookie_secret(...)` : **fail-secure** (hors Dev/Test, env var obligatoire,
+  ≥ 64 octets ; pas de fallback en prod). Vaut pour `UNLOCK_COOKIE_SECRET` ET `SESSION_SECRET`.
+- Rate-limit `/unlock` : deux `GovernorLayer` empilés via `tower::ServiceBuilder` (pas `.layer().layer()`
+  direct sur le `MethodRouter` → casse l'inférence axum 0.8) ; extracteurs custom `IpSlugKeyExtractor`
+  (clé `"{ip}|{slug}"`) + `SlugKeyExtractor` (clé `slug`). In-memory (reset au reboot, assumé).
+
+## Bouton avec état de chargement (`Button loading`) — Phase 4
+
+Le `Button` shadcn porte un prop `loading?: boolean` : spinner `Loader2 animate-spin` injecté +
+`disabled` effectif. On câble l'`isPending` de la mutation TanStack Query (jamais d'état local).
+
+```tsx
+// Bouton simple
+<Button type="submit" loading={deploy.isPending}>{t('deploy.btn')}</Button>
+
+// Agrégat (plusieurs mutations derrière une action)
+const saving = createProject.isPending || updateProject.isPending || setCode.isPending || clearCode.isPending
+<Button type="submit" loading={saving}>{t('common.save')}</Button>
+
+// Spinner par ligne (mutation partagée) via mutation.variables (TanStack Query v5)
+<Button loading={activateVersion.isPending && activateVersion.variables?.n === v.n} ...>
+```
+
+**Règles :**
+- Label **stable** (pas de swap "…ing" : le spinner suffit).
+- `loading` ne s'applique pas si `asChild` (nav links).
+- Pour un spinner ciblé sur une ligne avec une mutation partagée : `isPending && variables?.<clé> === <valeur>`.
+
+## 2ᵉ entrée Vite (page server-rendered découplée) — Phase 4
+
+Une page publique server-rendered (ex. `unlock.html`) qui réutilise le thème/les composants
+shadcn **sans embarquer le SPA admin** : 2ᵉ entrée Vite, bundle isolé.
+
+```ts
+// vite.config.ts
+base: '/',  // PAS '/admin/' — assets en /assets, servis hors /admin (découplage public)
+build: { rollupOptions: { input: { main: '…/index.html', unlock: '…/unlock.html' } } }
+```
+
+**Règles :**
+- `base: '/'` + `nest_service("/assets", ServeDir(dist/assets))` côté backend (assets publics,
+  pas sous `/admin`). Le routeur admin garde `basepath: '/admin'` (orthogonal à la base Vite).
+- L'entrée dédiée n'importe **aucun** code admin (pas de router/Query/openapi-fetch) — bundle isolé.
+- i18n minimal propre à la page (`createInstance()`), pas le catalogue admin complet.
+- Tests Vitest avec `<InputOTP>` : mocker `document.elementFromPoint` dans `vitest.setup.ts` (cf. QUIRKS).

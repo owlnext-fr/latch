@@ -108,3 +108,29 @@ Claude web se connecte à un serveur MCP sans auth HTTP (déduit de la doc, non 
 
 **Sortie :** e2e vert en CI, image publiée sur GHCR public, `deploy.sh` testé sur la
 box. Repo présentable comme référence FOSS.
+
+## Phase 7 — Peaufinage graphique / web
+
+Polish visuel et confort, une fois le cœur fonctionnel en place. Indépendant des
+phases métier ; peut s'intercaler selon les priorités produit.
+
+- **Titres de page** : gestion dynamique du `<title>` par route admin (TanStack Router)
+  et sur la page de déverrouillage (ex. « {brand_name} — déverrouillage » / « latch — admin »).
+  Aujourd'hui les titres sont statiques (`index.html` = « latch — admin », `unlock.html` = « latch »).
+- **Logo** : générer un logo `latch` et l'appliquer — favicon (les deux entrées Vite ; le
+  `/vite.svg` placeholder a été retiré en Phase 4), en-tête admin (topbar), et page de
+  déverrouillage (au-dessus du `brand_name`).
+- **Menu Settings** : un menu de réglages regroupant **le choix de la locale** (FR/EN, déjà
+  géré par `react-i18next` + `LocaleSwitcher`) et **le choix du thème** (`system` / `dark` /
+  `light`). `next-themes` est déjà en dépendance mais aucun `ThemeProvider` n'est monté
+  (retiré au Plan 2) — à recâbler + persister. NB : la page unlock est en fond clair only
+  aujourd'hui (cf. BACKLOG « bordure OTP sans variante dark »).
+- **i18n centralisé** : centraliser les catalogues de traduction pour qu'ajouter une locale
+  soit trivial — idéalement **détection automatique des fichiers JSON** de locale (`locales/*.json`)
+  plutôt que les imports statiques en dur actuels (`import en from './locales/en.json'`).
+  S'applique à l'i18n admin **et** au mini-catalogue de la page unlock (`src/unlock/i18n.ts`),
+  à harmoniser.
+
+**Sortie :** titres cohérents par page ; logo présent (favicon + admin + unlock) ; menu
+settings fonctionnel (locale + thème persistés, défaut thème = `system`) ; ajouter une locale
+= déposer un JSON (ou une config minimale), sans toucher au code d'import.
