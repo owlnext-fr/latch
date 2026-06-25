@@ -32,11 +32,18 @@ interface ProjectFormProps {
   onOpenChange: (open: boolean) => void
 }
 
-/** Generate a fresh 6-digit PIN (string, zero-padded). */
+/**
+ * Generate a fresh 6-digit PIN (string).
+ * Uses the Web Crypto CSPRNG rather than `Math.random()` — the modulo bias on a
+ * 6-digit code is negligible, and the real brute-force defense is the rate-limit
+ * on `/c/<slug>/unlock` (contrat §9.5), not the PIN entropy.
+ */
 function generatePin(): string {
+  const buf = new Uint32Array(6)
+  crypto.getRandomValues(buf)
   let pin = ''
   for (let i = 0; i < 6; i += 1) {
-    pin += String(Math.floor(Math.random() * 10))
+    pin += String(buf[i] % 10)
   }
   return pin
 }
