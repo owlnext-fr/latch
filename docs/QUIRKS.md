@@ -3,6 +3,17 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## `input-otp` exige `document.elementFromPoint` → absent de jsdom (2026-06-25)
+**Symptôme** : les tests Vitest avec `<InputOTP>` lancent des `Uncaught Exception: TypeError: document.elementFromPoint is not a function` à la fin des tests (sans les faire échouer, mais le process se termine avec exit 1).
+**Cause** : `input-otp@1.4.x` appelle `document.elementFromPoint` pour le positionnement du caret dans un timer interne (`setTimeout`). jsdom ne l'implémente pas.
+**Workaround** : ajouter dans `vitest.setup.ts` :
+```ts
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null
+}
+```
+Pattern identique au mock `ResizeObserver` déjà présent.
+
 ## Loco `limit_payload` plafonne le body à **2 Mo par défaut** → 413 sur un gros proto (2026-06-25)
 **Symptôme** : le deploy d'un HTML mono-fichier > 2 Mo échoue en **413** (`Failed to buffer the request
 body: length limit exceeded`, `JsonRejection(... LengthLimitError)`). Le petit HTML passe, le gros non.

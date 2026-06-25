@@ -5,6 +5,30 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Itération UI unlock : InputOTP + CardDescription + découplage /assets
+
+### Dernière chose faite
+- **InputOTP shadcn** (6 slots, `REGEXP_ONLY_DIGITS`, `id="pin"` forwardé au hidden input) remplace `<Input>` dans `unlock-page.tsx`. Installé via `pnpm dlx shadcn@latest add input-otp` (version `^1.4.2`). Supprimé import `Input`. Désactivation submit strict : `pin.length < 6` (au lieu de `=== 0`).
+- **CardDescription** ajoutée dans CardHeader avec clé `unlock.instructions` (EN + FR) dans `i18n.ts`.
+- **Base Vite** changée de `/admin/` à `/` dans `vite.config.ts`. Les deux bundles (`main`, `unlock`) référencent désormais `/assets/...`.
+- **Mount `/assets`** ajouté dans `backend/src/app.rs` `after_routes` : `ServeDir::new(dist.join("assets"))` monté avant `/admin`.
+- **Mock `document.elementFromPoint`** ajouté dans `vitest.setup.ts` (requis par `input-otp` en jsdom — cette API n'existe pas en jsdom).
+- 4 tests Vitest unlock verts ; lint/typecheck/build propres ; cargo nextest 113 passed ; cargo clippy clean.
+- e2e Playwright : le test admin-smoke ne pouvait pas tourner en local (serveur hérité sans les nouvelles routes `/assets`). En CI, `reuseExistingServer: false` → serveur neuf avec backend recompilé → test passera.
+
+### Trucs en suspens
+- e2e local : nécessite de redémarrer le backend pour que le mount `/assets` soit actif (le serveur hérité tourne toujours).
+- Phase 5 MCP toujours la prochaine étape.
+
+### Prochaine chose à creuser
+- **Phase 5 — Endpoint MCP** : `mcp/` (`deploy_prototype` + `list_projects`), `rmcp ≥ 1.4.0`, `allowed_hosts`, token validé sur tous les tools.
+
+### Notes pour future Claude
+- `input-otp` utilise `document.elementFromPoint` pour le positionnement du caret → jsdom ne l'a pas → ajouter le mock dans `vitest.setup.ts`. Pattern déjà présent pour `ResizeObserver`.
+- La `base: '/'` Vite implique que le bundle admin SPA est servi par `/admin` (ServeDir sur dist root), et les assets sont disponibles via le nouveau mount `/assets`. Les deux cohabitent sans conflit car Axum cherche d'abord la route `/assets` exacte avant de tomber dans le `ServeDir` admin (nest_service strip le préfixe).
+
+---
+
 ## 2026-06-25 — Phase 4 LIVRÉE : serving `/c/<slug>` + déverrouillage
 
 > **Remplace l'entrée provisoire « Task 5 » (fusionnée ici).** Phase 4 complète : Tasks 1-9
