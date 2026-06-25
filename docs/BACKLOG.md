@@ -120,3 +120,48 @@ L'admin est protégé par cookie de session same-origin mais `ApiDoc` ne déclar
 À ajouter via un `Modify`/`modifiers` utoipa (scheme `apiKey` cookie nommé `latch_admin`).
 Non bloquant.
 
+## Phase 4 — écartés de périmètre (2026-06-25)
+
+### Table `unlock_attempts` + statistiques admin (Phase 4 – écarté §9)
+Stocker les tentatives d'unlock (slug, IP, timestamp, succès/échec) pour exposer des
+stats à l'admin (nombre de tentatives, taux d'échec) et permettre un audit. Écarté v1 :
+le rate-limit in-memory suffit pour la barrière opérationnelle ; les stats sont cosmétiques.
+Dépendance : migration + entité SeaORM + section admin détail.
+
+### Scheduler / purge des cookies expirés (Phase 4 – écarté §9)
+Un scheduler cron (Loco worker ou tâche async) qui purgerait périodiquement les lignes
+de session/cookie expirées. Écarté v1 : SQLite reste petit, pas de pression de croissance
+immédiate. À envisager si la volumétrie monte.
+
+### Backoff durable au reboot (Phase 4 – écarté §9.5)
+Les compteurs de rate-limit governor sont **in-memory** : un reboot remet les compteurs à
+zéro, permettant à un attaquant de relancer une vague après un redémarrage du serveur.
+Un backoff durable (Redis, SQLite, ou `RUSTSEC`-safe external store) mitigerait ce vecteur.
+Écarté v1 : la limite est assumée et documentée (contrat §9.5, QUIRKS) ; restart est une
+opération monitored.
+
+### `unlock.html` `lang="en"` statique — i18n du shell HTML (Phase 4 – revue 2026-06-25)
+L'attribut `lang="html"` du shell `unlock.html` est figé en `"en"` (généré par Vite).
+Pour une page de déverrouillage multilingue, le shell HTML devrait refléter la langue
+de l'utilisateur. Faible priorité : le contenu dynamique de la page est rendu par React
+et peut déjà être i18n côté client sans que `lang` corresponde exactement.
+
+### Clarifier / aligner la sémantique de `LATCH_UNLOCK_RL_IP_PER_SECOND` (Phase 4 – revue 2026-06-25)
+tower_governor utilise un modèle « token bucket » : `per_second` contrôle le taux de
+remplissage du bucket (tokens/seconde), pas une limite de fenêtre glissante. Vérifier que
+le nommage `LATCH_UNLOCK_RL_IP_PER_SECOND` est suffisamment clair pour les opérateurs ou
+s'il vaut mieux le renommer en `LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC`. Non-breaking si
+renommé avant la Phase 6 (packaging publiable).
+
+### Test isolé du plafond slug-global (Phase 4 – revue 2026-06-25)
+Le governor slug-global (`LATCH_UNLOCK_RL_SLUG_BURST`/`PERIOD_SECS`) n'a pas de test
+d'intégration qui vérifie le rejet quand le plafond est atteint sur un seul slug (contrairement
+au per-IP qui est testé). À ajouter pour garantir la régression de la barrière §9.5.
+
+### Erreur opaque de `storage.read` dans `serve.rs` (Phase 4 – revue 2026-06-25)
+Le handler `serve` log `tracing::error!` si `storage.read` échoue, mais la réponse 500
+retournée n'est pas explicitement opaque (loco_rs::Error::Message inclut le texte de
+l'erreur IO). Durcir : logger le détail côté serveur et renvoyer un message générique
+`"internal error"` sans fuite du chemin de fichier. Même pattern que le backlog
+`controllers/error.rs`.
+

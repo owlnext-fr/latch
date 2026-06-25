@@ -70,15 +70,22 @@ Livrables React (Plans 1-3, tous verts) :
 
 **Critères de sortie :** parcours admin manuel complet ; Vitest verts ; Playwright e2e verts.
 
-## Phase 4 — Serving `/c/<slug>` (deux états)
+## Phase 4 — Serving `/c/<slug>` ✅ LIVRÉE (2026-06-25)
+
+> Spec : `docs/superpowers/specs/2026-06-25-phase-4-serving-design.md`
+> Plan : `docs/superpowers/plans/2026-06-25-phase-4-serving.md`
 
 - `controllers/serve.rs` : GET deux états (libre / cookie valide / page de
   déverrouillage), `POST /unlock` (vérif + cookie signé HMAC), `no-store` partout,
-  page de déverrouillage stylée portant `brand_name`.
-- **Rate-limit *load-bearing*** sur `/unlock` (backoff IP+slug + plafond global slug).
+  page de déverrouillage stylée portant `brand_name`. GET `/api/public/{slug}` (PublicMeta).
+- `services/unlock_cookie.rs` : cœur pur (`issue_token`/`verify_token`, empreinte HMAC du PIN).
+- `controllers/serve_ratelimit.rs` : **rate-limit *load-bearing*** sur `/unlock`
+  (backoff IP+slug via governor, 2 layers `ServiceBuilder`).
+- Frontend : `unlock.html` (2ᵉ entrée Vite) + `src/unlock.tsx`.
 
-**Sortie :** tests verts — projet libre servi, projet protégé → page de
-déverrouillage, unlock pose le cookie et sert l'active, rate-limit effectif.
+**Critères de sortie atteints :** tests verts (cœur unit, intégration serve/unlock,
+rate-limit) ; frontend Vitest+build verts (`dist/unlock.html`) ; cargo-deny vert ;
+validé navigateur (Task 9).
 
 ## Phase 5 — Endpoint MCP
 

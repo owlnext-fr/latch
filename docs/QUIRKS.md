@@ -176,6 +176,39 @@ admin, utiliser **`session.destroy()`** (contrat §4). `session.purge()` n'exist
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on
 fuit en remplaçant le Basic Auth).
 
+## Fail-secure secrets — `UNLOCK_COOKIE_SECRET` et `SESSION_SECRET` (2026-06-25)
+Les deux secrets de cookie sont résolus via un helper pur (`resolve_cookie_secret` dans
+`web/mod.rs`) qui **refuse le boot en prod** si la variable d'env est absente ou vide
+(tout environnement hors `Development`/`Test`). La garde de longueur est en **octets** (pas
+chars) : `Key::from()` panique si `bytes.len() < 64`. Un secret de 63 octets fait échouer le
+boot — c'est le comportement voulu, pas un bug. En dev/test, un fallback déterministe de
+64 chars est utilisé. **Ne jamais baisser la garde à ≥ 32 octets** : l'exigence `axum-extra
+SignedCookieJar` (signing 32 + encryption 32 = 64 minimum) est non-négociable.
+
+## Cookie unlock = `SignedCookieJar` + empreinte HMAC du PIN (2026-06-25)
+Le cookie de déverrouillage utilise `SignedCookieJar` (feature **`cookie-signed`** d'`axum-extra`,
+PAS le feature `cookie` seul — l'import est `axum_extra::extract::cookie::SignedCookieJar`) et
+stocke dans sa valeur une **empreinte HMAC du PIN** (pas le PIN en clair) : changement de PIN →
+rotation implicite des cookies existants → révocation sans liste de révocation. `Key::from()`
+exige ≥ 64 bytes (signing key 32 B + encryption key 32 B). `SignedCookieJar::from_headers(&headers, key)` —
+construire manuellement depuis `HeaderMap`, pas comme extracteur axum classique dans les handlers
+qui combinent plusieurs extracteurs.
+
+## Rate-limit `/unlock` = in-memory (governor, 2 layers via `ServiceBuilder`) (2026-06-25)
+Le rate-limit de `/unlock` est **100 % in-memory** (governor, `tower_governor`) : les compteurs
+sont **perdus au reboot** du serveur (limite assumée et documentée §9.5 du contrat). Architecture :
+deux layers indépendants (par-IP + slug-global) montés via `tower::ServiceBuilder` (`.layer()` ×2)
+car `.layer().layer()` chaîné directement sur un `MethodRouter` axum 0.8.9 casse l'inférence de
+type → erreur de compilation obscure. `ServiceBuilder` résout le problème car il compose les layers
+avant de les passer à axum.
+
+## 2ᵉ entrée Vite `unlock.html` : assets tirés de `/admin/assets/*` (2026-06-25)
+`unlock.html` est la 2ᵉ entrée du build Vite (Phase 4). Ses imports `<script src="/admin/assets/...">` et
+`<link href="/admin/assets/...">` pointent vers `/admin/assets/*` (base Vite = `/admin/`) — ils sont
+résolus correctement car le `ServeDir` admin (`nest_service("/admin", ServeDir::new(dist))`) sert
+l'intégralité du dossier `dist/`, y compris `assets/`. Pas de routing spécial supplémentaire
+nécessaire : les assets sont publics (pas derrière `AdminAuth`).
+
 ---
 
 ## Historique Yew — obsolète depuis migration React (2026-06-25)

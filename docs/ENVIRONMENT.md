@@ -8,10 +8,15 @@
 - `ADMIN_USER` — identifiant admin.
 - `ADMIN_PASS` — mot de passe admin (comparé à temps constant, non hashé).
 - `DEPLOY_TOKEN` — secret applicatif validé par les tools MCP.
-- `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client.
+- `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client (≥ 64 bytes, `Key::from()` panique en dessous). **OBLIGATOIRE en prod** (le boot refuse de démarrer si absente hors Dev/Test — fail-secure). En dev, un fallback déterministe de 64 chars est utilisé. Générer : `openssl rand -hex 32`.
+- `LATCH_UNLOCK_TTL_DAYS` — durée de vie du cookie d'unlock (jours). Défaut : 30.
+- `LATCH_UNLOCK_RL_IP_BURST` — governor IP : burst (réservation burst). Défaut : 5.
+- `LATCH_UNLOCK_RL_IP_PER_SECOND` — governor IP : taux de remplissage (req/s). Défaut : 1.
+- `LATCH_UNLOCK_RL_SLUG_BURST` — governor slug-global : burst. Défaut : 20.
+- `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` — governor slug-global : période de remplissage (secondes). Défaut : 3.
 - `SESSION_SECRET` — clé HMAC de signature du cookie de session admin (≥ 64 bytes). En dev : clé de secours déterministe (voir `web/mod.rs`). **Obligatoire en prod.**
 - `LATCH_STORAGE_ROOT` — racine du volume HTML des versions. Défaut : `data`. En prod : `/data` (volume Docker). Utilisé par `storage_from_ctx`.
-- `LATCH_SPA_DIST` — racine des assets buildés de la SPA React (Vite `dist/`). Défaut dev (CWD `backend/`) : `../frontend/dist`. Prod (image) : `/app/frontend/dist` (posé par le Dockerfile). Lu par `web::spa_dist_dir()`.
+- `LATCH_SPA_DIST` — racine des assets buildés de la SPA React (Vite `dist/`). Défaut dev (CWD `backend/`) : `../frontend/dist`. Prod (image) : `/app/frontend/dist` (posé par le Dockerfile). Lu par `web::spa_dist_dir()`. **Note** : `unlock.html` (page de déverrouillage client) est servie depuis cette même racine (`dist/unlock.html`) — c'est la 2ᵉ entrée Vite build en Phase 4 ; ses assets tirent de `/admin/assets/*` (base Vite `/admin/`), fonctionnel car le `ServeDir` admin sert le dist complet.
 - `DATABASE_URL` — URI SQLite. Dev (défaut) : `sqlite://latch_development.sqlite?mode=rwc`.
   Prod (image) : `sqlite:///data/latch.sqlite?mode=rwc` (volume monté). Modèle : `.env.example`.
 - `PORT` — port d'écoute backend (défaut `5150`).

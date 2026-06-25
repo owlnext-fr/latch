@@ -5,22 +5,32 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
-## 2026-06-25 — Phase 4 Task 5 : GET /c/{slug} handler (arbre de décision)
+## 2026-06-25 — Phase 4 LIVRÉE : serving `/c/<slug>` + déverrouillage
+
+> **Remplace l'entrée provisoire « Task 5 » (fusionnée ici).** Phase 4 complète : Tasks 1-9
+> livrées, validées navigateur (Task 9), vérification finale Task 10 ✅.
 
 ### Dernière chose faite
-- Implémenté `GET /c/{slug}` dans `backend/src/controllers/serve.rs` (handler `serve`, const `UNLOCK_COOKIE_NAME`, helpers `html_response` + `unlock_page_response`).
-- Arbre de décision : slug inconnu → 404 ; pas de version active → 404 ; code désactivé → HTML no-store ; code activé + pas de cookie → unlock.html HTTP 200 no-store ; code activé + cookie valide → HTML no-store.
-- TDD : 4 tests RED puis 6/6 GREEN (cargo nextest run --test serve). fmt + clippy clean.
-- Commit `4654b22`.
+- **Phase 4 entière livrée** : `services/unlock_cookie.rs` (cœur pur, `issue_token`/`verify_token`,
+  empreinte HMAC du PIN pour révocation par rotation) ; `controllers/serve.rs` (GET /c/{slug}
+  arbre de décision 5 branches, POST /c/{slug}/unlock, GET /api/public/{slug}) ;
+  `controllers/serve_ratelimit.rs` (deux governor layers via `ServiceBuilder`) ;
+  `frontend/src/unlock.tsx` + `unlock.html` (2ᵉ entrée Vite, page formulaire PIN).
+- Task 10 : `.env.example` corrigé (`UNLOCK_COOKIE_SECRET` ≥ 64 bytes, 5 knobs RL) ;
+  `docs/ENVIRONMENT.md` / `QUIRKS.md` / `INDEX.md` / `ROADMAP.md` / `BACKLOG.md` mis à jour.
+- Vérification finale : `cargo nextest`, `cargo clippy`, `cargo deny`, `pnpm lint/typecheck/test/build` — tous verts.
 
 ### Trucs en suspens
-- La branche valide-cookie-sert-HTML est correcte mais non couverte par ce test (intentionnel — Task 6 la couvre après avoir implémenté le endpoint `/unlock` qui émet le cookie).
+- **e2e Playwright complet** (flux `/c/<slug>` + unlock + cookie) reporté en **Phase 6** (e2e, durcissement, packaging).
+- Minors BACKLOG Phase 4 : `unlock.html` `lang` statique ; clarification sémantique `RL_IP_PER_SECOND` ; test isolé plafond slug-global ; erreur opaque `storage.read` dans `serve.rs`.
 
 ### Prochaine chose à creuser
-- Task 6 : endpoint POST /c/{slug}/unlock (vérification PIN, émission cookie signé, redirect).
+- **Phase 5 — Endpoint MCP** : `mcp/` (`deploy_prototype` + `list_projects`), `rmcp ≥ 1.4.0`, `allowed_hosts`, token validé sur tous les tools.
 
 ### Notes pour future Claude
-- `SignedCookieJar::from_headers(&headers, key)` — construire manuellement depuis HeaderMap, pas comme extracteur axum.
+- **Cookie unlock** = `SignedCookieJar` (feature **`cookie-signed`** d'`axum-extra`, pas `cookie` seul) + empreinte HMAC du PIN dans la valeur (révocation par rotation de PIN). `Key::from()` exige ≥ 64 bytes. Construire via `SignedCookieJar::from_headers(&headers, key)` (manuellement depuis HeaderMap).
+- **Rate-limit in-memory** : compteurs perdus au reboot (assumé §9.5). Deux layers governor montés via `tower::ServiceBuilder` car `.layer().layer()` sur MethodRouter casse l'inférence axum 0.8.9.
+- **Fail-secure secrets** : `UNLOCK_COOKIE_SECRET` ET `SESSION_SECRET` refusent le boot en prod si absents/vides (helper `resolve_cookie_secret` hors Dev/Test). Garde en octets, pas chars.
 - Le `?` ne peut pas vivre dans une closure `.map()` — utiliser `match` explicite (voir `serve` handler).
 
 ---
