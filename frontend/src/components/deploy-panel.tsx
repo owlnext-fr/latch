@@ -25,10 +25,10 @@ interface DeployPanelProps {
 function DeployPanelContent({
   projectId,
   onOpenChange,
-}: {
+}: Readonly<{
   projectId: number
   onOpenChange: (open: boolean) => void
-}) {
+}>) {
   const { t } = useTranslation()
   const deploy = useDeploy()
 
@@ -173,7 +173,7 @@ function DeployPanelContent({
   )
 }
 
-export function DeployPanel({ projectId, open, onOpenChange }: DeployPanelProps) {
+export function DeployPanel({ projectId, open, onOpenChange }: Readonly<DeployPanelProps>) {
   const { t } = useTranslation()
 
   return (

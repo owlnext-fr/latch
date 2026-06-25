@@ -23,7 +23,7 @@ export function DeleteProjectPanel({
   project,
   open,
   onOpenChange,
-}: DeleteProjectPanelProps) {
+}: Readonly<DeleteProjectPanelProps>) {
   const { t } = useTranslation()
   const router = useRouter()
   const deleteProject = useDeleteProject()

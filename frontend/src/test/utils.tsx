@@ -20,7 +20,7 @@ function makeQueryClient() {
   })
 }
 
-function AllProviders({ children }: { children: ReactNode }) {
+function AllProviders({ children }: Readonly<{ children: ReactNode }>) {
   const queryClient = makeQueryClient()
   return (
     <I18nextProvider i18n={i18n}>

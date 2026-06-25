@@ -11,7 +11,7 @@ interface PinFieldProps {
   disabled?: boolean
 }
 
-export function PinField({ pin, editable = false, onChange, disabled = false }: PinFieldProps) {
+export function PinField({ pin, editable = false, onChange, disabled = false }: Readonly<PinFieldProps>) {
   const { t } = useTranslation()
   const [revealed, setRevealed] = useState(false)
 

@@ -24,7 +24,7 @@ export function DeleteVersionPanel({
   version,
   open,
   onOpenChange,
-}: DeleteVersionPanelProps) {
+}: Readonly<DeleteVersionPanelProps>) {
   const { t } = useTranslation()
   const deleteVersion = useDeleteVersion()
 

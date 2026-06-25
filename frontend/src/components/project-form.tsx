@@ -60,7 +60,7 @@ export function ProjectForm({
   mode,
   project,
   onOpenChange,
-}: ProjectFormProps) {
+}: Readonly<ProjectFormProps>) {
   const { t } = useTranslation()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()

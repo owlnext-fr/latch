@@ -8,7 +8,7 @@ interface CopyButtonProps {
   ariaLabel: string
 }
 
-export function CopyButton({ text, ariaLabel }: CopyButtonProps) {
+export function CopyButton({ text, ariaLabel }: Readonly<CopyButtonProps>) {
   const { t } = useTranslation()
 
   async function handleClick() {

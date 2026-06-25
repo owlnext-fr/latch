@@ -9,7 +9,7 @@ import { reloadPage } from './reload'
 
 function slugFromPath(): string {
   // /c/<slug> → segment d'indice 1
-  return window.location.pathname.split('/').filter(Boolean)[1] ?? ''
+  return globalThis.location.pathname.split('/').filter(Boolean)[1] ?? ''
 }
 
 export function UnlockPage() {

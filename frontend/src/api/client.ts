@@ -18,7 +18,7 @@ const authMiddleware: Middleware = {
 // undici/MSW d'intercepter (un baseUrl '' produit une URL relative que Node rejette).
 // credentials include = cookie session same-origin.
 export const api = createClient<paths>({
-  baseUrl: window.location.origin,
+  baseUrl: globalThis.location.origin,
   credentials: 'include',
   // Résoudre `fetch` à l'appel (pas à la création du client) : sinon openapi-fetch
   // capture la référence globale au load du module, ce qui empêche MSW de l'intercepter

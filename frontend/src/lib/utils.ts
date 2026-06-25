@@ -13,5 +13,5 @@ export function humanSize(bytes: number): string {
 }
 
 export function publicUrl(slug: string): string {
-  return `${window.location.origin}/c/${slug}`
+  return `${globalThis.location.origin}/c/${slug}`
 }
