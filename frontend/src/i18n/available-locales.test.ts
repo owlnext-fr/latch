@@ -13,7 +13,7 @@ const fakeGlob = {
 describe('parseLocales', () => {
   it('derives the language code from the filename', () => {
     const { locales } = parseLocales(fakeGlob)
-    expect(locales.map((l) => l.code).sort()).toEqual(['en', 'fr'])
+    expect(locales.map((l) => l.code)).toEqual(['en', 'fr'])
   })
 
   it('sorts locales by code (stable order)', () => {
@@ -47,9 +47,12 @@ describe('parseLocales', () => {
   })
 
   it('falls back per-field when _meta is partial', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { locales } = parseLocales({
       './locales/admin/es.json': { default: { _meta: { name: 'Español' } } },
     })
     expect(locales[0]).toEqual({ code: 'es', name: 'Español', flag: 'ES' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 })

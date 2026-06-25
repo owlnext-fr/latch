@@ -8,6 +8,7 @@ export type ParsedLocales = {
 type GlobModule = { default: Record<string, unknown> }
 
 function codeFromPath(filePath: string): string {
+  // glob keys always contain a path separator, so pop() is always a string
   return filePath.split('/').pop()!.replace(/\.json$/, '')
 }
 
@@ -36,6 +37,7 @@ export function parseLocales(glob: Record<string, GlobModule>): ParsedLocales {
   for (const [filePath, mod] of Object.entries(glob)) {
     const code = codeFromPath(filePath)
     const { _meta, ...translation } = mod.default
+    // JSON locale files contain only string values by convention (i18next resources)
     resources[code] = { translation: translation as Record<string, string> }
     locales.push({ code, ...normalizeMeta(_meta, code) })
   }
