@@ -34,5 +34,8 @@ backend-lcov.info
 # Éditeur
 .vscode/
 
-# Fichier de test local (nom client réel) — ne jamais committer
-/prototype-local.html
+# Artefacts Playwright MCP (session-local)
+.playwright-mcp/
+
+# Prototypes HTML de test locaux — ne jamais committer (placeholder générique)
+/*.local.html
