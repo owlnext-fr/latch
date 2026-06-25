@@ -68,15 +68,21 @@ test('projet protégé : unlock par PIN puis proto servi', async ({ page, reques
   await expect(page.getByText('Demo proto')).toHaveCount(0)
 
   // 2) Mauvais PIN → reste sur l'unlock, proto non servi.
+  //    Synchro sur la réponse /unlock (anti-flaky : l'URL ne change pas).
   await page.locator('#pin').click()
+  const wrongResp = page.waitForResponse((r) => r.url().includes('/unlock'))
   await page.locator('#pin').pressSequentially('000000')
+  await wrongResp
   await expect(page.locator('#pin')).toBeVisible()
   await expect(page.getByText('Demo proto')).toHaveCount(0)
 
   // 3) Bon PIN → auto-submit (onComplete) → cookie posé → reload → proto servi.
+  //    Synchro sur la réponse /unlock avant d'asserter le proto.
   await page.reload()
   await page.locator('#pin').click()
+  const unlockResp = page.waitForResponse((r) => r.url().includes('/unlock'))
   await page.locator('#pin').pressSequentially('135790')
+  await unlockResp
   await expect(page.getByText('Demo proto')).toBeVisible()
 })
 
