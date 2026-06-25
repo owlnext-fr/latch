@@ -17,11 +17,12 @@
   `LATCH_BINDING=127.0.0.1`. Vérifié local : serveur loge `listening on http://127.0.0.1:5150`, `/_health` → 200,
   `1 passed` (9.6 s).
 - Mémoire à jour : `QUIRKS.md` (nouvelle entrée), `ENVIRONMENT.md` (`LATCH_BINDING`).
+- **Commité + poussé sur `main`** : `f90eb21`. **CI validée verte** (run `28153192320`) — tous les jobs OK,
+  dont `e2e Playwright (smoke admin)` qui était la source du flake.
 
 ### Trucs en suspens
-- **Pas encore commité/pushé** — les 4 fichiers modifiés sont dans le working-tree (`development.yaml`,
-  `playwright.config.ts`, `QUIRKS.md`, `ENVIRONMENT.md`, `HANDOFF.md`). À committer + push pour valider sur CI.
-- Le flake étant probabiliste, surveiller 2-3 runs CI verts d'affilée pour confirmer la disparition.
+- Le flake était probabiliste : surveiller 2-3 runs CI verts d'affilée pour confirmer la disparition complète
+  (cause racine éliminée par le bind IPv4 cohérent des deux côtés, donc faible risque).
 
 ### Prochaine chose à creuser
 - Rien de bloquant. Éventuellement aligner `test.yaml`/`production.yaml` si un besoin de bind explicite apparaît
