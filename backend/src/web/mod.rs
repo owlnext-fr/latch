@@ -60,6 +60,62 @@ fn resolve_cookie_secret(
     Ok(secret)
 }
 
+/// Résout un secret/config requis SANS plancher de longueur (contrairement à
+/// `resolve_cookie_secret` qui exige 64 octets pour `cookie::Key`). Fail-secure :
+/// hors Development/Test, l'env var est obligatoire (pas de fallback).
+fn resolve_required(
+    env_value: Option<String>,
+    is_prod: bool,
+    dev_fallback: &str,
+    label: &str,
+) -> Result<String> {
+    match env_value {
+        Some(s) if !s.is_empty() => Ok(s),
+        _ if is_prod => Err(loco_rs::Error::Message(format!(
+            "{label} doit être défini en production"
+        ))),
+        _ => Ok(dev_fallback.to_string()),
+    }
+}
+
+/// Secret partagé validé par TOUS les tools MCP (contrat §5, §9.3). Fail-secure :
+/// refuse de démarrer en prod sans `DEPLOY_TOKEN`. En dev, fallback déterministe.
+pub fn deploy_token(ctx: &AppContext) -> Result<String> {
+    resolve_required(
+        std::env::var("DEPLOY_TOKEN").ok(),
+        cookie_secure(ctx),
+        "dev-only-insecure-deploy-token-please-override-in-production",
+        "DEPLOY_TOKEN",
+    )
+}
+
+/// URL publique de base (source de vérité de l'hôte public, contrat §5/§7).
+/// Normalisée sans `/` final. Fail-secure en prod ; dev → `http://localhost:<PORT>`.
+pub fn public_base_url(ctx: &AppContext) -> Result<String> {
+    let port = std::env::var("PORT").unwrap_or_else(|_| "5150".to_string());
+    let dev_fallback = format!("http://localhost:{port}");
+    let base = resolve_required(
+        std::env::var("LATCH_PUBLIC_BASE_URL").ok(),
+        cookie_secure(ctx),
+        &dev_fallback,
+        "LATCH_PUBLIC_BASE_URL",
+    )?;
+    Ok(base.trim_end_matches('/').to_string())
+}
+
+/// Composant hôte (`host` ou `host:port`) d'une URL de base, pour `allowed_hosts`
+/// (rmcp ≥ 1.4, validation du `Host` header). Parsing minimal (pas de crate `url`).
+pub fn host_authority(base_url: &str) -> String {
+    let without_scheme = base_url
+        .split_once("://")
+        .map_or(base_url, |(_, rest)| rest);
+    without_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or(without_scheme)
+        .to_string()
+}
+
 /// `true` si l'on doit poser `Secure` sur le cookie (fail-secure : tout env hors
 /// Development/Test). Aligné sur `build_session_store`.
 pub fn cookie_secure(ctx: &AppContext) -> bool {
@@ -141,7 +197,7 @@ pub async fn build_session_store(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    use super::resolve_cookie_secret;
+    use super::{host_authority, resolve_cookie_secret, resolve_required};
 
     const DEV_FALLBACK: &str =
         "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!";
@@ -216,5 +272,42 @@ mod tests {
             msg.contains("trop court"),
             "message d'erreur doit mentionner 'trop court' : {msg}"
         );
+    }
+
+    // --- resolve_required (sans plancher de longueur) ---
+
+    #[test]
+    fn required_prod_no_env_is_err() {
+        assert!(resolve_required(None, true, "dev-fallback", "DEPLOY_TOKEN").is_err());
+    }
+
+    #[test]
+    fn required_prod_with_value_ok() {
+        let r = resolve_required(Some("abc".to_string()), true, "dev-fallback", "X");
+        assert_eq!(r.unwrap(), "abc");
+    }
+
+    #[test]
+    fn required_dev_no_env_uses_fallback() {
+        let r = resolve_required(None, false, "dev-fallback", "X");
+        assert_eq!(r.unwrap(), "dev-fallback");
+    }
+
+    // --- host_authority ---
+    #[test]
+    fn host_authority_strips_scheme_and_path() {
+        assert_eq!(
+            host_authority("https://latch.owlnext.fr"),
+            "latch.owlnext.fr"
+        );
+        assert_eq!(
+            host_authority("https://latch.owlnext.fr/"),
+            "latch.owlnext.fr"
+        );
+        assert_eq!(
+            host_authority("http://localhost:5150/mcp"),
+            "localhost:5150"
+        );
+        assert_eq!(host_authority("latch.owlnext.fr"), "latch.owlnext.fr");
     }
 }
