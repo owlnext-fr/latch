@@ -4,6 +4,48 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — Phase 7 Lot 2 : Panneau Settings unifié + Select + LanguageSelect + ThemeToggle — LIVRÉE
+
+### Dernière chose faite
+**Phase 7 Lot 2 clôturée et vérifiée.** Implémentation complète en 6 tâches :
+- `components/ui/select.tsx` : wrapper Select radix (style shadcn identique à `ui/sheet.tsx`)
+- `components/language-select.tsx` : Select + CSS flag-icons (import isolé = bundle unlock clean), locales-driven auto-découverte
+- `components/theme-toggle.tsx` : Segmented 3-state (system/light/dark), lecture `theme` context
+- `components/settings-sheet.tsx` : MCP section + Preferences, helper text par champ, `useSettings(open)` lazy fetch
+- Topbar rewired : icône Settings ouvre le Sheet ; route `/settings` supprimée ; effacement `routes/settings.tsx`/`settings.test.tsx` ; `test/utils.tsx` nettoyé
+- i18n : ~12 nouvelles clés `settings.*` (EN+FR) ; jsdom shims radix Select (scrollIntoView, hasPointerCapture, releasePointerCapture)
+
+**Vérification finale complète depuis `frontend/` :**
+- `rtk lint` : **0 erreur**
+- `pnpm typecheck` : **0 erreur**
+- `rtk vitest run --coverage` : **76/76 tests verts**, couverture new-code (language-select, theme-toggle, settings-sheet) **≥ 80%**
+- `pnpm build` : **build OK**, 2 entrées (`main`, `unlock`) ; assets isolés `/assets`
+
+**Isolation bundle public vérifiée :**
+- `grep -rl "flag-icons\|fi-gb\|section_preferences" dist/assets/ | grep -i unlock || echo "OK"` → **OK: unlock bundle sans flag-icons ni settings.***
+- flag-icons CSS **présente dans main-*.css** (admin bundle, sanity vérifiée)
+
+**Mémoire projet mise à jour :**
+- `docs/CONVENTIONS.md` + section Select+helper-text (pattern radix, CSS isolée par composant)
+- `docs/QUIRKS.md` + entrée radix Select jsdom (shims pour Radix)
+- `docs/INDEX.md` + ligne Phase 7 Lot 2 livrée (9 items, gate + isolation)
+- `docs/HANDOFF.md` (cette entrée)
+
+### Trucs en suspens
+- **Lot 3** : logo/titres de page/largeur layout (TBD priorité produit)
+- **Lot 4** : page d'erreur stylée `/c`
+- **Fusion Lot 1+2** : prévoir un merge groupé au moment du passage en prod (piste CI séparée recommandée)
+
+### Prochaine chose à creuser
+**Phase 7 Lot 3** : peaufinage visuel (logo projet, titres de page, ajustements largeur, GitHub links, etc.)
+
+### Notes pour future Claude
+- **Select radix vendorisé** : `import { Select as SelectPrimitive } from "radix-ui"` (même pattern que Sheet). Pattern câblage : `flex flex-col gap-1.5` → label + contrôle + helper text `text-muted-foreground text-xs`.
+- **flag-icons CSS isolation** : n'importer que dans le composant qui l'utilise (`language-select.tsx`), pas dans `index.css` partagé. Bundle unlock n'aura pas `flag-icons` grâce aux 2 globs Vite distincts (admin/unlock).
+- **Gate couverte** : new-code ≥ 80% Sonar = bloquante. Lot 2 passe (new components ≥ 80%).
+
+---
+
 ## 2026-06-25 — Phase 7 Lot 1 : Fondations i18n/thème — LIVRÉE
 
 ### Dernière chose faite

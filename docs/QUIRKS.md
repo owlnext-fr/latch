@@ -475,6 +475,13 @@ Cette variable d'env est passée à pnpm dlx et contourne la garde de workspace 
 Le `pnpm-workspace.yaml` peut être retiré si le frontend est un package autonome (pas un
 workspace pnpm multi-packages).
 
+## radix Select sous jsdom (Phase 7 Lot 2)
+
+Le Select radix appelle `scrollIntoView`, `hasPointerCapture`, `releasePointerCapture`,
+absents de jsdom. Shims ajoutés dans `vitest.setup.ts` (à côté de `ResizeObserver`/
+`elementFromPoint`). Les tests ciblent le câblage (option courante, `onValueChange` →
+`changeLanguage`) plutôt que le cycle pointer interne de radix.
+
 ## Thème de marque : export générateur shadcn (oklch) → triplets HSL (2026-06-25)
 La CSS vendorisée de `shadcn-rs` consomme les couleurs en **`hsl(var(--color-X))`** avec des
 **triplets HSL** `H S% L%` (y compris des compositions alpha `hsl(var(--color-X) / 0.2)`). Les

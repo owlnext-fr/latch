@@ -989,6 +989,17 @@ const saving = createProject.isPending || updateProject.isPending || setCode.isP
 - `loading` ne s'applique pas si `asChild` (nav links).
 - Pour un spinner ciblé sur une ligne avec une mutation partagée : `isPending && variables?.<clé> === <valeur>`.
 
+## Composant Select (radix) + helper-text généralisé (Phase 7 Lot 2)
+
+`components/ui/select.tsx` vendorise le Select radix via le package unifié
+(`import { Select as SelectPrimitive } from "radix-ui"`, même style que `ui/sheet.tsx`).
+Pattern de réglage dans un panneau : `flex flex-col gap-1.5` → label (`text-sm font-medium`)
++ contrôle + helper text (`text-muted-foreground text-xs`). Pour un sélecteur dépendant des
+locales découvertes, mapper sur l'export `locales` de `@/i18n` (jamais de liste en dur).
+La CSS d'un asset spécifique-admin (ex. `flag-icons`) s'importe DANS le composant qui
+l'utilise (`language-select.tsx`), pas dans `index.css` partagé, pour ne pas alourdir le
+bundle public unlock.
+
 ## i18n — locales auto-découvertes (Phase 7 Lot 1)
 
 Ajouter une langue = déposer `src/i18n/locales/{admin,unlock}/<code>.json` avec une

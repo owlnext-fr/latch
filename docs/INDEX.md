@@ -154,6 +154,18 @@
 - [x] Gate finale SDD : lint/typecheck/test+coverage/build, bundle isolation (admin key ≠ unlock bundle), anti-FOUC script présent/absent (index/unlock) — Phase 7 Lot 1 T5 — 2026-06-25
 - [x] Mémoire projet : CONVENTIONS (pattern glob+_meta), QUIRKS (import.meta.glob, anti-FOUC), INDEX (Lot 1), HANDOFF (entrée datée) — Phase 7 Lot 1 T5 — 2026-06-25
 
+### Lot 2 — Panneau Settings unifié
+- [x] `components/ui/select.tsx` : Select radix wrapper (radix-ui + shadcn style) — Phase 7 Lot 2 T1 — 2026-06-25
+- [x] `components/language-select.tsx` : Select + flag-icons CSS (locales-driven auto-découverte) — Phase 7 Lot 2 T1 — 2026-06-25
+- [x] `components/theme-toggle.tsx` : Segmented 3-state (system/light/dark), lit `theme` context — Phase 7 Lot 2 T2 — 2026-06-25
+- [x] `components/settings-sheet.tsx` : MCP section + Preferences, helper text par réglage, `useSettings(open)` lazy fetch — Phase 7 Lot 2 T3 — 2026-06-25
+- [x] Topbar ouvre le Settings sheet ; route `/settings` retirée ; `routes/settings.tsx`+`settings.test.tsx` effacés — Phase 7 Lot 2 T4-T5 — 2026-06-25
+- [x] New dep: `flag-icons` CSS (import seulement dans `language-select.tsx`, bundle unlock isolation vérifiée) — Phase 7 Lot 2 T1 — 2026-06-25
+- [x] i18n : ~12 nouvelles clés `settings.*` (EN+FR) — Phase 7 Lot 2 T1 — 2026-06-25
+- [x] jsdom shims radix Select (`scrollIntoView`, `hasPointerCapture`, `releasePointerCapture`) dans `vitest.setup.ts` — Phase 7 Lot 2 T1 — 2026-06-25
+- [x] Gate finale : lint 0 err, typecheck 0 err, tests 76 verts (new coverage ≥ 80%), build OK ; bundle isolation unlock vérifiée (no flag-icons CSS, no `settings.*` strings) — Phase 7 Lot 2 T6 — 2026-06-25
+- [x] Mémoire projet : CONVENTIONS (Select+helper-text pattern), QUIRKS (radix Select jsdom), INDEX (Lot 2), HANDOFF (entrée datée) — Phase 7 Lot 2 T6 — 2026-06-25
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
