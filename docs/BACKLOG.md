@@ -88,12 +88,10 @@ Avec la migration React, la SPA est réécrite — ces bugs Yew ne se posent plu
 - **Restant** : revue UX d'ensemble pour distribution (accessibilité clavier, états de chargement
   sur l'activation, cohérence sur mobiles).
 
-## Enrichir `ProjectListItem` : `active_version_n` + `version_count` (Plan 2 review – 2026-06-25)
-La liste projets affiche « Deployed » / tiret au lieu du numéro de version réel. Le DTO
-`ProjectListItem` ne porte pas `active_version_n` (numéro de la version active) ni `version_count`
-(nombre total de versions). L'affichage actuel repose sur la présence/absence de `active_version_id`.
-**À ajouter** : deux champs dans le DTO backend (`dto::to_list_item`) + migration/query JOIN, puis
-les colonnes correspondantes dans `routes/list.tsx`. Non-breaking sur l'API (ajout de champs).
+## ~~Enrichir `ProjectListItem` : `active_version_n` + `version_count`~~ — FAIT (2026-06-25, commit `797e56b`)
+Livré : `ProjectListItem` expose `active_version_n` (n° de version active) + `version_count` et n'expose
+plus `active_version_id`. Service `list_with_versions` (2 requêtes, regroupement mémoire, pas de N+1).
+`openapi.json` + `schema.d.ts` régénérés ; `routes/list.tsx` affiche « v{n} · {count} versions » (pluriel i18next).
 
 ## Bouton « Activer » : état pending (Plan 2 review – 2026-06-25)
 Le bouton « Activer » dans la liste des versions (page détail) ne désactive pas immédiatement

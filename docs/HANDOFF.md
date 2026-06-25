@@ -5,6 +5,37 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Post-validation : fixes + enrichissement liste + MERGE main + CI
+
+### Dernière chose faite
+- **Validé au navigateur par l'humain** (« 100x mieux »). Correctifs livrés après validation :
+  - **Bug gros HTML** : deploy d'un proto > 2 Mo → **413** (middleware Loco `limit_payload`, défaut 2 Mo).
+    Rendu configurable : env **`LATCH_BODY_LIMIT`** (défaut `5mb`, `disable` possible) dans
+    `backend/config/{development,production,test}.yaml` via `get_env`. Test de régression (deploy ~2,5 Mo → 200). Commit `d1087a2`.
+  - **PIN via CSPRNG** : `generatePin()` → `crypto.getRandomValues` (hygiène ; vraie barrière = rate-limit `/unlock`, §9.5). Commit `bc2d2dd`.
+  - **Vitest scope** : `include: ['src/**']` pour ne plus ramasser les specs Playwright `e2e/*.spec.ts`. Commit `0387724`.
+  - **Liste enrichie (résorbe l'item BACKLOG)** : `ProjectListItem` expose **`active_version_n`** (n° réel) +
+    **`version_count`** au lieu d'`active_version_id` (PK trompeuse). Service `list_with_versions` (2 requêtes,
+    pas de N+1). `openapi.json` + `schema.d.ts` régénérés. Liste affiche « v2 · 3 versions » (pluriel i18next). Commit `797e56b`.
+  - **CI** : allowlist licences front calibrée au pré-vol (`OFL-1.1` = police Inter, `MPL-2.0`). Commit `6583fd5`.
+- **Pré-vol CI local** (avant push) : cargo-deny `licenses ok, advisories ok` (`Zlib` déjà dans `deny.toml`) ;
+  `pnpm audit --audit-level=high` exit 0 (1 modérée only) ; license-checker exit 0 ; drift openapi/schema nul ;
+  back 89/89 ; front 25/25 ; e2e Playwright vert.
+- **MERGE sur `main`** (fast-forward — `main` était ancêtre, 84 commits) + **push origin** + CI surveillée.
+
+### Trucs en suspens
+- **CI sur `main`** : 1ʳᵉ exécution réelle de la CI réécrite (pistes back/front → e2e → docker push GHCR).
+  Risque non pré-volable : le job **e2e** démarre le backend via `cargo loco start` dans le webServer Playwright
+  (timeout 180 s) — compile CI au cache froid possiblement lent → à surveiller.
+- `docs/ENVIRONMENT.md` « Box de déploiement » toujours « à remplir » (déploiement géré par l'humain).
+
+### Notes pour future Claude
+- Après un changement DTO/handler : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (back) **et**
+  `cd frontend && pnpm gen:api` (front). Les deux ont un drift-check CI.
+- `LATCH_BODY_LIMIT` : protos > 5 Mo (base64) → remonter (`10mb`/`32mb`) ou `disable`.
+
+---
+
 ## 2026-06-25 — MIGRATION REACT LIVRÉE (Plans 1-3) — prête pour validation humaine (feat/admin-react)
 
 > Session autonome de nuit. Admin SPA migrée **Yew → React/Vite/shadcn** de bout en bout.

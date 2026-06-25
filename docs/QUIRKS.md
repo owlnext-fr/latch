@@ -3,6 +3,16 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Loco `limit_payload` plafonne le body à **2 Mo par défaut** → 413 sur un gros proto (2026-06-25)
+**Symptôme** : le deploy d'un HTML mono-fichier > 2 Mo échoue en **413** (`Failed to buffer the request
+body: length limit exceeded`, `JsonRejection(... LengthLimitError)`). Le petit HTML passe, le gros non.
+**Cause** : Loco active par défaut le middleware `limit_payload` avec `DefaultBodyLimitKind::Limit(2_000_000)`
+(2 Mo) **même si `server.middlewares:` est vide**. Le deploy envoie tout le HTML en JSON dans le body.
+**Workaround** : configurer `server.middlewares.limit_payload.body_limit` dans `config/*.yaml`. La valeur est
+parsée par `byte_unit` (`5mb`, `32mb`) ou `"disable"`. Rendu réglable par env via Tera :
+`body_limit: '{{ get_env(name="LATCH_BODY_LIMIT", default="5mb") }}'`. **La config est lue au boot** → un
+changement exige un **redémarrage** du serveur. Cf. `docs/ENVIRONMENT.md` (`LATCH_BODY_LIMIT`).
+
 ## Tests d'intégration Loco : DB de test **in-memory**, sinon course sous nextest (2026-06-24)
 **Symptôme** : `cargo test -p latch` vert en local, mais `cargo nextest run` (CI) rouge sur
 les tests qui bootent l'app (`request::<App>`) avec `UNIQUE constraint failed:
