@@ -105,5 +105,17 @@
   "settings.mcp_url": "MCP endpoint URL",
   "settings.deploy_token": "Deploy token",
   "settings.public_base_url": "Public base URL",
-  "settings.copy_mcp_url": "Copy MCP URL"
+  "settings.copy_mcp_url": "Copy MCP URL",
+  "settings.section_mcp": "MCP connection",
+  "settings.section_preferences": "Preferences",
+  "settings.language": "Language",
+  "settings.language_help": "Admin interface language.",
+  "settings.theme": "Theme",
+  "settings.theme_help": "\"System\" follows your OS preference.",
+  "settings.theme_system": "System",
+  "settings.theme_light": "Light",
+  "settings.theme_dark": "Dark",
+  "settings.mcp_url_help": "Set this in Claude's MCP connector.",
+  "settings.deploy_token_help": "Secret validated by all MCP tools.",
+  "settings.public_base_url_help": "Public root of this instance."
 }

@@ -105,5 +105,17 @@
   "settings.mcp_url": "URL de l'endpoint MCP",
   "settings.deploy_token": "Token de déploiement",
   "settings.public_base_url": "URL publique de base",
-  "settings.copy_mcp_url": "Copier l'URL MCP"
+  "settings.copy_mcp_url": "Copier l'URL MCP",
+  "settings.section_mcp": "Connexion MCP",
+  "settings.section_preferences": "Préférences",
+  "settings.language": "Langue",
+  "settings.language_help": "Langue de l'interface d'administration.",
+  "settings.theme": "Thème",
+  "settings.theme_help": "« Système » suit la préférence de l'OS.",
+  "settings.theme_system": "Système",
+  "settings.theme_light": "Clair",
+  "settings.theme_dark": "Sombre",
+  "settings.mcp_url_help": "À renseigner dans le connecteur MCP de Claude.",
+  "settings.deploy_token_help": "Secret validé par tous les tools MCP.",
+  "settings.public_base_url_help": "Racine publique de l'instance."
 }
