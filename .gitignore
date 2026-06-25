@@ -22,6 +22,9 @@ frontend/*.tsbuildinfo
 .env
 .env.local
 
+# Couverture Rust (cargo-llvm-cov, produit localement et en CI — ne pas committer)
+backend-lcov.info
+
 # Divers
 .DS_Store
 
