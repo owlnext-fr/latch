@@ -7,5 +7,7 @@
   "unlock.submit": "Unlock",
   "unlock.error_wrong": "Incorrect code.",
   "unlock.error_throttled": "Too many attempts. Please try again in a moment.",
-  "unlock.error_generic": "Something went wrong. Please try again."
+  "unlock.error_generic": "Something went wrong. Please try again.",
+  "unlock.page_title_brand": "{{brand}} — unlock",
+  "unlock.page_title_neutral": "Unlock — latch"
 }

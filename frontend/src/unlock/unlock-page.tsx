@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
+import { Logo } from '@/components/logo'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { reloadPage } from './reload'
 
 function slugFromPath(): string {
@@ -19,6 +21,10 @@ export function UnlockPage() {
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useDocumentTitle(
+    brand ? t('unlock.page_title_brand', { brand }) : t('unlock.page_title_neutral'),
+  )
 
   useEffect(() => {
     const ac = new AbortController()
@@ -60,7 +66,9 @@ export function UnlockPage() {
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
+      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+        <Logo className="size-12" />
+        <Card className="w-full">
         <CardHeader>
           <CardTitle>
             {brand ? t('unlock.title_brand', { brand }) : t('unlock.title_neutral')}
@@ -110,6 +118,7 @@ export function UnlockPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

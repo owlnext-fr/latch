@@ -7,5 +7,7 @@
   "unlock.submit": "Déverrouiller",
   "unlock.error_wrong": "Code incorrect.",
   "unlock.error_throttled": "Trop de tentatives. Réessaie dans un moment.",
-  "unlock.error_generic": "Une erreur s'est produite. Réessaie."
+  "unlock.error_generic": "Une erreur s'est produite. Réessaie.",
+  "unlock.page_title_brand": "{{brand}} — déverrouillage",
+  "unlock.page_title_neutral": "Déverrouillage — latch"
 }

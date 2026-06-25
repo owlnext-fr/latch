@@ -86,6 +86,17 @@ describe('UnlockPage', () => {
     await waitFor(() => expect(reloadPage).toHaveBeenCalledOnce())
   })
 
+  it('shows the logo and sets the neutral document title', async () => {
+    server.use(
+      http.get('*/api/public/demo-abc', () =>
+        HttpResponse.json({ brand_name: null, code_enabled: true }),
+      ),
+    )
+    renderUnlock()
+    expect(await screen.findByAltText('latch')).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toBe('Unlock — latch'))
+  })
+
   it('affiche un message de throttle sur 429', async () => {
     server.use(
       http.get('*/api/public/demo-abc', () =>
