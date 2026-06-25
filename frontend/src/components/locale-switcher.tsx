@@ -1,26 +1,24 @@
 import { useTranslation } from 'react-i18next'
+import { locales } from '@/i18n'
 import { Button } from '@/components/ui/button'
-
-const LOCALES = ['en', 'fr'] as const
-type Locale = (typeof LOCALES)[number]
 
 export function LocaleSwitcher() {
   const { i18n } = useTranslation()
-  const current = i18n.language.slice(0, 2) as Locale
+  const current = i18n.language.slice(0, 2)
 
   return (
-    <fieldset className="flex items-center gap-1 border-0 p-0 m-0">
+    <fieldset className="m-0 flex items-center gap-1 border-0 p-0">
       <legend className="sr-only">Language</legend>
-      {LOCALES.map((locale) => (
+      {locales.map((l) => (
         <Button
-          key={locale}
+          key={l.code}
           type="button"
-          variant={current === locale ? 'secondary' : 'ghost'}
+          variant={current === l.code ? 'secondary' : 'ghost'}
           size="xs"
-          aria-pressed={current === locale}
-          onClick={() => void i18n.changeLanguage(locale)}
+          aria-pressed={current === l.code}
+          onClick={() => void i18n.changeLanguage(l.code)}
         >
-          {locale.toUpperCase()}
+          {l.code.toUpperCase()}
         </Button>
       ))}
     </fieldset>
