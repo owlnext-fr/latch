@@ -2,6 +2,7 @@
 /target
 **/target
 **/dist
+frontend/node_modules
 /data
 *.sqlite
 *.sqlite-shm

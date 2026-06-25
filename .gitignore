@@ -6,8 +6,10 @@
 **/target
 Cargo.lock.bak
 
-# Trunk / wasm (frontend) — artefacts de build
+# Frontend React (Vite) — artefacts de build et dépendances
+/frontend/node_modules
 /frontend/dist
+frontend/*.tsbuildinfo
 **/dist
 
 # Données runtime (volume : .sqlite + HTML des versions) — jamais commitées
