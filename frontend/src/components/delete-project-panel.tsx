@@ -71,11 +71,9 @@ export function DeleteProjectPanel({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={deleteProject.isPending}
+            loading={deleteProject.isPending}
           >
-            {deleteProject.isPending
-              ? t('danger.deleting')
-              : t('danger.del_project_confirm')}
+            {t('danger.del_project_confirm')}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -163,8 +163,8 @@ function DeployPanelContent({
         >
           {t('common.cancel')}
         </Button>
-        <Button type="submit" disabled={deploy.isPending}>
-          {deploy.isPending ? t('deploy.deploying') : t('deploy.btn')}
+        <Button type="submit" loading={deploy.isPending}>
+          {t('deploy.btn')}
         </Button>
       </SheetFooter>
     </form>

@@ -108,8 +108,8 @@ export function LoginPage() {
               </p>
             )}
 
-            <Button type="submit" disabled={isPending}>
-              {isPending ? t('login.submitting') : t('login.submit')}
+            <Button type="submit" loading={isPending}>
+              {t('login.submit')}
             </Button>
           </form>
         </CardContent>

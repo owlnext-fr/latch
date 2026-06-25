@@ -29,8 +29,8 @@ export function UnlockPage() {
     return () => ac.abort()
   }, [slug])
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
+  async function doUnlock() {
+    if (busy) return
     setError(null)
     setBusy(true)
     try {
@@ -43,9 +43,14 @@ export function UnlockPage() {
         reloadPage()
         return
       }
-      if (res.status === 429) setError(t('unlock.error_throttled'))
-      else if (res.status === 401) setError(t('unlock.error_wrong'))
-      else setError(t('unlock.error_generic'))
+      if (res.status === 429) {
+        setError(t('unlock.error_throttled'))
+      } else if (res.status === 401) {
+        setPin('')
+        setError(t('unlock.error_wrong'))
+      } else {
+        setError(t('unlock.error_generic'))
+      }
     } catch {
       setError(t('unlock.error_generic'))
     } finally {
@@ -63,7 +68,13 @@ export function UnlockPage() {
           <CardDescription>{t('unlock.instructions')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void doUnlock()
+            }}
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col items-center gap-4">
               <Label htmlFor="pin">{t('unlock.pin_label')}</Label>
               <InputOTP
@@ -72,6 +83,7 @@ export function UnlockPage() {
                 pattern={REGEXP_ONLY_DIGITS}
                 value={pin}
                 onChange={setPin}
+                onComplete={() => void doUnlock()}
                 aria-invalid={error ? true : undefined}
               >
                 <InputOTPGroup>
@@ -89,7 +101,7 @@ export function UnlockPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy || pin.length < 6}>
+            <Button type="submit" loading={busy} disabled={pin.length < 6}>
               {t('unlock.submit')}
             </Button>
           </form>

@@ -64,11 +64,9 @@ export function DeleteVersionPanel({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={deleteVersion.isPending}
+            loading={deleteVersion.isPending}
           >
-            {deleteVersion.isPending
-              ? t('danger.deleting')
-              : t('danger.del_version_confirm')}
+            {t('danger.del_version_confirm')}
           </Button>
         </SheetFooter>
       </SheetContent>

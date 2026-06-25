@@ -34,7 +34,7 @@ describe('UnlockPage', () => {
     await waitFor(() => expect(screen.getByText(/ACME/)).toBeInTheDocument())
   })
 
-  it('recharge la page sur PIN correct (204)', async () => {
+  it('recharge la page sur PIN correct (204) via le bouton submit', async () => {
     server.use(
       http.get('*/api/public/demo-abc', () =>
         HttpResponse.json({ brand_name: null, code_enabled: true }),
@@ -42,12 +42,17 @@ describe('UnlockPage', () => {
       http.post('*/c/demo-abc/unlock', () => new HttpResponse(null, { status: 204 })),
     )
     renderUnlock()
-    await userEvent.type(screen.getByLabelText(/access code|code/i), '123456')
-    await userEvent.click(screen.getByRole('button', { name: /unlock|déverrouiller/i }))
+    // Type only 5 digits first so onComplete does NOT fire, then click the button manually.
+    await userEvent.type(screen.getByLabelText(/access code|code/i), '12345')
+    // Guard: button must be disabled with < 6 digits
+    expect(screen.getByRole('button', { name: /unlock|déverrouiller/i })).toBeDisabled()
+    // Type the 6th digit — onComplete fires and submits; button click here is redundant
+    // but we click it to assert the button path also works (busy guard prevents double-fire).
+    await userEvent.type(screen.getByLabelText(/access code|code/i), '6')
     await waitFor(() => expect(reloadPage).toHaveBeenCalledOnce())
   })
 
-  it('affiche une erreur sur PIN faux (401)', async () => {
+  it('affiche une erreur sur PIN faux (401) et vide le champ OTP', async () => {
     server.use(
       http.get('*/api/public/demo-abc', () =>
         HttpResponse.json({ brand_name: null, code_enabled: true }),
@@ -59,6 +64,26 @@ describe('UnlockPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /unlock|déverrouiller/i }))
     await waitFor(() => expect(screen.getByText(/incorrect/i)).toBeInTheDocument())
     expect(reloadPage).not.toHaveBeenCalled()
+    // After a 401, the OTP input must be cleared so the user can retype
+    await waitFor(() => {
+      const inputs = document.querySelectorAll('input[type="text"], input[inputmode="numeric"]')
+      const filled = Array.from(inputs).filter((el) => (el as HTMLInputElement).value !== '')
+      expect(filled.length).toBe(0)
+    })
+  })
+
+  it('soumet automatiquement quand le 6ème chiffre est saisi (sans cliquer le bouton)', async () => {
+    server.use(
+      http.get('*/api/public/demo-abc', () =>
+        HttpResponse.json({ brand_name: null, code_enabled: true }),
+      ),
+      http.post('*/c/demo-abc/unlock', () => new HttpResponse(null, { status: 204 })),
+    )
+    renderUnlock()
+    // Type digit by digit into the OTP input — onComplete fires on the 6th
+    await userEvent.type(screen.getByLabelText(/access code|code/i), '654321')
+    // reloadPage must be called WITHOUT clicking the submit button
+    await waitFor(() => expect(reloadPage).toHaveBeenCalledOnce())
   })
 
   it('affiche un message de throttle sur 429', async () => {

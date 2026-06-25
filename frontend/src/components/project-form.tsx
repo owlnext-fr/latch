@@ -252,7 +252,17 @@ export function ProjectForm({
             >
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('common.save')}</Button>
+            <Button
+              type="submit"
+              loading={
+                createProject.isPending ||
+                updateProject.isPending ||
+                setCode.isPending ||
+                clearCode.isPending
+              }
+            >
+              {t('common.save')}
+            </Button>
           </SheetFooter>
         </form>
       </SheetContent>

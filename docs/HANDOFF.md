@@ -5,6 +5,29 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Itération UX : Button loading + OTP auto-submit
+
+### Dernière chose faite
+- **`Button` loading réutilisable** : prop `loading?: boolean` ajoutée dans `frontend/src/components/ui/button.tsx`. Quand `true` : spinner `Loader2 animate-spin` injecté avant les children, button `disabled` effectif (`loading || disabled`). `asChild` non affecté (nav links).
+- **Câblage sur 7 sites** : `routes/login.tsx`, `components/deploy-panel.tsx`, `components/delete-project-panel.tsx`, `components/delete-version-panel.tsx`, `components/topbar.tsx`, `components/project-form.tsx` (aggregate 4 mutations), `routes/detail.tsx` (activate, per-row via `activateVersion.variables?.n`).
+- **Labels stables** : suppression de tous les text-swaps "…ing" — le spinner seul convoit l'état en cours.
+- **OTP auto-submit** (`frontend/src/unlock/unlock-page.tsx`) : `doUnlock()` extrait, `onComplete={() => void doUnlock()}` sur `<InputOTP>`, guard `busy` anti-double-fire, `setPin('')` sur 401 (pas sur 429).
+- **Tests** : 30 verts (était 29). Test modifié pour auto-submit (6ème chiffre → `reloadPage` sans clic bouton), nouveau test auto-submit sans bouton, assert clear-on-error 401. Lint/typecheck/build propres.
+
+### Trucs en suspens
+- Phase 5 MCP toujours la prochaine étape.
+- Clés i18n inutilisées (`login.submitting`, `deploy.deploying`, `danger.deleting`) laissées dans le catalogue (inoffensives).
+
+### Prochaine chose à creuser
+- **Phase 5 — Endpoint MCP** : `mcp/` (`deploy_prototype` + `list_projects`), `rmcp ≥ 1.4.0`, `allowed_hosts`, token validé sur tous les tools.
+
+### Notes pour future Claude
+- `activateVersion.variables` (TanStack Query v5) expose les dernières variables passées à `.mutate()` — permet un spinner par ligne sans état local.
+- La prop `loading` sur `Button` ne fait rien quand `asChild=true` (le spinner n'est pas injecté, `disabled` passe le raw prop, pas `isDisabled`) — intentionnel pour les nav links.
+- `onComplete` sur `<InputOTP>` se déclenche aussi sur paste d'un code complet — guard `busy` empêche le double-fire.
+
+---
+
 ## 2026-06-25 — Itération UI unlock : InputOTP + CardDescription + découplage /assets
 
 ### Dernière chose faite

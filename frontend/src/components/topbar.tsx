@@ -34,7 +34,7 @@ export function Topbar() {
           variant="ghost"
           size="sm"
           onClick={handleLogout}
-          disabled={logout.isPending}
+          loading={logout.isPending}
         >
           {t('common.logout')}
         </Button>

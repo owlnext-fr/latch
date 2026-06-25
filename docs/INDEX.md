@@ -110,6 +110,8 @@
 - [x] `InputOTP` shadcn (6 slots, `REGEXP_ONLY_DIGITS`) remplace `<Input>` dans la page unlock — itération UI — 2026-06-25
 - [x] `CardDescription` (clé `unlock.instructions` EN+FR) dans la page unlock — itération UI — 2026-06-25
 - [x] `vite.config.ts` base `'/'` + mount `/assets` dans `after_routes` (backend) — découplage assets admin/unlock — 2026-06-25
+- [x] `Button` prop `loading` réutilisable (spinner `Loader2` + disabled effectif) + câblage sur 7 sites d'action — itération UX — 2026-06-25
+- [x] OTP auto-submit sur saisie complète (`onComplete`) + clear-on-error (401) dans `unlock-page.tsx` — itération UX — 2026-06-25
 
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24

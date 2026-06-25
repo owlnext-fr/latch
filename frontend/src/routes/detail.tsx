@@ -230,6 +230,10 @@ export function DetailPage() {
                                   variant="ghost"
                                   size="sm"
                                   aria-label={t('detail.activate_aria')}
+                                  loading={
+                                    activateVersion.isPending &&
+                                    activateVersion.variables?.n === v.n
+                                  }
                                   onClick={() =>
                                     activateVersion.mutate({ id, n: v.n })
                                   }
