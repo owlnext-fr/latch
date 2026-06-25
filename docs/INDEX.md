@@ -101,6 +101,9 @@
 - [x] Images GHCR versionnées (`metadata-action` : semver+latest+sha) + pin déploiement (`LATCH_IMAGE_TAG`) — Phase 0 — 2026-06-24
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24
 
+## Phase 4 — Serving `/c/<slug>`
+- [x] `controllers/serve.rs` : handler `serve` (GET /c/{slug}) — arbre de décision (slug inconnu→404, pas de version→404, libre→HTML no-store, protégé sans cookie→unlock.html 200 no-store, protégé avec cookie valide→HTML no-store) — Phase 4 Task 5 — 2026-06-25
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24

@@ -5,6 +5,26 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 4 Task 5 : GET /c/{slug} handler (arbre de décision)
+
+### Dernière chose faite
+- Implémenté `GET /c/{slug}` dans `backend/src/controllers/serve.rs` (handler `serve`, const `UNLOCK_COOKIE_NAME`, helpers `html_response` + `unlock_page_response`).
+- Arbre de décision : slug inconnu → 404 ; pas de version active → 404 ; code désactivé → HTML no-store ; code activé + pas de cookie → unlock.html HTTP 200 no-store ; code activé + cookie valide → HTML no-store.
+- TDD : 4 tests RED puis 6/6 GREEN (cargo nextest run --test serve). fmt + clippy clean.
+- Commit `4654b22`.
+
+### Trucs en suspens
+- La branche valide-cookie-sert-HTML est correcte mais non couverte par ce test (intentionnel — Task 6 la couvre après avoir implémenté le endpoint `/unlock` qui émet le cookie).
+
+### Prochaine chose à creuser
+- Task 6 : endpoint POST /c/{slug}/unlock (vérification PIN, émission cookie signé, redirect).
+
+### Notes pour future Claude
+- `SignedCookieJar::from_headers(&headers, key)` — construire manuellement depuis HeaderMap, pas comme extracteur axum.
+- Le `?` ne peut pas vivre dans une closure `.map()` — utiliser `match` explicite (voir `serve` handler).
+
+---
+
 ## 2026-06-25 — Fix CI e2e flaky (bind localhost/IPv6 → 127.0.0.1)
 
 ### Dernière chose faite
