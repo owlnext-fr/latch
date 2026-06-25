@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/msw'
 import { renderWithRouter } from '@/test/utils'
@@ -130,6 +131,23 @@ describe('ListPage', () => {
 
     // Empty state "create first" button
     expect(screen.getByText('+ Create the first project')).toBeInTheDocument()
+  })
+
+  it('opens the create form when the empty-state button is clicked', async () => {
+    const user = userEvent.setup()
+    mockProjectsList([])
+    renderWithRouter('/')
+
+    await waitFor(() => {
+      expect(screen.getByText('No projects yet.')).toBeInTheDocument()
+    })
+
+    // onClick → setFormOpen(true) → ProjectForm sheet mounts with the create title.
+    await user.click(screen.getByText('+ Create the first project'))
+
+    await waitFor(() => {
+      expect(screen.getByText('New project')).toBeInTheDocument()
+    })
   })
 
   it('shows loading state initially then resolves', async () => {

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { ChangeEvent, DragEvent, FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Sheet,
@@ -44,7 +45,7 @@ function DeployPanelContent({
     setError(null)
   }
 
-  function handleDragOver(e: React.DragEvent<HTMLButtonElement>) {
+  function handleDragOver(e: DragEvent<HTMLButtonElement>) {
     e.preventDefault()
     setIsDragOver(true)
   }
@@ -53,21 +54,21 @@ function DeployPanelContent({
     setIsDragOver(false)
   }
 
-  function handleDrop(e: React.DragEvent<HTMLButtonElement>) {
+  function handleDrop(e: DragEvent<HTMLButtonElement>) {
     e.preventDefault()
     setIsDragOver(false)
     const dropped = e.dataTransfer.files[0]
     if (dropped) acceptFile(dropped)
   }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
     const chosen = e.target.files?.[0]
     if (chosen) acceptFile(chosen)
     // Reset input so the same file can be re-picked
     e.target.value = ''
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
     if (!file) {
