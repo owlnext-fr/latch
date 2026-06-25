@@ -5,6 +5,35 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 6 T3 : tests e2e Playwright serving `/c` + unlock + bascule (4/4 verts)
+
+### Dernière chose faite
+`frontend/e2e/serve-unlock.spec.ts` créé — 3 tests Playwright navigateur réel sur la surface `/c` :
+- `projet libre : /c sert le proto en no-store` : setup API, vérifie status 200 + `Cache-Control: no-store` + contenu "Demo proto"
+- `projet protégé : unlock par PIN puis proto servi` : sans cookie → page unlock visible ; mauvais PIN → reste sur unlock ; bon PIN (135790) → auto-submit OTP via `pressSequentially` → proto servi
+- `bascule de version : /c reflète la v2 activée` : deploy v1 → vérifie v1 ; deploy v2 → vérifie v2, v1 absente
+
+Setup entièrement API-driven (login + create + deploy via `request` fixture, `Origin: baseURL` sur les mutations). PIN explicite à la création = déterministe. Fixture `proto-v2.html` créée (titre "Prototype v2" — sans "Demo proto" pour éviter les faux positifs sur `not.toContain`).
+
+**Résultats :** 4/4 e2e verts (1 smoke admin + 3 serve-unlock). OTP auto-submit via `pressSequentially` fonctionnel. `pnpm lint` + `pnpm typecheck` propres. Commit `59a694e`.
+
+### Trucs en suspens
+- **T4** : sonar.tests + supply-chain audit (cargo-deny, CHANGELOG)
+- **T5** : captures Playwright (screenshots en CI)
+- **T6** : CHANGELOG git-cliff
+- **T7** : README refonte
+- **T8** : vérif finale + mémoire
+
+### Prochaine chose à creuser
+- **T4** : supply-chain audit (`cargo deny check`, `cargo audit`) + ajustement `sonar.tests` si souhaité
+
+### Notes pour future Claude
+- Piège proto-v2.html : le titre ne doit pas contenir le marqueur de v1 ("Demo proto") sinon l'assertion `not.toContain` échoue même quand v2 est bien servie. Titre neutre : "Prototype v2".
+- OTP auto-submit : `pressSequentially` suffit — pas besoin du fallback `fill` + click bouton.
+- La fixture `proto.html` ne doit PAS être modifiée (son marqueur "Demo proto" est utilisé par le smoke admin ET le serve-unlock spec).
+
+---
+
 ## 2026-06-25 — Phase 6 T2 : tests e2e MCP transport HTTP réel (5 tests verts)
 
 ### Dernière chose faite

@@ -139,6 +139,7 @@
 ## Phase 6 — E2E, durcissement, packaging
 
 - [x] `backend/tests/mcp_http.rs` : 5 tests e2e MCP transport Streamable HTTP réel (initialize handshake, tools/list, deploy_prototype + invariant §9 PIN absent, list_projects enveloppe objet, gate token rejeté). `axum-test` ajouté en dev-dep. 135/135 tests backend verts — Phase 6 T2 — 2026-06-25
+- [x] `frontend/e2e/serve-unlock.spec.ts` + `frontend/e2e/fixtures/proto-v2.html` : 3 tests Playwright navigateur réel sur la surface `/c` (projet libre no-store, unlock par PIN + auto-submit OTP, bascule v1→v2). Setup API-driven (login + create + deploy via `request` fixture, `Origin` on mutations). 4/4 e2e verts (smoke + serve-unlock) — Phase 6 T3 — 2026-06-25
 
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
