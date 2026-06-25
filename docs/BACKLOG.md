@@ -104,6 +104,13 @@ Les jobs GitHub Actions back/front/e2e sont définis inline dans `ci.yml`. Refac
 `workflow_call` réutilisables dans `.github/workflows/` améliorerait la lisibilité et
 permettrait de les déclencher séparément. Non-bloquant pour la v1.
 
+## Actions CI épinglées sur Node 20 déprécié (Toolchain CI – 2026-06-25)
+La CI épingle les actions à des SHA v4 (checkout, setup-node, pnpm/action-setup, cache,
+upload/download-artifact, docker-*) qui ciblent **Node 20** (déprécié, forcé sur Node 24 par
+les runners → annotations non bloquantes sur chaque run). Bump des majors vers les versions
+Node-24 (checkout v5, setup-node v5, etc.) — re-résoudre les SHA. Purement hygiène, aucun
+impact fonctionnel ; à faire au prochain passage sur `ci.yml`.
+
 ## `deny.toml` — transitives de `utoipa-swagger-ui 9` (Zlib) (revue finale Plan 1 – 2026-06-25)
 `rust-embed`, `zip`, `zlib-rs` (licence **Zlib**), `zopfli`, `arbitrary` sont entrées au
 lockfile avec `utoipa-swagger-ui 9`. L'allowlist stricte de `deny.toml` peut rejeter `Zlib`

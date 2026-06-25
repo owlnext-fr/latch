@@ -19,7 +19,8 @@ Chantier complet **durcissement toolchain & CI** livré sur `chore/toolchain-ci-
 - **Revue finale de branche (opus) : « Ready to merge: Yes »** (0 Critical, 0 Important bloquant). Polish appliqué (commit `251d260`) : message d'aide explicite si le `chown ./data` échoue (au lieu d'un échec silencieux) + commentaire `dataprep` clarifié (s'applique aux volumes nommés ; le bind-mount le shadow).
 
 ### Trucs en suspens
-- **Merge sur `main` + push + surveillance CI en cours** (déclenche le run CI sur push `main`). Mettre à jour avec le n° de run quand vert.
+- **Mergé sur `main` (ff `a42bd03..c32010f`) + CI VERTE** : run [28175334921](https://github.com/owlnext-fr/latch/actions/runs/28175334921), **8/8 jobs success** (dont `SonarQube` gate bloquant, flux artefact lcov Rust `test-backend`→`sonar`, `docker build` cargo-chef+non-root → GHCR). Chantier validé end-to-end.
+- **Annotation non bloquante** : plusieurs actions épinglées (SHA v4 de checkout/setup-node/pnpm/action-setup/cache/download-artifact/docker-*) ciblent **Node 20 déprécié** (forcées sur Node 24). À traiter par un bump des majors (checkout v5, setup-node v5…) → cf. BACKLOG. Avertissement, pas une erreur.
 - **2 issues Sonar non-bloquantes à clôturer en UI** (won't-fix) :
   - `typescript:S1874` ×2 (`deploy-panel.tsx:2,71`) — `FormEvent` déprécié @types/react 19 ; fix T3 (imports nommés) ne l'éteint pas → won't-fix UI.
   - `githubactions:S6505` (`ci.yml:132` `playwright install`) — faux positif (install navigateurs, pas paquets npm) → won't-fix UI.
