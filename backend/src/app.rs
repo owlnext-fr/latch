@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use axum::http::{HeaderName, HeaderValue};
+use axum::routing::get;
 use axum::Router as AxumRouter;
 use loco_rs::{
     app::{AppContext, Hooks, Initializer},
@@ -16,6 +18,17 @@ use tower_http::services::{ServeDir, ServeFile};
 
 #[allow(unused_imports)]
 use crate::{controllers, tasks};
+
+/// robots.txt servi par l'app (le « hide » ne dépend pas d'un proxy externe).
+async fn robots_txt() -> impl axum::response::IntoResponse {
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "text/plain; charset=utf-8",
+        )],
+        "User-agent: *\nDisallow: /\n",
+    )
+}
 
 pub struct App;
 #[async_trait]
@@ -105,6 +118,18 @@ impl Hooks for App {
         crate::web::deploy_token(ctx)?;
         let mcp = crate::mcp::service(ctx)?;
         let router = router.nest_service("/mcp", mcp);
+
+        // robots.txt + X-Robots-Tag : « hide » porté par l'app (contrat §9 « Hide this thing »).
+        let router = router.route("/robots.txt", get(robots_txt));
+        let router = router.layer(axum::middleware::map_response(
+            |mut res: axum::response::Response| async move {
+                res.headers_mut().insert(
+                    HeaderName::from_static("x-robots-tag"),
+                    HeaderValue::from_static("noindex, nofollow"),
+                );
+                res
+            },
+        ));
 
         Ok(router)
     }
