@@ -3,14 +3,15 @@
 //! la barrière = rate-limit (contrat §6, §9.5). Aucune réponse ne porte le PIN.
 
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use axum::http::{HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
-use axum_extra::extract::cookie::SignedCookieJar;
+use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
 use loco_rs::prelude::*;
 
 use crate::controllers::error::into_response;
+use crate::dto::UnlockReq;
 use crate::services::projects::ProjectsService;
-use crate::services::unlock_cookie::verify_token;
+use crate::services::unlock_cookie::{issue_token, verify_token};
 
 /// Nom du cookie de déverrouillage (scopé par `Path=/c/{slug}` → nom constant OK).
 pub(crate) const UNLOCK_COOKIE_NAME: &str = "latch_unlock";
@@ -106,8 +107,55 @@ pub(crate) async fn serve(
     Ok(html_response(html))
 }
 
+/// Durée de vie du cookie unlock (jours). Configurable via `LATCH_UNLOCK_TTL_DAYS`.
+fn unlock_ttl_days() -> i64 {
+    std::env::var("LATCH_UNLOCK_TTL_DAYS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(30)
+}
+
+/// POST /c/{slug}/unlock — vérifie le PIN (temps constant), pose le cookie signé.
+/// Surface publique : pas de garde Origin (le PIN + le rate-limit sont la barrière).
+#[debug_handler]
+pub(crate) async fn unlock(
+    State(ctx): State<AppContext>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<UnlockReq>,
+) -> Result<Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    // Slug inconnu → 404 ; PIN faux → 401.
+    let ok = svc
+        .verify_code(&slug, &body.pin)
+        .await
+        .map_err(into_response)?;
+    if !ok {
+        return Err(loco_rs::Error::Unauthorized("bad code".to_string()));
+    }
+
+    // PIN correct (ou projet libre) → poser le cookie signé liant le PIN courant.
+    let secret = crate::web::unlock_secret()?;
+    let ttl = unlock_ttl_days();
+    let exp = chrono::Utc::now().timestamp() + ttl * 86_400;
+    let token = issue_token(secret.as_bytes(), &slug, &body.pin, exp);
+
+    let cookie = Cookie::build((UNLOCK_COOKIE_NAME, token))
+        .path(format!("/c/{slug}"))
+        .http_only(true)
+        .secure(crate::web::cookie_secure(&ctx))
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::days(ttl))
+        .build();
+
+    let key = crate::web::unlock_key()?;
+    let jar = SignedCookieJar::from_headers(&headers, key).add(cookie);
+    Ok((jar, StatusCode::NO_CONTENT).into_response())
+}
+
 pub fn routes() -> Routes {
     Routes::new()
         .add("/api/public/{slug}", get(public_meta))
         .add("/c/{slug}", get(serve))
+        .add("/c/{slug}/unlock", post(unlock))
 }

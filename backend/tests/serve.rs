@@ -152,3 +152,90 @@ async fn project_without_active_version_is_404() {
     })
     .await;
 }
+
+#[tokio::test]
+#[serial]
+async fn unlock_wrong_pin_is_401_no_cookie() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-bbbbbbbb", true, Some("123456"), None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>SECRET</h1>").await;
+        let res = request
+            .post("/c/prot-bbbbbbbb/unlock")
+            .json(&serde_json::json!({ "pin": "000000" }))
+            .await;
+        assert_eq!(res.status_code(), 401);
+        // Vérifie qu'aucun cookie `latch_unlock` n'est posé sur échec.
+        // (Le session middleware peut poser son propre cookie `latch_admin` — ignoré ici.)
+        let has_unlock_cookie = res
+            .headers()
+            .get_all("set-cookie")
+            .iter()
+            .any(|v| v.to_str().unwrap_or("").contains("latch_unlock"));
+        assert!(!has_unlock_cookie, "pas de cookie unlock sur échec");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn unlock_good_pin_sets_cookie_then_serves_proto() {
+    let _dist = fake_dist();
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-cccccccc", true, Some("123456"), None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>SECRET-OK</h1>").await;
+
+        let unlocked = request
+            .post("/c/prot-cccccccc/unlock")
+            .json(&serde_json::json!({ "pin": "123456" }))
+            .await;
+        assert_eq!(unlocked.status_code(), 204);
+        assert!(
+            unlocked.headers().get("set-cookie").is_some(),
+            "cookie posé"
+        );
+
+        // save_cookies(true) renvoie le cookie → le GET sert maintenant le proto.
+        let served = request.get("/c/prot-cccccccc").await;
+        served.assert_status_ok();
+        assert!(served.text().contains("SECRET-OK"));
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn rotating_pin_invalidates_cookie() {
+    let _dist = fake_dist();
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-dddddddd", true, Some("123456"), None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>SECRET-ROT</h1>").await;
+
+        // Déverrouille → cookie valide → proto servi.
+        request
+            .post("/c/prot-dddddddd/unlock")
+            .json(&serde_json::json!({ "pin": "123456" }))
+            .await;
+        assert!(request
+            .get("/c/prot-dddddddd")
+            .await
+            .text()
+            .contains("SECRET-ROT"));
+
+        // Rotation du PIN (set_code) → le cookie émis sous l'ancien PIN doit être rejeté.
+        latch::services::projects::ProjectsService::new(ctx.db.clone())
+            .set_code(p.id, "654321")
+            .await
+            .unwrap();
+        let after = request.get("/c/prot-dddddddd").await;
+        after.assert_status_ok();
+        assert!(
+            after.text().contains("latch-unlock"),
+            "rotation → re-déverrouillage exigé (§6)"
+        );
+        assert!(!after.text().contains("SECRET-ROT"));
+    })
+    .await;
+}
