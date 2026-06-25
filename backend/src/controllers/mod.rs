@@ -5,3 +5,4 @@ pub mod home;
 pub mod middleware;
 pub mod serve;
 pub mod serve_ratelimit;
+pub mod settings;

@@ -170,6 +170,16 @@ pub struct ActivateResponse {
     pub active_version_id: i32,
 }
 
+/// Réponse de `GET /api/settings` — infos de branchement MCP pour l'admin.
+/// Expose `deploy_token` (secret applicatif) à un admin AUTHENTIFIÉ uniquement
+/// (même logique que le PIN au détail). Jamais via MCP, jamais en liste de projets.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct SettingsResponse {
+    pub deploy_token: String,
+    pub mcp_url: String,
+    pub public_base_url: String,
+}
+
 /// Projet + ses versions → item de liste (sans PIN).
 /// `active_version_n` = le `n` de la version pointée par `active_version_id` (jamais le PK).
 pub fn to_list_item(m: &projects::Model, vers: &[versions::Model]) -> ProjectListItem {

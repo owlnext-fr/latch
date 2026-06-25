@@ -181,6 +181,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/settings — infos de branchement du connecteur MCP Claude. */
+        get: operations["get_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -260,6 +277,16 @@ export interface components {
         };
         SetCodeReq: {
             pin: string;
+        };
+        /**
+         * @description Réponse de `GET /api/settings` — infos de branchement MCP pour l'admin.
+         *     Expose `deploy_token` (secret applicatif) à un admin AUTHENTIFIÉ uniquement
+         *     (même logique que le PIN au détail). Jamais via MCP, jamais en liste de projets.
+         */
+        SettingsResponse: {
+            deploy_token: string;
+            mcp_url: string;
+            public_base_url: string;
         };
         UpdateProjectReq: {
             /**
@@ -832,6 +859,33 @@ export interface operations {
             };
             /** @description Slug inconnu */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Infos MCP (deploy_token + URLs) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

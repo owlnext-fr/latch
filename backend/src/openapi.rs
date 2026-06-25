@@ -4,7 +4,7 @@
 
 use utoipa::OpenApi;
 
-use crate::controllers::{admin, auth, serve};
+use crate::controllers::{admin, auth, serve, settings};
 use crate::dto;
 
 #[derive(OpenApi)]
@@ -29,6 +29,7 @@ use crate::dto;
         admin::delete_version,
         admin::preview_version,
         serve::public_meta,
+        settings::get_settings,
     ),
     components(schemas(
         dto::ProjectListItem,
@@ -43,12 +44,14 @@ use crate::dto;
         dto::DeployResponse,
         dto::ActivateResponse,
         dto::PublicMeta,
+        dto::SettingsResponse,
     )),
     tags(
         (name = "auth", description = "Authentification admin"),
         (name = "projects", description = "Gestion des projets"),
         (name = "versions", description = "Déploiement et versions"),
         (name = "serving", description = "Serving client /c et meta publique"),
+        (name = "settings", description = "Configuration admin (infos MCP)"),
     )
 )]
 pub struct ApiDoc;
@@ -73,6 +76,7 @@ mod tests {
             "/api/projects/{id}/versions/{n}",
             "/api/projects/{id}/versions/{n}/preview",
             "/api/public/{slug}",
+            "/api/settings",
         ] {
             assert!(
                 paths.contains_key(expected),

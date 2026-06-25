@@ -586,6 +586,30 @@
           }
         }
       }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "GET /api/settings — infos de branchement du connecteur MCP Claude.",
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "Infos MCP (deploy_token + URLs)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -817,6 +841,26 @@
           }
         }
       },
+      "SettingsResponse": {
+        "type": "object",
+        "description": "Réponse de `GET /api/settings` — infos de branchement MCP pour l'admin.\nExpose `deploy_token` (secret applicatif) à un admin AUTHENTIFIÉ uniquement\n(même logique que le PIN au détail). Jamais via MCP, jamais en liste de projets.",
+        "required": [
+          "deploy_token",
+          "mcp_url",
+          "public_base_url"
+        ],
+        "properties": {
+          "deploy_token": {
+            "type": "string"
+          },
+          "mcp_url": {
+            "type": "string"
+          },
+          "public_base_url": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateProjectReq": {
         "type": "object",
         "properties": {
@@ -878,6 +922,10 @@
     {
       "name": "serving",
       "description": "Serving client /c et meta publique"
+    },
+    {
+      "name": "settings",
+      "description": "Configuration admin (infos MCP)"
     }
   ]
 }
