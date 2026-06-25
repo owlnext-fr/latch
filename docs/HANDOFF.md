@@ -29,9 +29,10 @@
   elementFromPoint, /assets), CONVENTIONS (adaptateur serve, Button loading, 2ᵉ entrée Vite), INDEX, BACKLOG, ENV.
 
 ### Trucs en suspens
-- **CI à surveiller après le push sur `main`** (1ʳᵉ exécution réelle avec les nouvelles deps `axum-extra`/`hmac`/
-  `sha2`/`hex`/`input-otp` + le mount `/assets` + la base Vite `/`). `cargo deny` non vérifiable en local
-  (binaire absent) → contrôlé en CI ; licences nouvelles deps = MIT/Apache (allowlist OK a priori).
+- **CI VERTE sur `main`** (run `28164197300`, commit `5dda87c`) — 7/7 jobs OK : fmt+clippy, tests backend,
+  front (lint/typecheck/test/build), front supply-chain (audit+licences), **cargo-deny** (nouvelles deps
+  `axum-extra`/`hmac`/`sha2`/`hex` OK), **e2e Playwright admin** (valide base Vite `/` + mount `/assets`),
+  docker build (GHCR). Plus aucun point de vigilance ouvert.
 - e2e complet `/c/<slug>` (déverrouillage) en Playwright = reporté **Phase 6** (le smoke admin couvre l'admin).
 
 ### Prochaine chose à creuser
