@@ -13,6 +13,7 @@
     "format": "prettier --write src",
     "gen:api": "openapi-typescript ../openapi.json -o src/api/schema.d.ts",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "test:watch": "vitest",
     "e2e": "playwright test"
   },
@@ -52,6 +53,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",
+    "@vitest/coverage-v8": "^4",
     "eslint": "^10",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",

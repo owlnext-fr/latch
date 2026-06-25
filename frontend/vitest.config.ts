@@ -13,5 +13,12 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: 'http://localhost' } },
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**'],
+      exclude: ['src/api/schema.d.ts', '**/*.test.{ts,tsx}', 'src/test/**'],
+    },
   },
 })
