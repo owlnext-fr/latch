@@ -121,7 +121,7 @@ describe('Topbar', () => {
   it('shows the logo and a help link to the docs', async () => {
     renderTopbar()
     await waitFor(() =>
-      expect(screen.getByAltText('latch')).toBeInTheDocument(),
+      expect(screen.getByRole('img', { name: 'latch' })).toBeInTheDocument(),
     )
     const help = screen.getByRole('link', { name: 'Documentation' })
     expect(help).toHaveAttribute('href', 'https://latch.owlnext.fr/docs')

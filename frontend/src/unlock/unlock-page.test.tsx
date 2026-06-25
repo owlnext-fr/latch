@@ -93,7 +93,7 @@ describe('UnlockPage', () => {
       ),
     )
     renderUnlock()
-    expect(await screen.findByAltText('latch')).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: 'latch' })).toBeInTheDocument()
     await waitFor(() => expect(document.title).toBe('Unlock — latch'))
   })
 

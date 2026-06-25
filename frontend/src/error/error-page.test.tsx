@@ -21,7 +21,7 @@ describe('ErrorPage', () => {
 
   it('renders the logo and the generic unavailable message', () => {
     renderError()
-    expect(screen.getByAltText('latch')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'latch' })).toBeInTheDocument()
     expect(
       screen.getByText('This prototype is not available or has been removed.'),
     ).toBeInTheDocument()

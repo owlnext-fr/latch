@@ -20,7 +20,7 @@ async function fillAndSubmit(user: string, pass: string) {
 describe('LoginPage', () => {
   it('shows the logo and a GitHub link, and sets the document title', async () => {
     renderWithRouter('/login')
-    expect(await screen.findByAltText('latch')).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: 'latch' })).toBeInTheDocument()
     const gh = screen.getByRole('link', { name: /GitHub/i })
     expect(gh).toHaveAttribute('href', 'https://github.com/owlnext-fr/latch')
     expect(gh).toHaveAttribute('target', '_blank')
