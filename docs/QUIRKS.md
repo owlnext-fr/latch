@@ -148,6 +148,18 @@ let result = m.deploy_prototype(DeployParams { slug: "mon-projet-abc".into(), ..
 ```
 Ce pattern permet des **tests unitaires de handler** (gate token, logique) sans monter un serveur HTTP. Les tests d'intégration complets (transport streamable HTTP) restent reportés Phase 6. Cf. `docs/CONVENTIONS.md §Test de handler MCP`.
 
+## Tests e2e MCP (transport HTTP) : Host header à fixer explicitement (2026-06-25)
+Le harness `axum_test` (utilisé par loco_rs 0.16 `request::<App>`) envoie les requêtes avec `Host: localhost` (sans port). Or `allowed_hosts` rmcp est dérivé de `LATCH_PUBLIC_BASE_URL = "http://localhost:5150"` via `host_authority()` → valeur `localhost:5150`. La validation `Host` rmcp rejette `localhost ≠ localhost:5150` avec `403 Forbidden: Host header is not allowed`. **Fix dans les tests** : ajouter explicitement le header `host: localhost:5150` dans chaque requête MCP `.add_header("host", "localhost:5150")`. Alternativement, `LATCH_PUBLIC_BASE_URL = "http://localhost"` (sans port) + `host: localhost`.
+
+## Tests e2e MCP (transport HTTP) : SSE rmcp 1.8 — première ligne `data:` vide (2026-06-25)
+Le transport Streamable HTTP de rmcp 1.8 débute la réponse SSE par un event de keepalive (`data: \nid: 0\nretry: 3000\n\n`) avant l'event JSON-RPC réel. Un parseur SSE qui prend la **première** ligne `data:` obtient une chaîne vide → `serde_json::from_str("")` → erreur. **Fix** : ignorer les lignes `data:` vides et prendre la première avec payload non vide.
+
+## rmcp 1.8 — `serverInfo.name` = "rmcp" dans la réponse `initialize` (2026-06-25)
+`ServerInfo::default()` appelle `Implementation::from_build_env()` qui capture `env!("CARGO_CRATE_NAME")` **au moment de la compilation de la crate rmcp** (pas de la crate `latch`). Résultat : `serverInfo.name = "rmcp"`, `version = "1.8.0"` — même si on surclasse les autres champs de `ServerInfo`. Pour exposer le nom "latch", il faudrait appeler `info.with_server_info(Implementation::new("latch", env!("CARGO_PKG_VERSION")))` dans `get_info()`. **Impact test** : ne pas asserter `serverInfo.name == "latch"` — vérifier `instructions` à la place (notre texte libre).
+
+## Tests e2e MCP : `axum_test::TestServer` non réexporté par `loco_rs::testing::prelude` (2026-06-25)
+La fonction `request::<App>` du harness loco prend une closure avec `(TestServer, AppContext)`, mais `TestServer` vient de `axum_test` — non réexporté par `loco_rs::testing::prelude`. Pour typer un helper `async fn mcp_post(request: &???, ...)`, il faut soit ajouter `axum-test = { version = "17.x" }` en dev-dependency directe (`version = "17.3"` épinglée sur la version du lockfile transitif), soit éviter de déclarer explicitement le type (le compilateur infère).
+
 ## rmcp < 1.4.0 — DNS rebinding (CVE-2026-42559)
 Le transport Streamable HTTP ne validait pas le `Host` avant la 1.4.0. **Épingler
 ≥ 1.4.0** et configurer `allowed_hosts` (inclure `latch.owlnext.fr`). Caddy valide

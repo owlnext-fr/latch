@@ -136,6 +136,10 @@
 - [x] `LATCH_PUBLIC_BASE_URL` (nouvelle variable runtime, fail-secure, source hôte public + `allowed_hosts`) — Phase 5 — 2026-06-25
 - [x] Tests Phase 5 : 127 backend (dont gate token, deploy_prototype, slug inconnu, invariants sécu, settings 401), 54 frontend. Clippy `--all-features` clean. SonarCloud gate PASSED (~94.8% new_coverage) — Phase 5 — 2026-06-25
 
+## Phase 6 — E2E, durcissement, packaging
+
+- [x] `backend/tests/mcp_http.rs` : 5 tests e2e MCP transport Streamable HTTP réel (initialize handshake, tools/list, deploy_prototype + invariant §9 PIN absent, list_projects enveloppe objet, gate token rejeté). `axum-test` ajouté en dev-dep. 135/135 tests backend verts — Phase 6 T2 — 2026-06-25
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24

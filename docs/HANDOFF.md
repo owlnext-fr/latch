@@ -5,6 +5,34 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 6 T2 : tests e2e MCP transport HTTP réel (5 tests verts)
+
+### Dernière chose faite
+`backend/tests/mcp_http.rs` créé — 5 tests e2e du transport Streamable HTTP réel via le harness loco `request::<App>` :
+- `mcp_initialize_handshake` : handshake + header `mcp-session-id` + instructions "latch"
+- `mcp_tools_list_exposes_two_tools` : 2 tools exposés (`deploy_prototype`, `list_projects`)
+- `mcp_deploy_prototype_creates_version` : deploy + structuredContent + invariant §9 (PIN absent)
+- `mcp_list_projects_is_object_envelope` : enveloppe `{projects:[...]}` confirmée
+- `mcp_bad_token_is_rejected` : gate token invalide → `isError` ou erreur JSON-RPC
+
+**Incertitudes résolues** : résultat dans `structuredContent` (pas `content[0].text`) ; header session = `mcp-session-id` ; `protocolVersion = "2025-06-18"` accepté ; SSE commence par `data:` vide (keepalive) puis `data: {json}` ; `Host: localhost:5150` requis dans les requêtes (sinon 403 `allowed_hosts`) ; `serverInfo.name = "rmcp"` (rmcp lui-même, pas notre crate).
+
+`axum-test = { version = "17.3" }` ajouté en dev-dep directe (requis pour typer `axum_test::TestServer` dans le helper). 135/135 tests backend verts. `cargo fmt` + `cargo clippy --all-features -- -D warnings` propres.
+
+### Trucs en suspens
+- **T3** : tests e2e Playwright `/c/<slug>` + unlock + bascule (priorité Phase 6)
+- **T4** : sonar.tests + supply-chain audit
+- Reste de la Phase 6 : CHANGELOG, README, vérif finale
+
+### Prochaine chose à creuser
+- **T3** : tests e2e Playwright (voir brief `task-3-brief.md`)
+
+### Notes pour future Claude
+- Tests e2e MCP : 4 pièges QUIRKS ajoutés (Host header, SSE `data:` vide, `serverInfo.name="rmcp"`, `axum_test::TestServer` non réexporté)
+- Pattern test MCP : `setup_env()` pose `DEPLOY_TOKEN`, `LATCH_PUBLIC_BASE_URL`, `LATCH_STORAGE_ROOT` ; chaque requête porte `host: localhost:5150` ; `parse_mcp_body` ignore les lignes `data:` vides ; session capturée du header `mcp-session-id` de la réponse `initialize`
+
+---
+
 ## 2026-06-25 — Phase 5 LIVRÉE : endpoint MCP + panneau Settings
 
 ### Dernière chose faite

@@ -2240,6 +2240,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
+ "axum-test",
  "axum_session",
  "axum_session_sqlx",
  "chrono",
