@@ -67,4 +67,21 @@ describe('SettingsSheet', () => {
     expect(screen.getByRole('combobox')).toBeInTheDocument() // LanguageSelect
     expect(screen.getByRole('button', { name: /System/ })).toBeInTheDocument() // ThemeToggle
   })
+
+  it('does NOT fetch /api/settings when panel is closed', async () => {
+    let called = false
+    server.use(
+      http.get(`${ORIGIN}/api/settings`, () => {
+        called = true
+        return HttpResponse.json({
+          mcp_url: 'https://latch.example/mcp',
+          deploy_token: 'tok-123456',
+          public_base_url: 'https://latch.example',
+        })
+      }),
+    )
+    renderSheet(false)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(called).toBe(false)
+  })
 })

@@ -101,7 +101,6 @@
   "list.versions_count_one": "{{count}} version",
   "list.versions_count_other": "{{count}} versions",
   "settings.title": "Réglages",
-  "settings.mcp_intro": "Branchez le connecteur MCP de Claude avec l'URL et le token ci-dessous.",
   "settings.mcp_url": "URL de l'endpoint MCP",
   "settings.deploy_token": "Token de déploiement",
   "settings.public_base_url": "URL publique de base",
