@@ -5,6 +5,31 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Toolchain/CI hardening Task 5 : Docker cargo-chef + non-root (commit `916f0b8`)
+
+### Dernière chose faite
+- **Dockerfile réécrit** : stage Rust en **cargo-chef** (couche deps cachée), runtime **distroless cc-debian12:nonroot** (uid 65532), stage `dataprep` pour `chown 65532 /data`. Rust épinglé `1.96-bookworm`.
+- **Durcissements Sonar** : S8549 (`--locked`), S6471 (non-root), S6596 (tags mineurs figés), S6505 (`--ignore-scripts`).
+- **Build vérifié** : `DOCKER_BUILDKIT=1 docker build` → OK (~110s cook + ~21s build final).
+- **Runtime non-root confirmé** : `docker inspect -f '{{.Config.User}}'` → `nonroot`. Migrations jouées + `latch.sqlite` créé sous uid 65532.
+- **Cache cook confirmé** : `touch backend/src/app.rs` + rebuild → `cargo chef cook … CACHED`.
+- Commit `916f0b8` sur `chore/toolchain-ci-hardening`.
+
+### Trucs en suspens
+- `docker-compose.yml` non modifié : bind-mount `./data:/data`. Un répertoire `./data` préexistant possédé par root nécessitera `chown 65532:65532 ./data` manuel (noté QUIRKS).
+- CI non encore exécutée sur cette branche pour le job docker (à vérifier quand le workflow tourne).
+
+### Prochaine chose à creuser
+- **Task 6** : CI pin SHA + ignore-scripts + confort (`.github/workflows/`)
+- **Task 7** : Rust workspace lints no-unwrap
+
+### Notes pour future Claude
+- `cargo chef cook -p latch --locked` fonctionne avec `recipe.json` issu de `cargo chef prepare` — pas de problème `--locked`.
+- Le stage `dataprep` (debian-slim) est nécessaire car distroless n'a pas de shell pour `chown`.
+- QUIRKS : voir entrée volume `/data` non-root ci-dessous.
+
+---
+
 ## 2026-06-25 — PHASE 4 LIVRÉE + itérations UI + revues + Phase 7 planifiée → merge `main`
 
 ### Dernière chose faite

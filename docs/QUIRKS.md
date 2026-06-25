@@ -89,6 +89,11 @@ Le frontend se build via `trunk` ou `cargo … -p latch-ui --target wasm32-unkno
 _(Aujourd'hui le `default-members` reste `["backend", "backend/migration"]` — le frontend React
 n'est pas un crate Cargo, donc `--workspace` n'en a jamais été affecté.)_
 
+## Docker runtime non-root : volume `/data` préexistant possédé par root (2026-06-25)
+**Symptôme** : après migration vers `distroless:nonroot` (uid 65532), le boot échoue si le répertoire ou volume `/data` a été créé par une ancienne image tournant en root — `Permission denied` lors de la création du SQLite ou d'un fichier HTML de version.
+**Cause** : le stage `dataprep` chown `/data` à `65532` seulement au moment de la construction de l'image. Les données existantes (bind-mount `./data` ou named volume) ne sont pas retouchées au runtime.
+**Workaround** : une fois, depuis l'hôte : `chown -R 65532:65532 ./data` (bind-mount) ou via un container helper `docker run --rm -v latch-data:/mnt alpine chown -R 65532:65532 /mnt` (named volume). La prochaine fois, le container écrit nativement en uid 65532.
+
 ## rmcp < 1.4.0 — DNS rebinding (CVE-2026-42559)
 Le transport Streamable HTTP ne validait pas le `Host` avant la 1.4.0. **Épingler
 ≥ 1.4.0** et configurer `allowed_hosts` (inclure `latch.owlnext.fr`). Caddy valide

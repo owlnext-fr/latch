@@ -97,6 +97,7 @@
 
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Node 24 pnpm build → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
+- [x] Dockerfile cargo-chef (couche deps cachée) + runtime `gcr.io/distroless/cc-debian12:nonroot` (uid 65532) + durcissements S8549/S6471/S6596/S6505 — Toolchain Task 5 — 2026-06-25
 - [x] CI GitHub Actions **verte sur main** (back: fmt/clippy/nextest/cargo-deny ; front: lint/typecheck/vitest ; e2e Playwright ; docker GHCR) — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
 - [x] Images GHCR versionnées (`metadata-action` : semver+latest+sha) + pin déploiement (`LATCH_IMAGE_TAG`) — Phase 0 — 2026-06-24
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24
