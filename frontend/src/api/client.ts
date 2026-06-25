@@ -13,6 +13,16 @@ const authMiddleware: Middleware = {
   },
 }
 
-// baseUrl '' = même origine. credentials include = cookie session same-origin.
-export const api = createClient<paths>({ baseUrl: '', credentials: 'include' })
+// baseUrl = origine courante (absolue). En prod, l'admin et l'API partagent la
+// même origine → cookies session envoyés. En test (jsdom) l'URL absolue permet à
+// undici/MSW d'intercepter (un baseUrl '' produit une URL relative que Node rejette).
+// credentials include = cookie session same-origin.
+export const api = createClient<paths>({
+  baseUrl: window.location.origin,
+  credentials: 'include',
+  // Résoudre `fetch` à l'appel (pas à la création du client) : sinon openapi-fetch
+  // capture la référence globale au load du module, ce qui empêche MSW de l'intercepter
+  // en test (MSW remplace `globalThis.fetch` après l'import). No-op en prod.
+  fetch: (input) => globalThis.fetch(input),
+})
 api.use(authMiddleware)
