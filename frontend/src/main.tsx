@@ -1,14 +1,28 @@
-import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nextProvider } from 'react-i18next'
+import { Toaster } from '@/components/ui/sonner'
+import i18n from '@/i18n'
+import { router } from '@/router'
+import { setUnauthorizedHandler } from '@/api/client'
+import './index.css'
 
-import "./index.css"
-import App from "./App.tsx"
-import { ThemeProvider } from "@/components/theme-provider.tsx"
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-createRoot(document.getElementById("root")!).render(
+setUnauthorizedHandler(() => {
+  queryClient.clear()
+  router.navigate({ to: '/login' })
+})
+
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </StrictMode>
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    </I18nextProvider>
+  </StrictMode>,
 )
