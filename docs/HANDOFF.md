@@ -4,57 +4,54 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
-## 2026-06-25 — Migration React Plan 2 T6 : route Liste + hooks Query + Topbar (feat/admin-react)
 
-### Dernière chose faite
-- **`hooks/use-projects.ts`** : `useProjects()` + `useProject(id)` + 8 mutations (useCreateProject, useUpdateProject, useDeleteProject, useSetCode, useClearCode, useDeploy, useActivateVersion, useDeleteVersion). Chaque mutation invalide `['projects']` (+ `['project', id]`) et émet toast sonner sur succès/erreur.
-- **`components/topbar.tsx`** : titre `latch` (button → `/`), `<LocaleSwitcher>`, bouton logout (`useLogout` → navigate `/login`).
-- **`routes/list.tsx`** : Topbar + intro `t('list.intro')`. Table shadcn 4 colonnes : nom (`<button>` navigable clavier), URL publique + `CopyButton`, badge vert (PIN required) / orange (Open), version active (`v{id}` ou `—`). État vide avec bouton `t('list.create_first')`. `<ProjectForm>` stub monté hors table.
-- **`components/project-form.tsx`** : stub (retourne null, remplacé Task 7).
-- **`components/ui/{table,badge}.tsx`** : ajoutés via `pnpm dlx shadcn@latest add table badge -y`.
-- **`routes/list.test.tsx`** : 6 tests MSW (hooks réels, pas de mock) — projets affichés, badges, PIN jamais rendu (§9.2 vérifié), état vide, CopyButton par ligne, `—` pour version null.
-- **Résultat** : 18 tests verts, typecheck + lint + build propres. Commit `cfab5bb`.
+## 2026-06-25 — MIGRATION REACT LIVRÉE (Plans 1-3) — prête pour validation humaine (feat/admin-react)
 
-### Trucs en suspens
-- **Task 7** : `ProjectForm` complet (création/édition side-panel, RHF+zod, invalidation query).
-- **Task 8+** : `DetailPage`, `DeployPanel`, panels danger.
+> Session autonome de nuit. Admin SPA migrée **Yew → React/Vite/shadcn** de bout en bout.
+> Détail tâche-par-tâche : `.superpowers/sdd/progress.md` (ledger). Plans :
+> `docs/superpowers/plans/2026-06-25-migration-react-plan-{1,2,3}-*.md`. Le backend Rust est inchangé.
+
+### Dernière chose faite — un SERVEUR TOURNE pour ta validation
+- **Serveur lancé et joignable** : `http://127.0.0.1:5150/admin` — login `admin` / `secret`.
+  (backend `cargo loco start` en dev, sert le `dist/` React buildé sous `/admin` ; DB neuve `/tmp/latch-dev.sqlite`,
+  storage `/tmp/latch-dev-data`.) Vérifié : `/_health`=ok, `/admin/` sert le React, `/api/projects` sans session = 401.
+  Si le process n'est plus là au réveil, relancer :
+  `cd frontend && pnpm build` puis `cd backend && LATCH_SPA_DIST=../frontend/dist ADMIN_USER=admin ADMIN_PASS=secret LATCH_STORAGE_ROOT=/tmp/latch-dev-data DATABASE_URL='sqlite:///tmp/latch-dev.sqlite?mode=rwc' cargo loco start`.
+
+### Ce qui est livré (3 plans, tout vert local)
+- **Plan 1 (déjà fait avant la nuit)** : backend OpenAPI (utoipa) → `openapi.json` commité + drift test. 88 tests nextest.
+- **Plan 2 — app React** (11 commits) : Vite+React+TS strict, TanStack Router (code-based, basepath `/admin`) + Query,
+  client **openapi-fetch** typé depuis `openapi.json` (→ `frontend/src/api/schema.d.ts`), shadcn/ui (Radix, base **stone**,
+  preset oklch `bJfDPe2y`), Tailwind v4, RHF+zod, react-i18next (FR/EN, défaut EN, catalogue porté), sonner.
+  Pages contrat §7 : login, liste (badges colorés, état vide), détail (lecture seule, PIN masqué, versions),
+  side-panels ProjectForm (créer/éditer, PIN disabled si code off, slug RO) / DeployPanel (dropzone) / danger.
+  **25 tests Vitest+MSW verts**, typecheck/lint(jsx-a11y)/build verts. Revue finale opus : 0 Critical, 4 Important + 2 Minor CORRIGÉS.
+- **Plan 3 — pipeline + e2e + docs** : Dockerfile stage **Node 24/pnpm** (Vite) → **image buildée OK 105 Mo** distroless ;
+  `ci.yml` réécrit en pistes parallèles back/front → e2e → docker (+ drift OpenAPI & schema, supply-chain front) ;
+  **e2e Playwright smoke VERT** (login → créer projet → déployer) contre la stack réelle ; doc mémoire alignée
+  (contrat §2/§4, BOOTSTRAP, ROADMAP, ENV, QUIRKS+CONVENTIONS avec archive « Historique Yew », INDEX, BACKLOG, README).
+
+### Trucs en suspens / à trancher (TOI, demain)
+- **PUSH + PR non faits** : la branche `feat/admin-react` est **locale** (pas d'upstream). Rien n'est poussé. La CI
+  réécrite n'a donc PAS tourné sur GitHub — à valider au 1er push. (Volontaire : tu voulais valider d'abord.)
+- **GAP contrat §7 (décision API)** : `ProjectListItem` ne porte que `active_version_id` (PK), pas le n° de version ni le
+  compte. La colonne « version active » affiche désormais **« Deployed »/—** (honnête) au lieu d'un faux `v{id}`. Pour
+  afficher le vrai n° + compte, **enrichir le DTO backend** (`active_version_n` + `version_count`) → régénérer
+  `openapi.json` + `schema.d.ts` + drift. C'est un changement du **contrat OpenAPI (loi)** → à décider/blesser. → BACKLOG.
+- **CI license allowlist** (`supply-chain-front`) possiblement à calibrer au 1er run réel (SPDX non listé mais légitime).
+- Minors Plan 2 (BACKLOG) : bouton « activer » sans état pending ; bundle JS 604 kB (code-splitting) ; reusable workflows CI ;
+  `deny.toml` transitives utoipa-swagger-ui (zlib-rs « Zlib »).
+
+### Notes pour future Claude (quirks React découverts — aussi dans QUIRKS.md)
+- **openapi-fetch capture `globalThis.fetch` au load** → `client.ts` passe `fetch:(input)=>globalThis.fetch(input)` pour que MSW intercepte en test.
+- **Pinner `packageManager: pnpm@9.15.9`** (`frontend/package.json`) : sinon corepack tire pnpm 11 dont la politique `minimumReleaseAge` rejette le lockfile (Docker/CI rouges).
+- **ResizeObserver polyfill** dans `vitest.setup.ts` (Radix en jsdom).
+- **shadcn `init --preset bJfDPe2y`** nécessite `npm_config_ignore_workspace_root_check=true` (le template Vite pose un `pnpm-workspace.yaml`).
+- Le ledger `.superpowers/sdd/progress.md` (gitignoré) détaille chaque task + les findings de revue.
 
 ### Prochaine chose à creuser
-- Task 7 : remplacer le stub `project-form.tsx` par le vrai composant Sheet + formulaire.
-
-### Notes pour future Claude
-- `ProjectListItem` n'a PAS de champ `pin` (invariant §9.2 structurel) — le test `list.test.tsx` vérifie que le mot "pin" n'apparaît pas dans le DOM.
-- La ligne du tableau utilise un `<button>` dans la cellule nom (pas un `onClick` sur `<TableRow>`) pour satisfaire `jsx-a11y/click-events-have-key-events` et `no-static-element-interactions`.
-- `stopPropagation` sur la cellule URL a été supprimé : le `<CopyButton>` est dans une cellule sans onClick parent.
-- `active_version_id` dans `ProjectListItem` est l'ID DB, pas le numéro de version `n` — afficher `v{id}` est une simplification acceptable en attendant que le DTO soit enrichi (BACKLOG si besoin).
-
----
-
-## 2026-06-25 — Migration React Plan 2 T4 : harness Vitest+MSW + PinField/CopyButton/LocaleSwitcher (feat/admin-react)
-
-### Dernière chose faite
-- **Harness Vitest** : `frontend/vitest.config.ts` (jsdom, globals, alias `@/`), `frontend/vitest.setup.ts` (jest-dom + MSW server lifecycle), scripts `test`/`test:watch` dans `package.json`.
-- **MSW** : `src/test/msw.ts` exporte `server` (setupServer) + `jsonOnce` helper typé (`JsonBodyType`).
-- **`src/test/utils.tsx`** : `renderWithProviders(ui)` = `I18nextProvider` (i18n partagé) + `QueryClientProvider` (fresh QueryClient, `retry: false`). Pattern réutilisé par toutes les tasks suivantes.
-- **CopyButton** (`src/components/copy-button.tsx`) : icône `Copy` lucide, `aria-label` prop, `navigator.clipboard.writeText` + `toast.success(t('toast.copied'))`.
-- **PinField** (`src/components/pin-field.tsx`) : lecture (masque `••••••`, bouton œil Eye/EyeOff, CopyButton si pin non null) ; édition (`<input>`, `disabled`, `onChange` filtré non-digits max 6). Retourne `null` si pin null.
-- **LocaleSwitcher** (`src/components/locale-switcher.tsx`) : boutons FR/EN, `i18n.changeLanguage`, `aria-pressed` sur langue active.
-- **Tests** : 10/10 verts (utils×2, PinField×5, CopyButton×2 dont clipboard stub `vi.fn()`). TDD : RED → FAIL import → composants implémentés → GREEN.
-- **Typecheck** : fix `tsconfig.app.json` (`"@testing-library/jest-dom/vitest"` dans `types`) pour exposer les matchers aux tests. **Lint** : 0 warning/error.
-
-### Trucs en suspens
-- **Plan 2 T5+** : composants de niveau supérieur (AuthProvider, pages Login/List/Detail, ProjectForm, DeployPanel, etc.).
-- **CI/Docker** : toujours rouge par design (stage Trunk) — sera traité Plan 3.
-
-### Prochaine chose à creuser
-- Tâches 5+ du Plan 2 : routes TanStack Router (Login, List, Detail), AuthProvider, pages.
-- Le `renderWithProviders` est prêt — les tests de composants page pourront en hériter.
-
-### Notes pour future Claude
-- `@testing-library/jest-dom/vitest` doit figurer dans `types[]` de `tsconfig.app.json` (pas seulement dans `vitest.setup.ts`) sinon `pnpm typecheck` échoue sur `.toBeInTheDocument()` etc.
-- jsdom n'a pas `navigator.clipboard` → stub via `Object.assign(navigator, { clipboard: { writeText: vi.fn() } })` dans `beforeEach`.
-- `jsonOnce` dans `msw.ts` doit typer `body` en `JsonBodyType` (import MSW) pas `unknown`, sinon erreur TS.
-- `lucide-react` est déjà en dépendance — utiliser `Eye`/`EyeOff`/`Copy`.
+- Valider l'UX au navigateur (serveur ci-dessus), puis **push + PR** de `feat/admin-react`, vérifier la CI verte.
+- Ensuite **Phase 4** (serving `/c/<slug>` + unlock) — backend, indépendant du front.
 
 ---
 
