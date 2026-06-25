@@ -116,5 +116,10 @@
   "settings.theme_dark": "Dark",
   "settings.mcp_url_help": "Set this in Claude's MCP connector.",
   "settings.deploy_token_help": "Secret validated by all MCP tools.",
-  "settings.public_base_url_help": "Public root of this instance."
+  "settings.public_base_url_help": "Public root of this instance.",
+  "title.projects": "Projects — latch admin",
+  "title.login": "Sign in — latch admin",
+  "title.detail": "{{name}} — latch admin",
+  "login.github": "View on GitHub",
+  "topbar.help": "Documentation"
 }

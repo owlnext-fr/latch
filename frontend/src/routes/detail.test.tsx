@@ -279,4 +279,10 @@ describe('DetailPage', () => {
       expect(screen.getByText('List')).toBeInTheDocument()
     })
   })
+
+  it('sets the document title to the project name', async () => {
+    mockProjectDetail(PROJECT_DETAIL)
+    renderDetailPage(1)
+    await waitFor(() => expect(document.title).toMatch(/— latch admin$/))
+  })
 })

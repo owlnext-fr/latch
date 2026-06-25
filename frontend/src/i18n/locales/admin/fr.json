@@ -116,5 +116,10 @@
   "settings.theme_dark": "Sombre",
   "settings.mcp_url_help": "À renseigner dans le connecteur MCP de Claude.",
   "settings.deploy_token_help": "Secret validé par tous les tools MCP.",
-  "settings.public_base_url_help": "Racine publique de l'instance."
+  "settings.public_base_url_help": "Racine publique de l'instance.",
+  "title.projects": "Projets — latch admin",
+  "title.login": "Connexion — latch admin",
+  "title.detail": "{{name}} — latch admin",
+  "login.github": "Voir sur GitHub",
+  "topbar.help": "Documentation"
 }

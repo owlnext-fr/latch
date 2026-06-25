@@ -189,4 +189,10 @@ describe('ListPage', () => {
     expect(screen.getByText('v2')).toBeInTheDocument()
     expect(screen.getByText('3 versions')).toBeInTheDocument()
   })
+
+  it('sets the document title to the projects title', async () => {
+    mockProjectsList(PROJECTS)
+    renderWithRouter('/')
+    await waitFor(() => expect(document.title).toBe('Projects — latch admin'))
+  })
 })

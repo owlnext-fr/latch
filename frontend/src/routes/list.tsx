@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useProjects } from '@/hooks/use-projects'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { publicUrl } from '@/lib/utils'
 
 export function ListPage() {
@@ -23,6 +24,7 @@ export function ListPage() {
   const router = useRouter()
   const { data: projects, isLoading } = useProjects()
   const [formOpen, setFormOpen] = useState(false)
+  useDocumentTitle(t('title.projects'))
 
   let content: ReactNode
   if (isLoading) {
@@ -111,7 +113,7 @@ export function ListPage() {
     <div className="flex min-h-screen flex-col">
       <Topbar />
 
-      <main className="flex-1 p-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 p-6">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-muted-foreground text-sm">{t('list.intro')}</p>
           <Button type="button" onClick={() => setFormOpen(true)}>

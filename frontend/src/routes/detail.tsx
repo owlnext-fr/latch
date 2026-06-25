@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useProject, useActivateVersion } from '@/hooks/use-projects'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { publicUrl } from '@/lib/utils'
 import type { components } from '@/api/schema'
 
@@ -44,6 +45,7 @@ export function DetailPage() {
 
   const { data: project, isLoading, isError } = useProject(id)
   const activateVersion = useActivateVersion()
+  useDocumentTitle(t('title.detail', { name: project?.name ?? '…' }))
 
   const [editOpen, setEditOpen] = useState(false)
   const [deployOpen, setDeployOpen] = useState(false)
@@ -303,7 +305,7 @@ export function DetailPage() {
     <div className="flex min-h-screen flex-col">
       <Topbar />
 
-      <main className="flex-1 p-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 p-6">
         {/* Breadcrumb */}
         <div className="mb-4">
           <button
