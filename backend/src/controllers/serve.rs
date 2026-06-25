@@ -17,6 +17,7 @@ use crate::controllers::serve_ratelimit::{IpSlugKeyExtractor, SlugKeyExtractor};
 
 use crate::controllers::error::into_response;
 use crate::dto::UnlockReq;
+use crate::services::errors::CoreError;
 use crate::services::projects::ProjectsService;
 use crate::services::unlock_cookie::{issue_token, verify_token};
 
@@ -26,6 +27,29 @@ pub(crate) const UNLOCK_COOKIE_NAME: &str = "latch_unlock";
 /// Construit la réponse HTML brute du proto actif, `no-store`.
 fn html_response(html: String) -> Response {
     (
+        [
+            (CACHE_CONTROL, HeaderValue::from_static("no-store")),
+            (
+                CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+        ],
+        html,
+    )
+        .into_response()
+}
+
+/// Sert la page d'erreur stylée (`error.html` buildé) avec le status donné, `no-store`.
+/// Fallback texte inline si le fichier manque — jamais de JSON brut sur `/c`.
+async fn serve_error_page(status: StatusCode) -> Response {
+    let path = crate::web::error_index();
+    let html = tokio::fs::read_to_string(&path).await.unwrap_or_else(|_| {
+        "<!doctype html><meta charset=utf-8><title>latch</title>\
+         <p>Ce prototype n'est pas disponible.</p>"
+            .to_string()
+    });
+    (
+        status,
         [
             (CACHE_CONTROL, HeaderValue::from_static("no-store")),
             (
@@ -75,12 +99,19 @@ pub(crate) async fn serve(
     headers: HeaderMap,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    // Slug inconnu → 404 (NotFound mappé par into_response).
-    let project = svc.get_by_slug(&slug).await.map_err(into_response)?;
+    // Slug inconnu → page d'erreur 404 ; erreur DB → 500 (loggée).
+    let project = match svc.get_by_slug(&slug).await {
+        Ok(p) => p,
+        Err(CoreError::NotFound) => return Ok(serve_error_page(StatusCode::NOT_FOUND).await),
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "serve: get_by_slug failed");
+            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
+        }
+    };
 
-    // Pas de version active → rien à servir.
+    // Pas de version active → rien à servir → page d'erreur 404.
     let Some(active_id) = project.active_version_id else {
-        return Err(loco_rs::Error::NotFound);
+        return Ok(serve_error_page(StatusCode::NOT_FOUND).await);
     };
 
     // Projet protégé sans cookie valide → page de déverrouillage (avant de lire le HTML).
@@ -101,16 +132,25 @@ pub(crate) async fn serve(
 
     // Libre, ou protégé + cookie valide → servir le HTML de la version active.
     use crate::models::_entities::versions;
-    let version = versions::Entity::find_by_id(active_id)
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let version = match versions::Entity::find_by_id(active_id).one(&ctx.db).await {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            tracing::error!(version = active_id, slug = %slug, "serve: active version row missing");
+            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
+        }
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "serve: version lookup failed");
+            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
+        }
+    };
     let storage = crate::web::storage_from_ctx(&ctx);
-    let html = storage
-        .read(&version.html_path)
-        .await
-        .map_err(into_response)?;
+    let html = match storage.read(&version.html_path).await {
+        Ok(h) => h,
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "serve: storage read failed");
+            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
+        }
+    };
     Ok(html_response(html))
 }
 

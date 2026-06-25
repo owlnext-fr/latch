@@ -33,6 +33,11 @@ pub fn unlock_index() -> PathBuf {
     spa_dist_dir().join("unlock.html")
 }
 
+/// Chemin du `error.html` buildé (page d'erreur stylée du serving `/c`).
+pub fn error_index() -> PathBuf {
+    spa_dist_dir().join("error.html")
+}
+
 /// Résout un secret de cookie. Fail-secure : hors Development/Test, l'env var
 /// est OBLIGATOIRE (pas de fallback). Le fallback de dev n'est toléré qu'en
 /// Development/Test. Erreur si trop court (< 64 octets, exigence de `cookie::Key`).

@@ -27,7 +27,7 @@ async fn make_project(
     .expect("insert project")
 }
 
-/// Prépare un faux `dist/` avec un unlock.html reconnaissable + pointe LATCH_SPA_DIST.
+/// Prépare un faux `dist/` avec un unlock.html + error.html reconnaissables + pointe LATCH_SPA_DIST.
 fn fake_dist() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(
@@ -35,6 +35,11 @@ fn fake_dist() -> tempfile::TempDir {
         "<!doctype html><title>latch-unlock</title>",
     )
     .expect("write unlock.html");
+    std::fs::write(
+        dir.path().join("error.html"),
+        "<!doctype html><title>latch</title><div id=\"error-root\">latch-error</div>",
+    )
+    .expect("write error.html");
     std::env::set_var("LATCH_SPA_DIST", dir.path());
     dir
 }
@@ -134,23 +139,35 @@ async fn protected_project_without_cookie_serves_unlock_page() {
 
 #[tokio::test]
 #[serial]
-async fn unknown_slug_is_404() {
+async fn unknown_slug_serves_styled_error_404() {
     let _dist = fake_dist();
     request::<App, _, _>(|request, _ctx| async move {
         let res = request.get("/c/nope-xxxxxxxx").await;
         assert_eq!(res.status_code(), 404);
+        assert_eq!(
+            res.headers().get("content-type").unwrap(),
+            "text/html; charset=utf-8",
+            "page d'erreur HTML, pas du JSON"
+        );
+        assert_eq!(res.headers().get("cache-control").unwrap(), "no-store");
+        assert!(res.text().contains("error-root"), "rend error.html");
     })
     .await;
 }
 
 #[tokio::test]
 #[serial]
-async fn project_without_active_version_is_404() {
+async fn project_without_active_version_serves_styled_error_404() {
     let _dist = fake_dist();
     request::<App, _, _>(|request, ctx| async move {
-        make_project(&ctx.db, "vide-aaaaaaaa", false, None, None).await; // aucune version
+        make_project(&ctx.db, "vide-aaaaaaaa", false, None, None).await;
         let res = request.get("/c/vide-aaaaaaaa").await;
         assert_eq!(res.status_code(), 404);
+        assert_eq!(
+            res.headers().get("content-type").unwrap(),
+            "text/html; charset=utf-8"
+        );
+        assert!(res.text().contains("error-root"));
     })
     .await;
 }
@@ -230,6 +247,26 @@ async fn unlock_rate_limited_after_burst() {
             }
         }
         assert!(got_429, "le burst dépassé doit déclencher un 429 (§9.5)");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn missing_error_html_falls_back_to_inline_text() {
+    // dist sans error.html → fallback inline (pas de JSON brut), toujours no-store.
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("unlock.html"), "<title>u</title>").unwrap();
+    std::env::set_var("LATCH_SPA_DIST", dir.path());
+    request::<App, _, _>(|request, _ctx| async move {
+        let res = request.get("/c/nope-yyyyyyyy").await;
+        assert_eq!(res.status_code(), 404);
+        assert_eq!(res.headers().get("cache-control").unwrap(), "no-store");
+        assert!(
+            res.text().contains("pas disponible"),
+            "fallback inline HTML, pas du JSON"
+        );
+        assert!(!res.text().contains("{"), "pas de JSON brut");
     })
     .await;
 }
