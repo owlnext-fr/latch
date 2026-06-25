@@ -24,8 +24,8 @@ Claude*, qui est le différenciateur.
 | Sujet | Décision |
 |---|---|
 | **Outil** | **Fumadocs** (Next.js + MDX), **export statique** (`output: 'export'`). Node uniquement au build/CI. |
-| **Hébergement** | **GitHub Pages** avec **domaine custom `docs.latch.owlnext.fr` servi à la racine** (fichier `CNAME`). Pas de sous-chemin. |
-| **`basePath`** | **Vide** (site à la racine) → **aucun piège `basePath`/`assetPrefix`/404 d'assets**. Gardé env-driven (`DOCS_BASE_PATH`, défaut `''`) pour repli sous-chemin si besoin. `CNAME` + `.nojekyll` posés au build. |
+| **Hébergement** | **GitHub Pages** — **sous-chemin projet** `https://owlnext-fr.github.io/latch` (source = **GitHub Actions**). **Pas de domaine custom** (ni maintenant, ni prévu — décision 2026-06-26). |
+| **`basePath`** | **`/latch`** (sous-chemin projet). `basePath` + `assetPrefix` posés **explicitement** + `.nojekyll`, sinon styles/scripts en **404**. Gardé env-driven (`DOCS_BASE_PATH`, défaut `'/latch'`) pour bascule racine/domaine custom ultérieure sans toucher le code. |
 | **Emplacement** | **`public_docs/`** dans le monorepo `owlnext-fr/latch`. |
 | **Langue du site** | **Anglais uniquement** (portée FOSS, un seul corpus). |
 | **Identité visuelle** | **Réutiliser l'identité produit** : logo `latch` SVG, palette **stone/oklch**, thème **clair/sombre** (next-themes, défaut `system`). |
@@ -67,7 +67,6 @@ public_docs/
     source.ts               # loader Fumadocs (content/docs)
   public/
     img/                    # captures + assets (logo, schéma flux Claude)
-    CNAME                   # docs.latch.owlnext.fr (domaine custom, racine)
   source.config.ts          # config Fumadocs MDX
   next.config.mjs           # output export, basePath/assetPrefix env, images unoptimized
   package.json              # app isolée (Node 24, pnpm) — distincte de frontend/
@@ -233,10 +232,10 @@ reset au reboot) ; **404 `/c`** (slug inconnu / pas de version active) ; cookie 
 ### 6.1 Next/Fumadocs (export statique)
 
 - `next.config.mjs` : `output: 'export'`, `images: { unoptimized: true }`,
-  `basePath: process.env.DOCS_BASE_PATH ?? ''`, `assetPrefix` dérivé du même (vide par défaut).
-  Site servi **à la racine** sous domaine custom → pas de préfixe. Repli sous-chemin possible en
-  posant `DOCS_BASE_PATH=/latch`. Build pose `public/CNAME` (`docs.latch.owlnext.fr`) et `.nojekyll`
-  à la racine de l'export.
+  `basePath: process.env.DOCS_BASE_PATH ?? '/latch'`, `assetPrefix` dérivé du même.
+  Site servi sous **sous-chemin projet** `owlnext-fr.github.io/latch`. Bascule racine/domaine custom
+  plus tard → poser `DOCS_BASE_PATH=''` (+ CNAME à ce moment-là). Build pose `.nojekyll` à la racine
+  de l'export (indispensable : sinon Jekyll mange les fichiers `_next/`).
 - Scaffold : `pnpm create fumadocs-app` (template Next.js). App **isolée** dans `public_docs/`
   (son `package.json`, son lockfile) — **n'est pas** un membre du workspace Rust, ni lié à `frontend/`.
 - Node 24, pnpm (aligné repo). Vérifier la version Fumadocs courante **via Context7** au scaffold
@@ -271,8 +270,8 @@ La CI Rust et la doc partagent le **workflow** (statut unifié) mais pas les **d
   push `main` est idempotent (Pages republie le même artefact si rien n'a changé). Filtrage par
   chemin = optimisation reportée si le temps de build le justifie.
 - Actions **épinglées par SHA** (politique supply-chain, BOOTSTRAP §6).
-- Pré-requis humain : activer **Pages = « GitHub Actions »** dans les settings du repo
-  (non scriptable — consigné dans ENVIRONMENT à la livraison).
+- Pré-requis humain : **Pages = « GitHub Actions »** dans les settings du repo — **déjà activé**
+  (confirmé 2026-06-26). Aucun domaine custom à configurer.
 
 ### 6.3 Recherche
 
@@ -326,13 +325,15 @@ Chaque unité a un périmètre clair et testable indépendamment :
 
 ## 10. Risques & points d'attention
 
-- **Domaine custom à la racine** : `basePath` vide → le piège « assets en 404 » du sous-chemin est
-  **évité par construction**. Nouveau prérequis humain : enregistrement **DNS `CNAME docs.latch.owlnext.fr`
-  → `owlnext-fr.github.io`**, + « Custom domain » renseigné dans les settings Pages (déclenche la vérif +
-  le HTTPS auto). Tant que le DNS n'est pas posé, le site n'est pas joignable à l'URL finale (le build/déploiement, lui, reste vert).
+- **`basePath` sous-chemin projet** : *la* source classique de « le site se déploie mais styles/scripts
+  en **404** ». Le repo `owlnext-fr/latch` est un **repo projet** → Pages sert sous `/latch`, donc
+  `basePath` + `assetPrefix` **explicites** (`/latch`) et `.nojekyll` au build sont **obligatoires**.
+  Les liens internes restent root-relative (`/docs/...`) : Next/Fumadocs préfixe automatiquement via
+  `basePath` (ne **jamais** coder `/latch` en dur dans les liens MDX). À vérifier au 1er deploy (charger
+  une page profonde, confirmer que `_next/` se charge).
 - **Fumadocs bouge vite** (loader, `source.config.ts`) : résoudre la version via **Context7** au scaffold,
   épingler dans `public_docs/package.json`.
-- **Pré-requis humain** : activer Pages = « GitHub Actions » dans les settings repo (non scriptable).
+- **Pré-requis humain** : Pages = « GitHub Actions » — **déjà activé** ; pas de domaine custom.
 - **Lien doc dans le produit** : le bouton « ? » de l'admin et le README pointent déjà vers une URL doc —
-  l'aligner sur l'URL §2 une fois en ligne.
+  l'aligner sur l'URL §2 (`owlnext-fr.github.io/latch`) une fois en ligne.
 - **Confidentialité** : règle CLAUDE.md non-négociable — aucun nom client dans le contenu, placeholders fictifs.
