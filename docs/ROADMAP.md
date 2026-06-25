@@ -144,6 +144,19 @@ phases métier ; peut s'intercaler selon les priorités produit.
   `light`). `next-themes` est déjà en dépendance mais aucun `ThemeProvider` n'est monté
   (retiré au Plan 2) — à recâbler + persister. NB : la page unlock est en fond clair only
   aujourd'hui (cf. BACKLOG « bordure OTP sans variante dark »).
+- **Settings en side-panel** : aujourd'hui le panneau Settings (`deploy_token` / `mcp_url` /
+  `public_base_url`, livré Phase 5) est une **route plein écran** `/admin/settings`. Le
+  transformer en **side-panel** (`<Sheet>`, cohérent avec la grammaire d'interaction admin
+  du contrat §7 — créer/éditer en side-panel) ouvert depuis l'icône Settings de la topbar,
+  plutôt qu'une navigation de route. À combiner avec le « Menu Settings » ci-dessus (locale +
+  thème + infos MCP dans le même panneau).
+- **Page d'erreur stylée pour le serving `/c/<slug>`** : aujourd'hui les branches d'erreur de
+  `controllers/serve.rs` (slug inconnu, projet sans version active) renvoient l'erreur Loco par
+  défaut (**JSON brut**, ex. `404 NotFound`) sur une surface **publique** vue par le client final.
+  Servir à la place une **page HTML stylée** (cohérente avec la page de déverrouillage, portant
+  éventuellement `brand_name`) pour chaque cas : projet introuvable, aucune version déployée,
+  voire erreur interne. Idéalement une 2ᵉ/3ᵉ vue réutilisant le bundle/thème de `unlock.html`
+  (ou un mini-template HTML). `no-store` comme le reste de la surface `/c`.
 - **i18n centralisé** : centraliser les catalogues de traduction pour qu'ajouter une locale
   soit trivial — idéalement **détection automatique des fichiers JSON** de locale (`locales/*.json`)
   plutôt que les imports statiques en dur actuels (`import en from './locales/en.json'`).
@@ -151,5 +164,7 @@ phases métier ; peut s'intercaler selon les priorités produit.
   à harmoniser.
 
 **Sortie :** titres cohérents par page ; logo présent (favicon + admin + unlock) ; menu
-settings fonctionnel (locale + thème persistés, défaut thème = `system`) ; ajouter une locale
-= déposer un JSON (ou une config minimale), sans toucher au code d'import.
+settings fonctionnel **en side-panel** (locale + thème persistés, défaut thème = `system`, +
+infos MCP) ; serving `/c` rend des **pages d'erreur HTML stylées** (plus de JSON brut sur slug
+inconnu / sans version) ; ajouter une locale = déposer un JSON (ou une config minimale), sans
+toucher au code d'import.
