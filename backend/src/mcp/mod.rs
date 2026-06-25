@@ -50,6 +50,33 @@ struct DeployArgs {
     activate: Option<bool>,
 }
 
+/// Arguments du tool `list_projects`.
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct ListArgs {
+    /// Secret de déploiement (validé contre DEPLOY_TOKEN).
+    deploy_token: String,
+}
+
+/// Résumé d'un projet renvoyé par `list_projects` — sans PIN ni hash (§9.1/§9.2).
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct ProjectSummary {
+    /// Slug public — à passer à `deploy_prototype`.
+    pub slug: String,
+    pub name: String,
+    /// `true` si le projet exige un code d'accès.
+    pub code_protected: bool,
+    /// Numéro de la version active, ou `null` si jamais déployé.
+    pub active_version: Option<i32>,
+}
+
+/// Résultat enveloppe de `list_projects` — MCP exige `outputSchema` de type `object`
+/// (pas `array`), donc on encapsule la liste.
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct ProjectListResult {
+    /// Liste des projets.
+    pub projects: Vec<ProjectSummary>,
+}
+
 /// Résultat renvoyé par `deploy_prototype`.
 #[derive(Debug, Serialize, schemars::JsonSchema)]
 pub struct DeployResult {
@@ -116,6 +143,34 @@ impl LatchMcp {
             version: version.n,
             code_protected: project.code_enabled,
         }))
+    }
+
+    #[tool(
+        description = "Liste les projets déployables (slug, nom, protection par code, n° de \
+                       version active). Ne renvoie jamais de PIN ni de secret."
+    )]
+    async fn list_projects(
+        &self,
+        Parameters(args): Parameters<ListArgs>,
+    ) -> Result<Json<ProjectListResult>, ErrorData> {
+        self.check_token(&args.deploy_token)?;
+
+        let projects = ProjectsService::new(self.db.clone());
+        let rows = projects.list_with_versions().await.map_err(map_core_err)?;
+
+        let items = rows
+            .iter()
+            .map(|(p, vers)| ProjectSummary {
+                slug: p.slug.clone(),
+                name: p.name.clone(),
+                code_protected: p.code_enabled,
+                active_version: p
+                    .active_version_id
+                    .and_then(|aid| vers.iter().find(|v| v.id == aid).map(|v| v.n)),
+            })
+            .collect();
+
+        Ok(Json(ProjectListResult { projects: items }))
     }
 }
 
@@ -319,6 +374,57 @@ mod tests {
         assert!(
             reloaded.active_version_id.is_none(),
             "activate=false → pas de bascule"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_rejects_bad_token() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let m = mcp(db, &dir);
+        let res = m
+            .list_projects(Parameters(ListArgs {
+                deploy_token: "WRONG".to_string(),
+            }))
+            .await;
+        // Le rejet doit venir du gate token (§9.3). `Json<ProjectListResult>`
+        // n'implémente pas `Debug`, donc on `match` plutôt que `unwrap_err`.
+        let err = match res {
+            Err(e) => e,
+            Ok(_) => panic!("token invalide doit être rejeté"),
+        };
+        assert_eq!(
+            err.message, "deploy_token invalide",
+            "le rejet doit venir du gate token, pas d'un chemin DB"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_returns_summaries_without_pin() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, true).await; // code activé, pin 123456
+        let m = mcp(db, &dir);
+        let Json(result) = m
+            .list_projects(Parameters(ListArgs {
+                deploy_token: TOKEN.to_string(),
+            }))
+            .await
+            .unwrap();
+
+        assert_eq!(result.projects.len(), 1);
+        assert_eq!(result.projects[0].slug, p.slug);
+        assert!(result.projects[0].code_protected);
+        assert_eq!(result.projects[0].active_version, None);
+        // Invariant §9.2 : le PIN ne doit JAMAIS transiter par MCP.
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(
+            !json.contains("123456"),
+            "le PIN ne doit pas apparaître via MCP (§9.2)"
+        );
+        assert!(
+            !json.contains("\"pin\""),
+            "pas de champ pin dans le résumé MCP"
         );
     }
 }
