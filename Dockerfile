@@ -47,7 +47,9 @@ WORKDIR /app
 COPY --from=builder  /src/target/release/latch-cli  /app/latch-cli
 COPY --from=builder  /src/backend/config            /app/config
 COPY --from=frontend /src/frontend/dist             /app/frontend/dist
-# /data possédé par nonroot (65532) → volume inscriptible au premier boot.
+# /data possédé par nonroot (65532) → s'applique à un volume NOMMÉ (inscriptible au 1er boot).
+# NB : le bind-mount ./data de docker-compose shadow ce /data au runtime → pour un bind-mount,
+# l'ownership réel est posé côté hôte par deploy.sh (chown 65532:65532 ./data).
 COPY --from=dataprep --chown=65532:65532 /data /data
 ENV LOCO_ENV=production
 ENV LATCH_SPA_DIST=/app/frontend/dist

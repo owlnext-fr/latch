@@ -5,7 +5,15 @@ set -euo pipefail
 
 # Le runtime tourne en non-root (uid 65532) ; le bind-mount ./data doit lui appartenir.
 mkdir -p data
-chown -R 65532:65532 data 2>/dev/null || true   # best-effort (nécessite root la 1re fois)
+if ! chown -R 65532:65532 data 2>/dev/null; then
+  # Pas les droits (deploy non-root) : avertir si ./data n'est pas déjà à 65532,
+  # sinon le container non-root échouera à écrire (SQLite + HTML des versions).
+  owner=$(stat -c %u data 2>/dev/null || echo '?')
+  if [ "$owner" != "65532" ]; then
+    echo "⚠️  ./data appartient à uid $owner, pas 65532 — le runtime non-root ne pourra pas y écrire." >&2
+    echo "    Corrige une fois en root :  sudo chown -R 65532:65532 ./data" >&2
+  fi
+fi
 
 docker compose pull        # pull de l'image GHCR publique
 docker compose up -d       # relance avec le .env
