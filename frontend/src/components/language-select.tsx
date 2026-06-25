@@ -16,7 +16,7 @@ export function LanguageSelect() {
   return (
     <Select value={current} onValueChange={(code) => void i18n.changeLanguage(code)}>
       <SelectTrigger className="w-full" aria-label={t('settings.language')}>
-        <SelectValue />
+        <SelectValue placeholder={t('settings.language')} />
       </SelectTrigger>
       <SelectContent>
         {locales.map((l) => (
