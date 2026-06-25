@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { GithubIcon } from '@/components/github-icon'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { useLogin } from '@/hooks/use-auth'
 import { Logo } from '@/components/logo'
@@ -121,15 +121,12 @@ export function LoginPage() {
             </form>
           </CardContent>
         </Card>
-        <a
-          href={GITHUB_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 h-8 text-sm font-medium hover:bg-muted hover:text-foreground transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <ExternalLink className="size-4" />
-          {t('login.github')}
-        </a>
+        <Button asChild variant="ghost" size="sm">
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            <GithubIcon className="size-4" />
+            {t('login.github')}
+          </a>
+        </Button>
       </div>
     </div>
   )
