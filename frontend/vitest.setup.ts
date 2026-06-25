@@ -11,6 +11,11 @@ if (!('ResizeObserver' in globalThis)) {
   }
 }
 
+// jsdom lacks document.elementFromPoint, which input-otp uses for caret positioning.
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

@@ -5,6 +5,8 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 const en = {
   'unlock.title_brand': 'Prototype prepared for {{brand}}',
   'unlock.title_neutral': 'Protected prototype',
+  'unlock.instructions':
+    'An access code was shared with this link. Enter it to unlock the prototype.',
   'unlock.pin_label': 'Access code',
   'unlock.submit': 'Unlock',
   'unlock.error_wrong': 'Incorrect code.',
@@ -14,6 +16,8 @@ const en = {
 const fr = {
   'unlock.title_brand': 'Prototype préparé pour {{brand}}',
   'unlock.title_neutral': 'Prototype protégé',
+  'unlock.instructions':
+    "Un code d'accès vous a été transmis avec ce lien. Saisissez-le pour déverrouiller le prototype.",
   'unlock.pin_label': "Code d'accès",
   'unlock.submit': 'Déverrouiller',
   'unlock.error_wrong': 'Code incorrect.',

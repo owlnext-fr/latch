@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
+import { REGEXP_ONLY_DIGITS } from 'input-otp'
 import { reloadPage } from './reload'
 
 function slugFromPath(): string {
@@ -59,27 +60,36 @@ export function UnlockPage() {
           <CardTitle>
             {brand ? t('unlock.title_brand', { brand }) : t('unlock.title_neutral')}
           </CardTitle>
+          <CardDescription>{t('unlock.instructions')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="pin">{t('unlock.pin_label')}</Label>
-              <Input
+              <InputOTP
                 id="pin"
-                inputMode="numeric"
-                autoComplete="off"
                 maxLength={6}
+                pattern={REGEXP_ONLY_DIGITS}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                onChange={setPin}
                 aria-invalid={error ? true : undefined}
-              />
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
             {error && (
               <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy || pin.length === 0}>
+            <Button type="submit" disabled={busy || pin.length < 6}>
               {t('unlock.submit')}
             </Button>
           </form>
