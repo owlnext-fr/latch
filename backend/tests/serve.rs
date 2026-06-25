@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use latch::app::App;
 use latch::models::_entities::{projects, versions};
 use loco_rs::testing::prelude::*;

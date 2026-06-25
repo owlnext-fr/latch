@@ -220,6 +220,7 @@ pub fn to_public_meta(m: &projects::Model) -> PublicMeta {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -49,6 +49,9 @@ axum_session = { version = "0.16" }
 axum_session_sqlx = { version = "0.5", features = ["sqlite", "tls-rustls"] }
 time = { version = "0.3" }
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "latch-cli"
 path = "src/bin/main.rs"

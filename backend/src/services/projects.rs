@@ -136,6 +136,7 @@ impl ProjectsService {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::services::test_support::test_db;

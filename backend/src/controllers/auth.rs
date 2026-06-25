@@ -92,6 +92,10 @@ pub fn routes() -> Routes {
     // 2 req/s), burst de 5. SmartIpKeyExtractor lit X-Forwarded-For
     // (posé par Caddy en façade) avant de tomber sur l'IP peer.
     let login_governor = {
+        // Init de boot : une config governor invalide = bug de programmation (burst ou période
+        // hors-bornes). Panique au démarrage est acceptable — l'app ne peut pas fonctionner
+        // sans rate-limiter (invariant de sécurité §9.5).
+        #[allow(clippy::expect_used)]
         let config = Arc::new(
             GovernorConfigBuilder::default()
                 .per_second(2)

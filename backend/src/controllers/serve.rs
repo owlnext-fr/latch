@@ -182,6 +182,9 @@ pub fn routes() -> Routes {
     let slug_period: u64 = env_u64("LATCH_UNLOCK_RL_SLUG_PERIOD_SECS", 3);
 
     let ip_layer = {
+        // Init de boot : config governor invalide (burst/période hors-bornes) = bug de config.
+        // Panique au démarrage acceptable — le rate-limiter est un invariant de sécurité (contrat §9.5).
+        #[allow(clippy::expect_used)]
         let config = Arc::new(
             GovernorConfigBuilder::default()
                 .per_second(ip_per_sec)
@@ -193,6 +196,8 @@ pub fn routes() -> Routes {
         GovernorLayer { config }
     };
     let slug_layer = {
+        // Init de boot : même raison que ip_layer ci-dessus.
+        #[allow(clippy::expect_used)]
         let config = Arc::new(
             GovernorConfigBuilder::default()
                 .period(Duration::from_secs(slug_period))

@@ -13,6 +13,7 @@ pub use errors::CoreError;
 pub(crate) mod test_support;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod migration_tests {
     use crate::models::_entities::{projects, versions};
     use crate::services::test_support::test_db;

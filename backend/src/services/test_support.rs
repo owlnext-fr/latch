@@ -1,5 +1,6 @@
 //! Helpers de test du cœur : une base SQLite **in-memory** isolée par test,
 //! migrée via `Migrator`. Jamais le disque de prod (ROADMAP Phase 1).
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};

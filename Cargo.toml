@@ -9,3 +9,7 @@ default-members = ["backend", "backend/migration"]
 
 [workspace.dependencies]
 loco-rs = { version = "0.16" }
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"

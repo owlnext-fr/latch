@@ -54,6 +54,7 @@ use crate::dto;
 pub struct ApiDoc;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

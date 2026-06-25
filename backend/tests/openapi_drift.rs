@@ -1,5 +1,6 @@
 //! Verrou anti-drift : `openapi.json` (racine) doit toujours refléter `ApiDoc`.
 //! Régénérer après tout changement de DTO/route : `UPDATE_OPENAPI=1 cargo test --test openapi_drift`.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::path::PathBuf;
 

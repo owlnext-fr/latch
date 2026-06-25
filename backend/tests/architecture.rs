@@ -1,6 +1,7 @@
 //! Garde d'architecture (contrat §1) : le cœur `src/services/` est agnostique
 //! HTTP. Aucune dépendance à axum ou loco ne doit y apparaître — y compris dans
 //! d'éventuels sous-modules (scan récursif) et via des ré-exports (`pub use`).
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
