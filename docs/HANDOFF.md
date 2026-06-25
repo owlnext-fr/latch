@@ -9,16 +9,17 @@
 
 ### Dernière chose faite
 Chantier complet **durcissement toolchain & CI** livré sur `chore/toolchain-ci-hardening` (T1→T8c + T9). Récapitulatif :
-- **Remédiation 64 issues Sonar front** (T1–T3) : 22 `void` S3735 retirés, 12 props `Readonly`+`globalThis` (S6606/S1128), 4 ternaires/FormEvent/fieldset/conditions/assertions (S3358/S1874/…).
+- **Remédiation 64 issues Sonar front** (T1–T3) : 22 `void` S3735 retirés, props `Readonly` (S6759) + `globalThis` (S7764), 4 ternaires (S3358) + FormEvent (S1874) + fieldset (S6819) + condition positive (S7735) + assertion (S5906).
 - **Couverture Vitest lcov** (T4) : `@vitest/coverage-v8`, bloc `coverage`, script `test:cov`, lcov.info → SonarCloud.
 - **Dockerfile cargo-chef + runtime non-root** (T5) : stage `cook` (couche deps cachée), `gcr.io/distroless/cc-debian12:nonroot` (uid 65532), stage `dataprep`, `--locked ×2`, `--ignore-scripts`, rust:1.96 épinglé.
 - **CI confort** (T6) : 15 uses SHA-pinned, `--ignore-scripts ×3`, `concurrency cancel-in-progress`, cache Playwright, `clippy --all-features`.
 - **Lints Rust no-unwrap** (T7) : `[workspace.lints.clippy] unwrap_used/expect_used=warn`, `[lints] workspace=true` ×2 crates, `#[allow]` groupés (tests), `fingerprint` refactoré en `unwrap_or_else(unreachable!)`.
 - **SonarQube Cloud bloquant** (T8c) : `sonar-project.properties` (backend/src, lcov paths, clippy=false), job `sonar` CI (gate PASSED, front+IaC+couv Rust), `cargo-llvm-cov nextest` → `backend-lcov.info` (artefact CI), 0 issue Rust, couv globale 77.2%.
 - **Vérif finale** (T9) : `cargo fmt` OK, clippy 0 warning, nextest 113/113, Vitest 52/52, lint/typecheck/build front verts. `eslint.config.js` : `coverage/` ajouté aux ignores. `deploy.sh` : garde `chown 65532:65532 data` (best-effort idempotente).
+- **Revue finale de branche (opus) : « Ready to merge: Yes »** (0 Critical, 0 Important bloquant). Polish appliqué (commit `251d260`) : message d'aide explicite si le `chown ./data` échoue (au lieu d'un échec silencieux) + commentaire `dataprep` clarifié (s'applique aux volumes nommés ; le bind-mount le shadow).
 
 ### Trucs en suspens
-- **CI non encore poussée** sur la branche (le push + surveillance CI est fait par le contrôleur, pas par T9).
+- **Merge sur `main` + push + surveillance CI en cours** (déclenche le run CI sur push `main`). Mettre à jour avec le n° de run quand vert.
 - **2 issues Sonar non-bloquantes à clôturer en UI** (won't-fix) :
   - `typescript:S1874` ×2 (`deploy-panel.tsx:2,71`) — `FormEvent` déprécié @types/react 19 ; fix T3 (imports nommés) ne l'éteint pas → won't-fix UI.
   - `githubactions:S6505` (`ci.yml:132` `playwright install`) — faux positif (install navigateurs, pas paquets npm) → won't-fix UI.
