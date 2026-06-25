@@ -18,6 +18,7 @@ tokio = { version = "1.45", default-features = false, features = [
 ] }
 async-trait = { version = "0.1" }
 axum = { version = "0.8" }
+axum-extra = { version = "0.10", features = ["cookie-signed"] }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 regex = { version = "1.11" }

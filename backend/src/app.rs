@@ -62,6 +62,9 @@ impl Hooks for App {
     }
     async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter> {
         let store = crate::web::build_session_store(ctx).await?;
+        // Fail-fast : un UNLOCK_COOKIE_SECRET trop court en prod doit casser le boot,
+        // pas produire un 500 à la première requête /c protégée.
+        crate::web::unlock_secret()?;
         let router = router.layer(axum_session::SessionLayer::new(store));
 
         // SPA servie sous /admin : assets si le fichier existe, sinon index.html

@@ -28,6 +28,43 @@ pub fn storage_from_ctx(_ctx: &AppContext) -> Arc<dyn Storage> {
     Arc::new(FsStorage::new(root.into()))
 }
 
+/// Chemin du `unlock.html` buildé (2ᵉ entrée Vite), sous la même racine que la SPA.
+pub fn unlock_index() -> PathBuf {
+    spa_dist_dir().join("unlock.html")
+}
+
+/// Secret HMAC du cookie de déverrouillage client. Doit faire ≥ 64 bytes
+/// (exigence de `cookie::Key`). En dev, clé de secours déterministe (insécurisée).
+/// En prod, `UNLOCK_COOKIE_SECRET` doit être défini avec ≥ 64 bytes d'entropie.
+pub fn unlock_secret() -> Result<String> {
+    let secret = std::env::var("UNLOCK_COOKIE_SECRET").unwrap_or_else(|_| {
+        "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!".to_string()
+    });
+    if secret.len() < 64 {
+        return Err(loco_rs::Error::Message(format!(
+            "UNLOCK_COOKIE_SECRET trop court : {} octets (minimum 64)",
+            secret.len()
+        )));
+    }
+    Ok(secret)
+}
+
+/// `Key` du `SignedCookieJar` (signature anti-falsification du cookie unlock).
+pub fn unlock_key() -> Result<axum_extra::extract::cookie::Key> {
+    Ok(axum_extra::extract::cookie::Key::from(
+        unlock_secret()?.as_bytes(),
+    ))
+}
+
+/// `true` si l'on doit poser `Secure` sur le cookie (fail-secure : tout env hors
+/// Development/Test). Aligné sur `build_session_store`.
+pub fn cookie_secure(ctx: &AppContext) -> bool {
+    !matches!(
+        ctx.environment,
+        loco_rs::environment::Environment::Development | loco_rs::environment::Environment::Test
+    )
+}
+
 /// Construit le `SessionStore` : pool SQLite dérivé de la connexion Loco, table
 /// `sessions` (déjà migrée), cookie signé + flags adaptés à l'environnement.
 ///
