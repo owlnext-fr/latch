@@ -12,6 +12,7 @@ describe('ThemeProvider (config)', () => {
     // Mock window.matchMedia for theme detection
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
+      configurable: true,
       value: (query: string) => ({
         matches: query === '(prefers-color-scheme: dark)',
         media: query,
