@@ -103,26 +103,32 @@ Couvert en couches. Chaque couche est un critère de sortie de phase (ROADMAP).
 Jobs (séparés, cache agressif pour rester rapide : cache cargo `target` + registry,
 cache pnpm/node_modules) :
 
-1. **Backend** : `fmt` + `clippy` (warnings = erreurs) + `cargo nextest` + `cargo deny`/`audit`.
-2. **Frontend** : `pnpm install` + `pnpm lint` + `pnpm typecheck` + `pnpm test`.
-3. **E2E** : Playwright sur la stack montée (dépend de #1 + #2).
-4. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
+1. **Backend** (`fmt-clippy` + `test-backend`) : `fmt` + `clippy --all-features` (warnings = erreurs) + `cargo nextest` (+ `cargo llvm-cov nextest --lcov` → artefact `backend-lcov`) + `cargo deny`/`audit`.
+2. **Frontend** : `pnpm install --ignore-scripts` + `pnpm lint` + `pnpm typecheck` + `pnpm test:cov` (→ `coverage/lcov.info`).
+3. **SonarQube** (gate bloquant) : télécharge l'artefact `backend-lcov` + exécute `sonar-scanner`. Analyse front + IaC + couverture Rust (lcov). Gate : `new_code_coverage ≥ 80%`, `new_security_rating = A`. Secret : `SONAR_TOKEN` (GitHub Actions secret). Dépend de #1 + #2.
+4. **E2E** : Playwright sur la stack montée (dépend de #1 + #2).
+5. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
    **public** du repo (`ghcr.io/owlnext-fr/latch`). Tags dérivés par
    `docker/metadata-action` (modèle *release-driven*) :
    - tag git `vX.Y.Z` → `X.Y.Z`, `X.Y`, `latest`, `sha-xxxxxxx` ;
    - push `main` → `main`, `sha-xxxxxxx` (pas `latest` : il pointe la dernière *release*).
    Le déploiement pin une version via `LATCH_IMAGE_TAG` (`docker-compose.yml`).
-   Le job docker dépend de **tous** les contrôles (dont `cargo-deny`) : pas de publication
-   d'une image qui échoue fmt/clippy/tests/supply-chain.
+   Le job docker dépend de **tous** les contrôles (dont `cargo-deny` et `sonar`) : pas de publication
+   d'une image qui échoue fmt/clippy/tests/supply-chain/gate Sonar.
 
 Badge CI dans le README, dual-license, CHANGELOG en commits conventionnels.
 
+> Toutes les actions GitHub (`uses:`) sont épinglées par **SHA** de commit (sécurité supply-chain). `concurrency: cancel-in-progress` évite les runs orphelins sur force-push.
+
 ## 7. Docker
 
-- **Dockerfile multi-stage** :
-  1. étape **Node 24** (`node:24-bookworm-slim`) : `pnpm install` + `pnpm build` → `frontend/dist/`.
-  2. étape **build Rust** : compile le backend (statique, SQLite `bundled`).
-  3. **runtime minimal** (distroless ou alpine) : binaire + assets SPA (`frontend/dist/`), rien d'autre.
+- **Dockerfile multi-stage** (cargo-chef — couche deps cachée) :
+  1. étape **Node 24** (`node:24-bookworm-slim`) : `pnpm install --ignore-scripts` + `pnpm build` → `frontend/dist/`.
+  2. étape **planner** (`rust:1.96-bookworm`) : `cargo chef prepare` → `recipe.json`.
+  3. étape **cook** (`rust:1.96-bookworm`) : `cargo chef cook --locked` (couche deps, invalidée seulement si `Cargo.lock` change).
+  4. étape **builder** (`rust:1.96-bookworm`) : `COPY . .` + `cargo build --release --locked`.
+  5. étape **dataprep** (`debian:bookworm-slim`) : `chown 65532:65532 /data` (shell requis, distroless n'en a pas).
+  6. **runtime minimal** (`gcr.io/distroless/cc-debian12:nonroot`, uid 65532) : binaire + assets SPA, rien d'autre.
 - **Entrypoint** : `migrate` **puis** `start` (premier boot sur volume vierge = pas
   de schéma sinon).
 - **Volume `data/`** : le `.sqlite` **et** les fichiers HTML des versions ensemble.

@@ -39,15 +39,11 @@ retenu en v1 pour ne pas complexifier le branchement.
 Dépend de la formule OWLNEXT (Owner provisionne en Team/Ent vs chacune ajoute l'URL
 en Pro/Max). Hors périmètre build — à traiter au branchement, pas au code.
 
-## Cache de build Docker (cargo-chef)
-Le Dockerfile Phase 0 fait un `COPY . . && cargo build` simple : chaque build recompile
-toutes les deps. Passer à `cargo-chef` (recipe deps en couche cachée) accélérerait
-fortement la CI/les rebuilds. Non-breaking, purement perf de build.
+## ~~Cache de build Docker (cargo-chef)~~ — **LIVRÉ** (Toolchain Task 5 – 2026-06-25)
+Dockerfile réécrit avec `cargo-chef` (couche `cook` cachée par `type=gha`). Build rapide sur rebuild. Cf. `docs/INDEX.md`.
 
-## Conteneur en utilisateur non-root
-L'image distroless tourne en `root` (le `latch.sqlite` du volume est créé root). Passer
-à `gcr.io/distroless/cc-debian12:nonroot` + ownership du volume `/data` durcirait le
-runtime. Reporté : friction d'ownership du volume à régler, faible enjeu derrière Caddy.
+## ~~Conteneur en utilisateur non-root~~ — **LIVRÉ** (Toolchain Task 5 – 2026-06-25)
+Runtime `gcr.io/distroless/cc-debian12:nonroot` (uid 65532) + stage `dataprep` pour ownership `/data`. `deploy.sh` contient la garde `chown -R 65532:65532 data`. Cf. `docs/INDEX.md` + QUIRKS.
 
 ## same_host — port par défaut et IPv6 sans crochets (Phase 2 – 2026-06-24)
 `same_host` accepte `("example.com:80", "example.com")` car l'un n'a pas de port explicite — sans connaître le schéma (http/https), on ne peut pas résoudre le port par défaut. Caveat acceptable en v1 (le proxy Caddy normalise le Host avant de transmettre). IPv6 sans crochets (`::1` au lieu de `[::1]`) serait mal découpé par `rsplit_once(':')` — mais les navigateurs émettent toujours `[::1]` dans Origin/Host. Les deux cas sont documentés dans QUIRKS.

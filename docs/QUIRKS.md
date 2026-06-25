@@ -3,6 +3,27 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## SonarCloud : Automatic Analysis EXCLUSIVE du scanner CI (2026-06-25)
+SonarCloud propose deux modes d'analyse : **Automatic Analysis** (déclenché par SonarCloud lui-même sur chaque push, sans configuration) et **scanner CI** (job GitHub Actions qui pilote `sonar-scanner`). Les deux sont **mutuellement exclusifs** : activer les deux produit une erreur `You are running CI analysis while Automatic Analysis is enabled`. **Procédure** : désactiver l'Automatic Analysis dans les settings SonarCloud (`Administration > Analysis Method > Automatic Analysis = OFF`) AVANT de créer le job CI. Une fois désactivé, le job CI devient l'unique source de scan.
+
+## SonarCloud : `sonar.rust.clippy.enabled=false` obligatoire (2026-06-25)
+Sans `sonar.rust.clippy.enabled=false` dans `sonar-project.properties`, le scanner `sonar-scanner-cli` tente de lancer `cargo clippy` **depuis le container sonar-scanner** (qui ne contient pas `cargo`). Résultat : erreur `cargo: command not found` et scan avorté. Clippy reste bloquant dans le job `fmt-clippy` — la couverture lint n'est pas perdue, simplement dissociée du scan Sonar. Règle : **toujours poser ce flag** dans les projets Rust.
+
+## Couverture Rust → SonarCloud : `cargo llvm-cov` + `sonar.rust.lcov.reportPaths` (2026-06-25)
+SonarCloud consomme la couverture Rust via le format **lcov** (`sonar.rust.lcov.reportPaths`). Workflow CI : `cargo llvm-cov nextest --lcov --output-path backend-lcov.info` (job `test-backend`) → `actions/upload-artifact` → `actions/download-artifact` dans le job `sonar` → `pnpm test:cov` produit `coverage/lcov.info` (front) → le scanner consolide les deux. Prérequis toolchain : component **`llvm-tools-preview`** ajouté à `rust-toolchain` + `taiki-e/install-action@v2` (SHA `ace6ebe`) avec `tool: cargo-llvm-cov,nextest` (virgule-séparé — v1 ne supporte qu'un seul outil).
+
+## Gate Sonar new-code 80% ≠ `cargo-llvm-cov --fail-under` (2026-06-25)
+La gate SonarQube configurée est `new_code_coverage >= 80%` — elle porte sur le **new-code uniquement** (lignes modifiées depuis la référence de branche). Ce n'est PAS équivalent à `--fail-under=80` de `cargo-llvm-cov` (qui porte sur la couverture totale). Ne pas mélanger les deux mécanismes. Le `--fail-under` n'est PAS utilisé dans ce projet (la gate Sonar est l'autorité).
+
+## `void` (S3735) supprimable sans risque si `no-floating-promises` inactif (2026-06-25)
+La règle ESLint `@typescript-eslint/no-floating-promises` est inactive dans la config `recommended` non type-checked (`eslint:recommended` + `tseslint.configs.recommended` sans `strictTypeChecked`). Les `void fn()` ajoutés pour satisfaire cette règle deviennent donc des dead-weight que Sonar signale en S3735. Ils peuvent être retirés sans risque. **Si `no-floating-promises` est activé** (config type-checked), les `void` redeviennent obligatoires — vérifier la config ESLint avant de les retirer.
+
+## `typescript:S1874` `FormEvent` déprécié @types/react 19 — résistant au fix (2026-06-25)
+Depuis `@types/react 19`, `FormEvent` est marqué déprécié (renommé en `React.FormEvent`). La remédiation Sonar recommande l'import nommé `import { FormEvent } from 'react'` au lieu de `import React from 'react'; React.FormEvent`. Ce fix **ne supprime pas** l'issue Sonar S1874 car la dépréciation vient du type lui-même dans `@types/react 19`, pas de la façon de l'importer. Clôturer en **won't-fix** dans l'UI SonarCloud.
+
+## `[lints] workspace=true` à répliquer dans chaque `Cargo.toml` de crate (2026-06-25)
+La table `[workspace.lints]` dans le `Cargo.toml` racine définit les lints workspace, mais elle n'est **pas héritée automatiquement**. Chaque crate membre (`backend/Cargo.toml`, `backend/migration/Cargo.toml`) doit explicitement opter via `[lints] workspace = true`. Oublier ce flag dans une crate fait silencieusement ignorer tous les lints workspace pour cette crate — clippy passe, mais les règles `unwrap_used`/`expect_used` ne s'appliquent pas.
+
 ## `input-otp` exige `document.elementFromPoint` → absent de jsdom (2026-06-25)
 **Symptôme** : les tests Vitest avec `<InputOTP>` lancent des `Uncaught Exception: TypeError: document.elementFromPoint is not a function` à la fin des tests (sans les faire échouer, mais le process se termine avec exit 1).
 **Cause** : `input-otp@1.4.x` appelle `document.elementFromPoint` pour le positionnement du caret dans un timer interne (`setTimeout`). jsdom ne l'implémente pas.

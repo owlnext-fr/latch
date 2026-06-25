@@ -98,6 +98,12 @@
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Node 24 pnpm build → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
 - [x] Dockerfile cargo-chef (couche deps cachée) + runtime `gcr.io/distroless/cc-debian12:nonroot` (uid 65532) + durcissements S8549/S6471/S6596/S6505 — Toolchain Task 5 — 2026-06-25
+- [x] Couverture Rust sur SonarQube (`cargo-llvm-cov` → `backend-lcov.info`) : `backend/src` scanné, artefact CI `backend-lcov` (upload `test-backend` → download `sonar`), `sonar.rust.clippy.enabled=false`, gate PASSED, 0 issue Rust — Toolchain Task 8c — 2026-06-25
+- [x] `sonar-project.properties` + job CI `sonar` **bloquant** (gate PASSED, front + IaC + couverture Rust lcov), SonarCloud Automatic Analysis désactivé — Toolchain Task 8c — 2026-06-25
+- [x] `[workspace.lints.clippy] unwrap_used/expect_used=warn` + `[lints] workspace=true` ×2 crates (backend + migration) — Toolchain Task 7 — 2026-06-25
+- [x] Couverture Vitest lcov (`@vitest/coverage-v8`, script `test:cov`, `coverage/lcov.info`) — Toolchain Task 4 — 2026-06-25
+- [x] CI confort : 15 uses SHA-pinned, `--ignore-scripts ×3`, `concurrency cancel-in-progress`, cache Playwright, `clippy --all-features` — Toolchain Task 6 — 2026-06-25
+- [x] Remédiation 64 issues Sonar front (22 `void` S3735, 12 `Readonly`/`globalThis` S6606/S1128, ternaires/FormEvent/fieldset — Tasks T1–T3) — Toolchain Tasks 1-3 — 2026-06-25
 - [x] CI GitHub Actions **verte sur main** (back: fmt/clippy/nextest/cargo-deny ; front: lint/typecheck/vitest ; e2e Playwright ; docker GHCR) — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
 - [x] Images GHCR versionnées (`metadata-action` : semver+latest+sha) + pin déploiement (`LATCH_IMAGE_TAG`) — Phase 0 — 2026-06-24
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24

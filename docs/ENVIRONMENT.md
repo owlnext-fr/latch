@@ -23,6 +23,29 @@
 - `LATCH_BINDING` — interface sur laquelle le serveur bind (`server.binding`). **Défaut `localhost`** (dev local). Les **e2e Playwright** exportent `127.0.0.1` pour forcer un bind IPv4 explicite, cohérent avec le poll `127.0.0.1/_health` (sinon `localhost` peut résoudre vers `::1`/IPv6 sur les runners CI → timeout webServer flaky, cf. QUIRKS). Configuré dans `backend/config/development.yaml` via Tera.
 - `LATCH_BODY_LIMIT` — taille max du body des requêtes (le deploy envoie le HTML mono-fichier en JSON). Valeurs `byte_unit` (`5mb`, `10mb`, `32mb`) ou `disable`. **Défaut `5mb`** (l'ancien défaut Loco `limit_payload` était 2 Mo → 413 sur un gros proto). Configuré dans `backend/config/*.yaml` via `server.middlewares.limit_payload.body_limit`.
 
+## SonarCloud
+- **Secret GitHub** : `SONAR_TOKEN` — token d'accès SonarCloud (projet `owlnext-fr_latch`, org `owlnext-fr`). À créer dans les settings GitHub du repo (`Settings > Secrets and variables > Actions`). Générer depuis `sonarcloud.io > My Account > Security`.
+- **Identifiants SonarCloud** :
+  - `sonar.organization=owlnext-fr`
+  - `sonar.projectKey=owlnext-fr_latch`
+  - Ces valeurs sont dans `sonar-project.properties` (commité).
+- **Scan local (Docker)** :
+  ```bash
+  # Depuis la racine du repo ; backend-lcov.info doit exister (cargo llvm-cov nextest --lcov --output-path backend-lcov.info)
+  # et coverage/lcov.info (pnpm test:cov dans frontend/)
+  docker run --rm \
+    -e SONAR_TOKEN="$(grep SONAR_TOKEN .env.local | cut -d= -f2)" \
+    -v "$(pwd):/usr/src" \
+    sonarsource/sonar-scanner-cli
+  ```
+- **`.env.local`** (gitignoré) : fichier optionnel pour stocker le token localement pour les scans manuels. Format : `SONAR_TOKEN=<votre_token>`. Ne jamais commiter ce fichier.
+- **Automatic Analysis** : DÉSACTIVÉ dans les settings SonarCloud (`Administration > Analysis Method`) — le scanner CI est l'unique source (les deux modes sont exclusifs, cf. QUIRKS).
+
+## Toolchain couverture Rust
+- **`cargo-llvm-cov`** : installé en CI via `taiki-e/install-action@v2` (`tool: cargo-llvm-cov,nextest`). Localement : `cargo install cargo-llvm-cov`.
+- **`llvm-tools-preview`** : composant Rust requis par `cargo-llvm-cov`. En CI, ajouté à `dtolnay/rust-toolchain` via `components: llvm-tools-preview`. Localement : `rustup component add llvm-tools-preview`.
+- **Commande locale** : `cargo llvm-cov nextest --lcov --output-path backend-lcov.info` (depuis la racine).
+
 ## Repo & exécution (cette instance)
 - **Path repo** : `/srv/owlnext/latch` · **branche par défaut** : `main` (commits directs / branches courtes).
 - **Toolchain backend** : Rust 1.96, Docker 29,

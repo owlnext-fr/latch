@@ -5,6 +5,59 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Chantier toolchain & CI LIVRÉ (branche `chore/toolchain-ci-hardening`)
+
+### Dernière chose faite
+Chantier complet **durcissement toolchain & CI** livré sur `chore/toolchain-ci-hardening` (T1→T8c + T9). Récapitulatif :
+- **Remédiation 64 issues Sonar front** (T1–T3) : 22 `void` S3735 retirés, 12 props `Readonly`+`globalThis` (S6606/S1128), 4 ternaires/FormEvent/fieldset/conditions/assertions (S3358/S1874/…).
+- **Couverture Vitest lcov** (T4) : `@vitest/coverage-v8`, bloc `coverage`, script `test:cov`, lcov.info → SonarCloud.
+- **Dockerfile cargo-chef + runtime non-root** (T5) : stage `cook` (couche deps cachée), `gcr.io/distroless/cc-debian12:nonroot` (uid 65532), stage `dataprep`, `--locked ×2`, `--ignore-scripts`, rust:1.96 épinglé.
+- **CI confort** (T6) : 15 uses SHA-pinned, `--ignore-scripts ×3`, `concurrency cancel-in-progress`, cache Playwright, `clippy --all-features`.
+- **Lints Rust no-unwrap** (T7) : `[workspace.lints.clippy] unwrap_used/expect_used=warn`, `[lints] workspace=true` ×2 crates, `#[allow]` groupés (tests), `fingerprint` refactoré en `unwrap_or_else(unreachable!)`.
+- **SonarQube Cloud bloquant** (T8c) : `sonar-project.properties` (backend/src, lcov paths, clippy=false), job `sonar` CI (gate PASSED, front+IaC+couv Rust), `cargo-llvm-cov nextest` → `backend-lcov.info` (artefact CI), 0 issue Rust, couv globale 77.2%.
+- **Vérif finale** (T9) : `cargo fmt` OK, clippy 0 warning, nextest 113/113, Vitest 52/52, lint/typecheck/build front verts. `eslint.config.js` : `coverage/` ajouté aux ignores. `deploy.sh` : garde `chown 65532:65532 data` (best-effort idempotente).
+
+### Trucs en suspens
+- **CI non encore poussée** sur la branche (le push + surveillance CI est fait par le contrôleur, pas par T9).
+- **2 issues Sonar non-bloquantes à clôturer en UI** (won't-fix) :
+  - `typescript:S1874` ×2 (`deploy-panel.tsx:2,71`) — `FormEvent` déprécié @types/react 19 ; fix T3 (imports nommés) ne l'éteint pas → won't-fix UI.
+  - `githubactions:S6505` (`ci.yml:132` `playwright install`) — faux positif (install navigateurs, pas paquets npm) → won't-fix UI.
+
+### Prochaine chose à creuser
+- **Phase 5 — Endpoint MCP** : `mcp/`, `rmcp ≥ 1.4.0`, `allowed_hosts`, `deploy_prototype` + `list_projects`, token validé sur tous les tools.
+
+### Notes pour future Claude
+- `sonar.rust.clippy.enabled=false` est OBLIGATOIRE dans `sonar-project.properties` : sans ça le scanner tente de lancer `cargo` (absent dans le container sonar-scanner-cli) → erreur. Clippy reste bloquant dans le job `fmt-clippy`.
+- La gate Sonar new-code à 80% est sur le **new-code uniquement** (pas la couverture totale). Ne pas confondre avec `--fail-under` de `cargo-llvm-cov` (non utilisé).
+- `cargo llvm-cov nextest` exige le component `llvm-tools-preview` sur la toolchain Rust ET `taiki-e/install-action@v2` avec `tool: cargo-llvm-cov,nextest` (v1 ne supporte qu'un seul outil).
+- SonarCloud : **Automatic Analysis EXCLUSIVE du scanner CI** — les deux ne peuvent pas coexister ; désactiver l'Automatic Analysis dans les settings SonarCloud avant d'activer le job CI.
+- `[lints] workspace=true` doit être répété dans **chaque** `Cargo.toml` de crate (backend + backend/migration) — le workspace root seul ne suffit pas.
+- Bind-mount `./data` : le `chown` du stage `dataprep` ne s'applique PAS aux bind-mounts existants. `deploy.sh` contient maintenant la garde idempotente.
+
+---
+
+## 2026-06-25 — Toolchain/CI hardening Task 8c : couverture Rust sur SonarQube (commit `197fcec`)
+
+### Dernière chose faite
+- **`sonar-project.properties`** : `backend/src` ajouté à `sonar.sources`, `sonar.rust.lcov.reportPaths=backend-lcov.info`, `sonar.rust.clippy.enabled=false` (clippy reste l'autorité lint dans `fmt-clippy`).
+- **`.github/workflows/ci.yml`** : job `test-backend` — `llvm-tools-preview` ajouté à `rust-toolchain`, `taiki-e/install-action` passé en **v2** (SHA `ace6ebe`) avec `tool: cargo-llvm-cov,nextest`, `cargo nextest run` remplacé par `cargo llvm-cov nextest --lcov --output-path backend-lcov.info`, upload artefact `backend-lcov` (`actions/upload-artifact@ea165f8  # v4`). Job `sonar` : `needs: [test-backend]` ajouté, download artefact (`actions/download-artifact@d3f86a1  # v4`) avant `pnpm test:cov`.
+- **`.gitignore`** : `backend-lcov.info` ajouté.
+- **Vérification locale** : gate PASSED, 113 tests Rust verts, 0 issue Rust sur SonarCloud, YAML OK, actionlint propre.
+
+### Trucs en suspens
+- CI non encore exécutée sur cette branche pour le job sonar avec le nouveau wiring (à vérifier quand le run CI démarre).
+- Task 9 (vérif finale + mémoire + push CI) reste ouverte.
+
+### Prochaine chose à creuser
+- **Task 9** : push de la branche `chore/toolchain-ci-hardening` + vérification CI verte + clôture mémoire.
+
+### Notes pour future Claude
+- `sonar.rust.clippy.enabled=false` est **obligatoire** : sans ça le scanner tente de lancer `cargo` (absent dans le container sonar-scanner-cli) → erreur. Clippy bloquant reste dans le job `fmt-clippy`.
+- `taiki-e/install-action@v2` installe plusieurs outils avec `tool: cargo-llvm-cov,nextest` (virgule-séparé) — le `@nextest` ref de la v1 ne supportait qu'un seul outil.
+- `cargo llvm-cov nextest` exige le component `llvm-tools-preview` sur la toolchain Rust — à ajouter via `with: { components: llvm-tools-preview }` sur `dtolnay/rust-toolchain`.
+
+---
+
 ## 2026-06-25 — Toolchain/CI hardening Task 5 : Docker cargo-chef + non-root (commit `916f0b8`)
 
 ### Dernière chose faite
