@@ -239,15 +239,37 @@ reset au reboot) ; **404 `/c`** (slug inconnu / pas de version active) ; cookie 
 - Node 24, pnpm (aligné repo). Vérifier la version Fumadocs courante **via Context7** au scaffold
   (l'API `source.config.ts` / loader bouge entre majors).
 
-### 6.2 CI — `deploy-docs.yml` (séparée de la CI Rust)
+### 6.2 CI — **deux jobs dans la CI principale `ci.yml`** (pas de workflow séparé)
 
-- Déclencheur : `push` sur `main`, **filtré `paths: public_docs/**`** (+ `workflow_dispatch`).
-- Étapes : checkout → setup Node 24 + pnpm → `pnpm install` (dans `public_docs/`) → `pnpm build`
-  (export statique + index Orama) → upload artefact → `actions/deploy-pages`.
-- **Permissions** `pages: write`, `id-token: write` ; environnement `github-pages`.
-- Actions **épinglées par SHA** (cohérent avec la politique supply-chain du repo, BOOTSTRAP §6).
-- La CI Rust (`ci.yml`) n'est **pas** touchée — deux pipelines, deux déclencheurs. Pré-requis humain :
-  activer **Pages = GitHub Actions** dans les settings du repo (consigné dans ENVIRONMENT à la livraison).
+Décision (révision 2026-06-26) : le déploiement de la doc vit **dans la CI principale**
+`ci.yml`, pas dans un workflow `deploy-docs.yml` à part. Un statut unique, un seul pipeline.
+*(Override explicite du brief §8, qui prévoyait un workflow distinct.)*
+
+On ajoute **deux jobs** au workflow existant (qui se déclenche déjà sur `push` main/tag + PR) :
+
+- **`docs` (build, toujours)** — validation à chaque `push`/PR, comme `frontend` :
+  `working-directory: public_docs`, `pnpm/action-setup@<sha>` (version `9.15.9`) +
+  `actions/setup-node@<sha>` (Node 24, cache pnpm sur `public_docs/pnpm-lock.yaml`),
+  `pnpm install --frozen-lockfile` → `pnpm build` (export statique + index Orama).
+  Puis `actions/upload-pages-artifact@<sha>` sur `public_docs/out`. Aucune permission spéciale.
+  → garantit que la doc **compile** sur chaque PR (check bloquant), sans déployer.
+- **`deploy-docs` (déploiement, main seulement)** — `needs: [docs]`,
+  `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`.
+  `permissions: { pages: write, id-token: write }` (au niveau **job**, comme `docker` met
+  `packages: write`), `environment: github-pages`, étape unique `actions/deploy-pages@<sha>`.
+  `concurrency: { group: pages, cancel-in-progress: false }` au niveau job (ne pas annuler un
+  déploiement Pages en cours, malgré le `cancel-in-progress: true` global du workflow).
+
+**Couplage volontairement faible** : `deploy-docs` ne dépend **que** de `docs` (son propre build),
+pas des jobs Rust — la publication de la doc n'est pas bloquée par un test backend flaky sans rapport.
+La CI Rust et la doc partagent le **workflow** (statut unifié) mais pas les **dépendances de jobs**.
+
+- Build **toujours** (pas de `paths:` filter) : le build Fumadocs est court ; déployer à chaque
+  push `main` est idempotent (Pages republie le même artefact si rien n'a changé). Filtrage par
+  chemin = optimisation reportée si le temps de build le justifie.
+- Actions **épinglées par SHA** (politique supply-chain, BOOTSTRAP §6).
+- Pré-requis humain : activer **Pages = « GitHub Actions »** dans les settings du repo
+  (non scriptable — consigné dans ENVIRONMENT à la livraison).
 
 ### 6.3 Recherche
 
@@ -267,7 +289,8 @@ Chaque unité a un périmètre clair et testable indépendamment :
    stone/oklch + logo, build local OK (`pnpm build` produit `out/`).
 2. **Chrome & landing** — nav header, footer, `app/(home)/page.tsx` (les 7 sections §4.2), 404.
 3. **Recherche & navigation docs** — Orama, `meta.json`, sidebar.
-4. **CI & déploiement Pages** — `deploy-docs.yml`, `.nojekyll`, déploiement vert sur l'URL §2.
+4. **CI & déploiement Pages** — jobs `docs` (build) + `deploy-docs` (Pages, main only) **dans `ci.yml`**,
+   `.nojekyll`, déploiement vert sur l'URL §2.
 5. **Contenu — `how-it-works/` + `deploy/`** (dérivable du contrat/BOOTSTRAP, sans dépendre des écrans).
 6. **Contenu — `admin/` + `publish-from-claude/` + `quickstart` + `troubleshooting`** (captures + écrans réels).
 7. **Captures** — script de génération + intégration des PNG + schéma flux Claude.
@@ -287,7 +310,7 @@ Chaque unité a un périmètre clair et testable indépendamment :
 - Captures à jour (harnais Playwright) ; schéma pour le flux Claude.
 - Contenu sourcé **uniquement** de `public_docs/content/` ; **zéro** contenu du `docs/` interne publié ;
   **zéro nom client** (placeholders fictifs uniquement).
-- CI `deploy-docs.yml` verte ; CI Rust intacte.
+- Jobs `docs` + `deploy-docs` **ajoutés à `ci.yml`** verts ; jobs Rust/front existants inchangés.
 - Mémoire projet mise à jour (INDEX, ROADMAP Phase 8 ✅, ENVIRONMENT §Pages/URL, HANDOFF, QUIRKS si pièges).
 
 ## 9. Hors périmètre (v1 du site)
