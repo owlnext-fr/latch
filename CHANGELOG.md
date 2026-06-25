@@ -1,6 +1,59 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v0.2.0] — 2026-06-25
+
+### Ajouts
+
+- ParseLocales — découverte pure des locales + _meta
+- ThemeProvider next-themes (admin, défaut system) + anti-FOUC
+- LanguageSelect (Select radix + flag-icons, locales-driven)
+- ThemeToggle segmenté (système/clair/sombre)
+- SettingsSheet (MCP + préférences) + useSettings(enabled)
+- Topbar ouvre le Sheet, route /settings supprimée
+- Logo + useDocumentTitle + lib/links + favicon SVG, purge scaffold
+- Titres de page dynamiques + largeur bornée max-w-6xl
+- Logo + lien GitHub + titre de page
+- Vrai logo GitHub (SVG inline) + Button asChild (Slot OK)
+- Logo badge+texte + bouton ? vers la doc
+- Logo + titre de page dynamique (brand)
+- Page d'erreur stylée /c (3e entrée Vite error.html)
+- Branches d'erreur /c en pages HTML stylées + log 500
+
+### Divers
+
+- SelectValue placeholder + ordre DOM ItemText/indicateur
+
+### Documentation
+
+- Cadrage Phase 7 en 4 lots + spec Lot 1 (fondations i18n/thème)
+- Plan d'implémentation Lot 1 (fondations i18n/thème)
+- Lot 1 livré — mémoire (INDEX/HANDOFF/CONVENTIONS/QUIRKS)
+- Spec Lot 2 — panneau Settings unifié (side-panel)
+- Plan d'implémentation Lot 2 (panneau Settings side-panel)
+- Lot 2 livré — mémoire (INDEX/HANDOFF/CONVENTIONS/QUIRKS)
+- Spec Lot 3 — identité visuelle & confort admin
+- Plan d'implémentation Lot 3 (identité visuelle)
+- Lot 3 livré — mémoire (INDEX/HANDOFF/CONVENTIONS/QUIRKS)
+- Spec Lot 4 — page d'erreur stylée serving /c
+- Plan d'implémentation Lot 4 (page d'erreur serving /c)
+- Lot 4 livré — Phase 7 LIVRÉE (mémoire + ROADMAP)
+
+### Interne
+
+- Admin locales auto-découvertes (glob + _meta)
+- Unlock locales auto-découvertes (glob), bundle public minimal
+- LocaleSwitcher dérivé de locales (supprime ['en','fr'] en dur)
+- Reflow Prettier + clarifie note QUIRKS lucide
+- SVG inline currentColor (suit le thème) + favicon transparent adaptatif
+- Ignore backend/data (storage dev) — évite le parasite
+
+### Tests
+
+- Durcit les tests parseLocales + documente les casts trusted-input
+- MatchMedia mock configurable (évite redefine cross-test)
+- Non-fetch panneau fermé + purge clé i18n morte mcp_intro
+- Assertion précise du nom accessible (latch latch)
 ## [v0.1.0] — 2026-06-25
 
 ### Ajouts
@@ -68,6 +121,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Tool list_projects (gate token, résumé sans PIN ni hash §9.2)
 - GET /api/settings (AdminAuth) expose infos MCP (deploy_token + urls)
 - Panneau Settings React (infos MCP, token masqué via PinField)
+- Annonce serverInfo.name="latch" (au lieu du défaut rmcp)
 
 ### Corrections
 
@@ -142,7 +196,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Alignement mémoire sur la stack React (contrat §2/§4, BOOTSTRAP, ROADMAP, ENV, QUIRKS, CONVENTIONS, INDEX, BACKLOG, README)
 - HANDOFF — migration React livrée (Plans 1-3), serveur prêt pour validation
 - Mémoire post-validation (body-limit, liste enrichie, CSPRNG, pré-vol CI)
-- HANDOFF — fix e2e bind commité (f90eb21) + CI verte (run 28153192320)
+- HANDOFF — fix e2e bind commité (464eb94) + CI verte (run 28153192320)
 - Spec Phase 4 — serving /c/<slug> + déverrouillage
 - Plan d'implémentation Phase 4 — serving /c/<slug>
 - Task 5 — mémoire projet (HANDOFF + INDEX)
@@ -166,6 +220,9 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Script de capture Playwright (skip sauf CAPTURE=1) + captures admin/unlock
 - T5 captures — mise à jour HANDOFF/INDEX/QUIRKS
 - CHANGELOG via git-cliff (preprocessor gitmoji) — v0.1.0
+- Refonte complète (badges Sonar, captures, quickstart, archi, sécurité)
+- Phase 6 LIVRÉE — vérif finale verte + mémoire + stub Phase 8
+- Revue finale opus (merge) + polish serverInfo + entrée merge main
 
 ### Interne
 
@@ -199,6 +256,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Job SonarQube Cloud bloquant (gate wait) + properties
 - Couverture Rust sur Sonar (cargo-llvm-cov → lcov), clippy reste l'autorité
 - Classer backend/tests comme tests + supply-chain vérifiée
+- Purge d'un nom client résiduel + ignore .playwright-mcp
 
 ### Sécurité
 

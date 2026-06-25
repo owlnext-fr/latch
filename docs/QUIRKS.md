@@ -3,6 +3,15 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Storage dev = `backend/data`, pas `/data` racine — gitignore (2026-06-26)
+`LATCH_STORAGE_ROOT` défaut `"data"` (relatif au CWD). En dev on lance `cargo loco start` **depuis `backend/`** → le storage des HTML de versions vit dans `backend/data`. Or `.gitignore` n'avait que `/data` (ancré racine = volume Docker prod) → `backend/data` n'était PAS ignoré (risque de commit accidentel des protos déployés). **Fix** : ajouter `backend/data/` à `.gitignore`. Prod (image) = volume monté `/data` (toujours couvert par `/data`).
+
+## Logo qui suit le thème : SVG inline `currentColor`, jamais `<img src>` (2026-06-26)
+`currentColor` n'est résolu que pour un SVG **inline dans le DOM** ; un `<img src="logo.svg">` ne peut pas hériter de la couleur du texte. Pour un logo qui bascule clair/sombre, inliner le SVG (composant `Logo`) avec `fill="currentColor"` → suit `text-foreground`. Le favicon (forcément un fichier, pas de contexte DOM) s'adapte autrement : `<style> @media (prefers-color-scheme: dark) { path { fill: … } }</style>` à l'intérieur du SVG (suit le thème navigateur/OS, indépendant du toggle in-app).
+
+## Claude Code : `claude mcp add` en cours de session ne charge pas les tools (2026-06-26)
+Les serveurs MCP sont chargés **au démarrage de session**. `claude mcp add <srv>` l'enregistre (et `claude mcp list` le montre connecté ✔) mais ses tools n'apparaissent PAS dans la session courante ; `/mcp` ne **reconnecte que les serveurs déjà chargés**, il n'en charge pas de nouveaux. Pour les avoir en natif → redémarrer la session. Contournement sans perdre le contexte : appeler le même endpoint `/mcp` via un client HTTP (transport Streamable HTTP identique). NB transport rmcp : `Accept: application/json, text/event-stream`, session via header `Mcp-Session-Id`, **`Host` doit matcher `allowed_hosts`** (dérivé de `LATCH_PUBLIC_BASE_URL`), résultat des tools dans `result.structuredContent`.
+
 ## Playwright : `testMatch` par défaut = `*.spec.ts` seulement (2026-06-25)
 Sans configuration explicite, Playwright ne découvre que les fichiers `*.spec.ts` (et `*.spec.js`). Un fichier nommé `*.capture.ts` n'est pas trouvé → `No tests found` silencieux. **Fix** : ajouter `testMatch: /.*\.(spec|capture)\.ts$/` dans `playwright.config.ts`. Cette option étend la découverte sans perturber les specs CI existantes.
 

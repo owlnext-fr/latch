@@ -4,6 +4,30 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-26 — Phase 7 MERGÉE sur `main` (tag **v0.2.0**) + logo adaptatif + flow MCP validé en vrai
+
+### Dernière chose faite
+**Phase 7 (4 lots) mergée sur `main` en fast-forward, taggée `v0.2.0`, poussée.** CHANGELOG régénéré (git-cliff `--tag v0.2.0`). CI surveillée au push.
+
+Après la clôture du Lot 4, trois choses ajoutées avant le merge :
+- **Logo adaptatif au thème** (commit `4954f97`) : le composant `Logo` passe d'un `<img src>` à un **SVG inline en `currentColor`** (fond blanc retiré) → suit `text-foreground`, donc mark sombre en clair / clair en sombre. Le **favicon** (`src/assets/latch-logo.svg`) devient transparent + adaptatif via `<style> @media (prefers-color-scheme: dark)`. Tests : `getByAltText('latch')` → `getByRole('img', { name: 'latch' })` (5 fichiers). *(Rappel : `currentColor` ne marche QUE sur SVG inline, jamais via `<img src>` — d'où l'inlining ; idem icône GitHub Lot 3.)*
+- **Flow MCP validé de bout en bout (vrai endpoint live)** : backend lancé servant le build, puis `initialize` → `tools/list` → `list_projects` → `deploy_prototype(slug="azerazer-IiLHqghy", activate=true)` sur `/mcp` (transport Streamable HTTP réel, token gate dev). Résultat : `DeployResult { url, version: 2, code_protected: true }` (aucun PIN/hash → invariant §9 OK), v1→v2 active en DB, HTML stocké, et **servi après unlock** (PIN). Caveat Claude Code : `claude mcp add` en cours de session ne charge PAS les tools (chargés au démarrage) ; `/mcp` ne reconnecte que les serveurs déjà chargés → test fait via client HTTP sur le même endpoint live (identique).
+- **Fix `.gitignore`** (commit `ef9eb3f`) : `backend/data/` (storage dev quand on lance depuis `backend/`) n'était PAS ignoré (`/data` n'attrape que le volume Docker prod racine) → comblé. `backend/data` + scratchpad de test purgés.
+
+### Trucs en suspens
+- **CI sur `main`** : 1ʳᵉ exécution post-merge Phase 7 (v0.2.0) — vérifier gate SonarCloud `new_coverage ≥ 80%` + build/push image GHCR (`main` + `v0.2.0` → tags `0.2.0`, `0.2`, `latest`).
+- **Scan Sonar local** non lancé (la CI fait foi).
+- e2e Playwright « page d'erreur /c stylée » = optionnel non fait → BACKLOG.
+- Lien doc du bouton « ? » topbar = URL Phase 8 (Fumadocs) pas encore en ligne (assumé).
+
+### Prochaine chose à creuser
+- **Phase 8** — Documentation publique (Fumadocs / GitHub Pages). Le README + le bouton « ? » pointent vers une URL doc à publier.
+
+### Notes pour future Claude
+- Phase 7 = 4 lots (fondations i18n/thème · panneau Settings side-panel · identité visuelle · page d'erreur serving), chacun spec+plan+subagents, 4 revues finales opus = YES.
+- Pour une icône/logo qui suit le thème : **SVG inline `currentColor`** (pas `<img>`). Favicon adaptatif : `@media (prefers-color-scheme: dark)` dans le SVG.
+- Storage dev = `backend/data` (désormais gitignoré). Prod = volume `/data`.
+
 ## 2026-06-26 — Phase 7 Lot 4 : Page d'erreur serving /c — LIVRÉE (Phase 7 ✅ COMPLÈTE)
 
 ### Dernière chose faite
