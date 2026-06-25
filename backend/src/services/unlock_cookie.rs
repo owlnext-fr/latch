@@ -15,10 +15,13 @@ type HmacSha256 = Hmac<Sha256>;
 /// Empreinte one-way du PIN, scopée au slug. Sûre à exposer dans la valeur du
 /// cookie (un cookie signé n'est pas chiffré — sa valeur est lisible).
 fn fingerprint(secret: &[u8], slug: &str, pin: &str) -> String {
-    // `new_from_slice` ne peut pas échouer pour HMAC (accepte toute longueur de clé ≥ 0) :
-    // l'erreur `InvalidLength` n'est levée que pour des longueurs hors-spec, inapplicable ici.
-    #[allow(clippy::expect_used)]
-    let mut mac = HmacSha256::new_from_slice(secret).expect("HMAC accepte toute clé");
+    // `new_from_slice` ne peut pas échouer pour HMAC (accepte toute longueur de clé) :
+    // l'erreur `InvalidLength` est structurellement inatteignable ici. Cette fonction
+    // est dans le request-path (pas l'init de boot), donc on exprime l'invariant via
+    // `unreachable!` (non couvert par unwrap_used/expect_used) plutôt qu'avec une
+    // suppression de lint.
+    let mut mac = HmacSha256::new_from_slice(secret)
+        .unwrap_or_else(|_| unreachable!("HMAC-SHA256 accepte toute longueur de clé"));
     mac.update(slug.as_bytes());
     mac.update(b":");
     mac.update(pin.as_bytes());
@@ -46,6 +49,7 @@ pub fn verify_token(secret: &[u8], slug: &str, pin: &str, token: &str, now_unix:
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

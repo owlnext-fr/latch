@@ -196,7 +196,9 @@ pub fn routes() -> Routes {
         GovernorLayer { config }
     };
     let slug_layer = {
-        // Init de boot : même raison que ip_layer ci-dessus.
+        // Init de boot : config governor invalide (burst/période hors-bornes) = bug de config.
+        // Le burst par défaut est non-nul (20) ; panique au démarrage acceptable —
+        // le rate-limiter est un invariant de sécurité (contrat §9.5).
         #[allow(clippy::expect_used)]
         let config = Arc::new(
             GovernorConfigBuilder::default()
