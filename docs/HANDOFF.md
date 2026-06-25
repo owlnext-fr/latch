@@ -15,19 +15,28 @@
 - **Dérivation `utoipa::ToSchema`** sur tous les DTOs. Dépendances `utoipa 5` + `utoipa-swagger-ui 9` (axum 0.8 natif — v8 tire axum 0.7) ajoutées à `backend/Cargo.toml`.
 - **`#[utoipa::path]` sur toutes les routes `/api/*`** (placées AVANT `#[debug_handler]`) + `ApiDoc` (`paths(...)`, `components(schemas(...))`) dans `backend/src/openapi.rs`.
 - **`openapi.json` committé à la racine + test de drift + Swagger UI dev.** Régénérable via `UPDATE_OPENAPI=1 cargo test --test openapi_drift`. Swagger sous `/api-docs` en dev/test uniquement (guard `is_prod`). Test drift `backend/tests/openapi_drift.rs` dans la suite nextest.
-- Vérification finale : `cargo fmt --all` propre, `cargo clippy --all-targets -- -D warnings` 0 warning, `cargo nextest run` vert (tous les tests d'intégration, security_invariants, openapi_drift, dto::tests, openapi::tests). Aucune référence résiduelle à `latch_dto`.
+- **Revue finale de branche (Opus) passée** sur tout le Plan 1 (`db58d28..`) : 0 Critical, fondation saine pour le Plan 2. Un Important corrigé (commit **`d80833a`**) : les doc-comments `///` des handlers fuitaient des paths `/admin/...` périmés + des notes internes (Context7/QUIRKS) dans `openapi.json` → auraient pollué le JSDoc du client TS. Summaries réduits à une ligne `/api`, notes internes passées en `//`, `openapi.json` régénéré. Sanity : 0 occurrence de `/admin/projects` et de `Context7` dans le schéma.
+- Vérification finale : `cargo fmt --all` propre, `cargo clippy --all-targets -- -D warnings` 0 warning, **`cargo nextest run` = 88 verts** (intégration, security_invariants, openapi_drift, dto::tests, openapi::tests). Aucune référence résiduelle à `latch_dto`. **HEAD = `d80833a`**, working tree propre.
 
 ### Trucs en suspens
-- **Plan 2** (app React côté frontend) : scaffolding Vite + React, `openapi-typescript` depuis `openapi.json`, client `openapi-fetch`, Query/RHF+zod/i18next/sonner, pages + panels, tests Vitest + MSW.
+- **Plan 2 (PROCHAINE ÉTAPE)** : app React (Vite + TanStack Router SPA). PAS DE BRAINSTORM — le design est déjà tranché. Il reste à **écrire le plan** (writing-plans) puis l'exécuter en Subagent-Driven.
+- **CI / Docker rouges PAR DESIGN** sur `feat/admin-react` (Dockerfile stage Trunk/wasm, job CI frontend wasm, `web/mod.rs` défaut `../frontend/dist`, `.env.example`/`.gitignore`) — seront retravaillés au **Plan 3** (CI pistes node + Docker stage pnpm). Ne pas s'en alarmer.
+- **BACKLOG (non bloquant, ajoutés ce jour)** : `SecurityScheme` cookie dans l'OpenAPI ; allowlist `deny.toml` pour les transitives de `utoipa-swagger-ui 9` (dont `zlib-rs` licence « Zlib ») → à traiter avec la supply-chain du Plan 3.
 
-### Prochaine chose à creuser
-- Écrire le spec + plan du Plan 2. Consulter `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md` pour le périmètre exact.
+### Prochaine chose à creuser — DÉMARRAGE PLAN 2 (à froid)
+- **Écrire le Plan 2** (`docs/superpowers/plans/`) via writing-plans, à partir du design déjà validé.
+- **Design de référence = `docs/superpowers/specs/2026-06-25-admin-react-stack-design.md`** (LA source : stack Vite+React+TanStack Router, OpenAPI→openapi-typescript+openapi-fetch, Query/RHF+zod/react-i18next/sonner, structure `frontend/`, `.nvmrc`, tests Vitest+MSW). La décision/périmètre amont est dans `2026-06-25-admin-react-migration-decision.md`.
+- **Input figé du front = `openapi.json`** (racine) : le build front lancera `openapi-typescript` dessus → `frontend/src/api/schema.d.ts` + client `openapi-fetch`. Le schéma est propre (revue finale).
+- **Recycler depuis la branche Yew** : catalogue i18n FR/EN via `git show feat/phase-3-spa-yew-admin:frontend/locales/en.yml` (et `fr.yml`) → JSON ; comportement UX = contrat §7 (`docs/contrat-deploy.md`) ; thème oklch (preset shadcn `bJfDPe2y`).
+- **Plan 3 ensuite** : CI pistes (back/front/(fuma)→e2e→docker), supply-chain front, Docker stage Node/pnpm, smoke e2e Playwright, alignement docs (BOOTSTRAP/contrat §4/ROADMAP/ENVIRONMENT/README).
 
 ### Notes pour future Claude
 - Le workspace n'a plus de crate `latch-dto`. Tout est dans `crate::dto` (`backend/src/dto/mod.rs`). Les types sont identiques, juste inlinés.
-- Pour régénérer `openapi.json` après un changement de handler ou de DTO : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (depuis la racine ou `backend/`).
+- Pour régénérer `openapi.json` après un changement de handler ou de DTO : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (depuis la racine). Un test de drift casse la suite si on oublie.
+- **Les `///` des handlers deviennent les `summary` OpenAPI → JSDoc du client TS.** Garder ces doc-comments concis/orientés API ; mettre les notes internes en `//`. (Cf. QUIRKS.)
 - Le Swagger UI (`/api-docs`) ne s'expose qu'en dev/test (`is_prod = !matches!(env, Development | Test)`, fail-secure : tout env inconnu = prod = pas de Swagger). Ne pas inverser ce guard.
 - Épingler `utoipa-swagger-ui = "9"` : v8 tire `axum 0.7` (conflit de types avec l'axum 0.8 du projet). Cf. QUIRKS.
+- Ledger d'exécution Subagent-Driven du Plan 1 (détail tâche-par-tâche, findings) : `.superpowers/sdd/progress.md` (gitignoré, scratch).
 
 ---
 
