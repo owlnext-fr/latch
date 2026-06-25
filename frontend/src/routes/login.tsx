@@ -4,10 +4,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { useLogin } from '@/hooks/use-auth'
+import { Logo } from '@/components/logo'
+import { useDocumentTitle } from '@/hooks/use-document-title'
+import { GITHUB_URL } from '@/lib/links'
 
 const loginSchema = z.object({
   user: z.string().min(1),
@@ -18,6 +22,7 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export function LoginPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t('title.login'))
   const navigate = useNavigate()
   const { mutate, isPending } = useLogin()
   const [error, setError] = useState<string | null>(null)
@@ -50,70 +55,82 @@ export function LoginPage() {
         <LocaleSwitcher />
       </div>
 
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>{t('login.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="login-user"
-                className="text-sm font-medium leading-none"
-              >
-                {t('login.user')}
-              </label>
-              <input
-                id="login-user"
-                type="text"
-                autoComplete="username"
-                aria-invalid={!!errors.user}
-                aria-describedby={errors.user ? 'login-user-error' : undefined}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                {...register('user')}
-              />
-              {errors.user && (
-                <span id="login-user-error" className="text-xs text-destructive" role="alert">
-                  {errors.user.message}
-                </span>
+      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+        <Logo className="size-12" />
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>{t('login.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="login-user"
+                  className="text-sm font-medium leading-none"
+                >
+                  {t('login.user')}
+                </label>
+                <input
+                  id="login-user"
+                  type="text"
+                  autoComplete="username"
+                  aria-invalid={!!errors.user}
+                  aria-describedby={errors.user ? 'login-user-error' : undefined}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register('user')}
+                />
+                {errors.user && (
+                  <span id="login-user-error" className="text-xs text-destructive" role="alert">
+                    {errors.user.message}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="login-pass"
+                  className="text-sm font-medium leading-none"
+                >
+                  {t('login.pass')}
+                </label>
+                <input
+                  id="login-pass"
+                  type="password"
+                  autoComplete="current-password"
+                  aria-invalid={!!errors.pass}
+                  aria-describedby={errors.pass ? 'login-pass-error' : undefined}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register('pass')}
+                />
+                {errors.pass && (
+                  <span id="login-pass-error" className="text-xs text-destructive" role="alert">
+                    {errors.pass.message}
+                  </span>
+                )}
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
               )}
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="login-pass"
-                className="text-sm font-medium leading-none"
-              >
-                {t('login.pass')}
-              </label>
-              <input
-                id="login-pass"
-                type="password"
-                autoComplete="current-password"
-                aria-invalid={!!errors.pass}
-                aria-describedby={errors.pass ? 'login-pass-error' : undefined}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                {...register('pass')}
-              />
-              {errors.pass && (
-                <span id="login-pass-error" className="text-xs text-destructive" role="alert">
-                  {errors.pass.message}
-                </span>
-              )}
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            )}
-
-            <Button type="submit" loading={isPending}>
-              {t('login.submit')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" loading={isPending}>
+                {t('login.submit')}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 h-8 text-sm font-medium hover:bg-muted hover:text-foreground transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <ExternalLink className="size-4" />
+          {t('login.github')}
+        </a>
+      </div>
     </div>
   )
 }

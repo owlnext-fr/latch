@@ -18,6 +18,16 @@ async function fillAndSubmit(user: string, pass: string) {
 }
 
 describe('LoginPage', () => {
+  it('shows the logo and a GitHub link, and sets the document title', async () => {
+    renderWithRouter('/login')
+    expect(await screen.findByAltText('latch')).toBeInTheDocument()
+    const gh = screen.getByRole('link', { name: /GitHub/i })
+    expect(gh).toHaveAttribute('href', 'https://github.com/owlnext-fr/latch')
+    expect(gh).toHaveAttribute('target', '_blank')
+    expect(gh).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    await waitFor(() => expect(document.title).toBe('Sign in — latch admin'))
+  })
+
   it('shows error message on 401', async () => {
     server.use(
       http.post(`${window.location.origin}/api/login`, () =>
