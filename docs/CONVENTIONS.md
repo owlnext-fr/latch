@@ -364,7 +364,101 @@ mod tests {
 **Règles :**
 - Pas de serveur HTTP → pas de `#[serial]` nécessaire (DB in-memory par test).
 - Tester : gate token bad → erreur, gate token ok → succès, slug inconnu → erreur.
-- Les tests d'intégration via transport HTTP restent reportés Phase 6.
+
+## Test e2e MCP via transport Streamable HTTP (harness loco) — Phase 6
+
+Tests d'intégration du transport HTTP réel : le harness loco `request::<App>` démarre l'app entière
+(dont `/mcp`) et `axum-test` envoie de vraies requêtes HTTP. `backend/tests/mcp_http.rs`.
+
+```rust
+// Helper : environnement + serveur
+fn setup_env() {
+    std::env::set_var("DEPLOY_TOKEN", "test-token");
+    std::env::set_var("LATCH_PUBLIC_BASE_URL", "http://localhost:5150");
+    std::env::set_var("LATCH_STORAGE_ROOT", "/tmp/latch-mcp-test");
+}
+
+// Helper : POST /mcp avec host explicite (OBLIGATOIRE — cf. QUIRKS)
+async fn mcp_post(server: &TestServer, body: serde_json::Value, session: Option<&str>)
+    -> axum_test::TestResponse
+{
+    let mut req = server.post("/mcp")
+        .add_header("content-type", "application/json")
+        .add_header("accept", "application/json, text/event-stream")
+        .add_header("host", "localhost:5150")  // LOAD-BEARING — cf. QUIRKS
+        .json(&body);
+    if let Some(s) = session {
+        req = req.add_header("mcp-session-id", s);
+    }
+    req.await
+}
+
+// Helper : extraire la première ligne JSON d'une réponse SSE (ignore les `data:` vides)
+fn parse_mcp_body(body: &str) -> serde_json::Value {
+    for line in body.lines() {
+        if let Some(payload) = line.strip_prefix("data:") {
+            let trimmed = payload.trim();
+            if !trimmed.is_empty() {
+                return serde_json::from_str(trimmed).expect("JSON valide");
+            }
+        }
+    }
+    panic!("Aucune ligne data non-vide dans la réponse SSE");
+}
+
+#[tokio::test]
+#[serial]
+async fn mcp_initialize_handshake() {
+    setup_env();
+    request::<App, _, _>(|server, _ctx| async move {
+        let res = mcp_post(&server, serde_json::json!({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": { "protocolVersion": "2025-06-18",
+                        "clientInfo": { "name": "test", "version": "0.0.1" },
+                        "capabilities": {} }
+        }), None).await;
+        res.assert_status_ok();
+        let session = res.header("mcp-session-id").to_str().unwrap().to_string();
+        assert!(!session.is_empty());
+        let json = parse_mcp_body(&res.text());
+        assert_eq!(json["result"]["protocolVersion"], "2025-06-18");
+    }).await;
+}
+```
+
+**Règles :**
+- `#[serial]` obligatoire (l'app entière est démarrée par `request::<App>`, accès DB).
+- `host: localhost:5150` **dans chaque requête MCP** : rmcp valide `allowed_hosts` dérivé de `LATCH_PUBLIC_BASE_URL` (cf. QUIRKS).
+- `parse_mcp_body` **ignore les lignes `data:` vides** : rmcp 1.8 débute le SSE par un keepalive (cf. QUIRKS).
+- `LATCH_STORAGE_ROOT`, `LATCH_PUBLIC_BASE_URL`, `DEPLOY_TOKEN` posés via `set_var` AVANT `request::<App>`.
+- Session MCP capturée du header `mcp-session-id` de la réponse `initialize`, transmise dans les requêtes suivantes.
+- Vérifier `structuredContent` (pas `content[0].text`) pour les résultats de tool (cf. QUIRKS T2).
+
+## Durcissement en-têtes HTTP global dans `after_routes` — Phase 6
+
+En-têtes de sécurité applicables à toutes les surfaces : posés via `map_response` en **dernier**
+dans `after_routes` pour couvrir `/admin`, `/api`, `/c`, `/mcp`, `/robots.txt`.
+
+```rust
+// Dans backend/src/app.rs — after_routes (à la fin, après tous les mount)
+use axum::middleware::{self, map_response};
+use axum::http::HeaderValue;
+
+let router = router.layer(map_response(|mut res: Response| async move {
+    res.headers_mut().insert(
+        "X-Robots-Tag",
+        HeaderValue::from_static("noindex, nofollow"),
+    );
+    res
+}));
+```
+
+**Règles :**
+- Posé **après** tous les `nest_service` (layer axum s'applique de l'extérieur vers l'intérieur —
+  le dernier ajouté enveloppe le tout).
+- `map_response` (pas `from_fn`) : modifie la réponse sans court-circuiter la chaîne.
+- Test : vérifier la présence du header sur au moins une route de chaque surface (`/admin`,
+  `/api`, `/robots.txt`) pour éviter les régressions si l'ordre des layers change.
 
 ## Composants React (shadcn/ui) — patterns courants
 

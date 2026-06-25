@@ -77,6 +77,24 @@ Cf. QUIRKS pour le détail du piège chemin absolu/`/usr/src`.
 - **`llvm-tools-preview`** : composant Rust requis par `cargo-llvm-cov`. En CI, ajouté à `dtolnay/rust-toolchain` via `components: llvm-tools-preview`. Localement : `rustup component add llvm-tools-preview`.
 - **Commande locale** : `cargo llvm-cov nextest --lcov --output-path backend-lcov.info` (depuis la racine).
 
+## Toolchain CHANGELOG (git-cliff)
+- **`git-cliff`** : installé via Cargo (`cargo install git-cliff`). Utilisé pour générer `CHANGELOG.md` depuis l'historique git.
+- **Configuration** : `cliff.toml` à la racine du repo (2 passes preprocessor gitmoji : retire les émojis en tête et en milieu de sujet, parsers réordonnés : Sécurité avant `^feat`).
+- **Régénérer** : `git cliff --output CHANGELOG.md` (depuis la racine). Ajouter `--tag vX.Y.Z` pour un nouveau tag.
+- **Note** : git-cliff n'est pas en CI (génération manuelle avant chaque release). Entrée BACKLOG si on veut l'automatiser.
+
+## Captures Playwright (screenshots)
+- **Condition** : les tests de capture (`e2e/screenshots.capture.ts`) sont skippés par défaut.
+  Activer avec : `CAPTURE=1 pnpm exec playwright test screenshots.capture` (depuis `frontend/`).
+- **`CAPTURE=1`** : contrôle le skip (`test.skip(!process.env.CAPTURE, ...)`). Seule variable requise.
+- **`CI=1`** : active `reuseExistingServer: true` dans `playwright.config.ts` (réutilise le serveur déjà lancé). Indépendant du CAPTURE — utile pour ne pas relancer le build si le serveur tourne déjà.
+- **Résultat** : `docs/assets/admin-list.png` (liste admin, 2 projets fictifs) + `docs/assets/unlock.png` (page unlock formulaire OTP).
+- **Données** : toujours des placeholders fictifs (`Mon Projet`, `ACME`) — jamais de nom client (cf. règle confidentialité CLAUDE.md).
+
+## Badges SonarCloud (README)
+- **Visibilité publique requise** : les badges SonarCloud (`Quality Gate`, `Coverage`) ne s'affichent que si le projet SonarCloud est **public** (`Administration > Visibility > Public`). Si le badge renvoie une icône « brisée », vérifier la visibilité dans les settings SonarCloud.
+- **Clé du projet** : `owlnext-fr_latch` (organisation `owlnext-fr`). URLs des badges dans le README.
+
 ## Repo & exécution (cette instance)
 - **Path repo** : `/srv/owlnext/latch` · **branche par défaut** : `main` (commits directs / branches courtes).
 - **Toolchain backend** : Rust 1.96, Docker 29,

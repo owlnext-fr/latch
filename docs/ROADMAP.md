@@ -117,16 +117,28 @@ settings 401), 54 frontend. Clippy `--all-features` clean. Cargo-deny OK.
 
 **À confirmer :** branchement réel Claude web (déduit de la doc rmcp, non testé en prod).
 
-## Phase 6 — E2E, durcissement, packaging publiable
+## Phase 6 — E2E, durcissement, packaging publiable ✅ LIVRÉE (2026-06-25)
 
-- **E2E Playwright** : flux complet de bout en bout (contrat §7 + §6).
-- Durcissement : `cargo deny`/`audit` au vert, en-têtes (`X-Robots-Tag`), `robots.txt`,
-  vérif `Origin`, scoping/expiration des cookies.
-- Publiable : README complet (quickstart, capture, archi), badge CI, CHANGELOG,
-  dual-license, `.env.example`.
+> Spec/plan : `docs/superpowers/` (tasks 1-8). Toutes les gates vertes (136 nextest, 54 vitest, 4 playwright).
 
-**Sortie :** e2e vert en CI, image publiée sur GHCR public, `deploy.sh` testé sur la
-box. Repo présentable comme référence FOSS.
+**Livré :**
+- **E2E MCP transport HTTP** (`backend/tests/mcp_http.rs`) : 6 tests Streamable HTTP réel
+  (initialize handshake, tools/list, deploy_prototype + invariant §9, list_projects enveloppe objet,
+  gate bad-token ×2 no-side-effect). Harness loco + `axum-test`.
+- **E2E Playwright `/c/<slug>`** (`e2e/serve-unlock.spec.ts`) : 3 tests navigateur réel (projet libre
+  no-store, unlock par PIN + auto-submit OTP, bascule v1→v2). Setup API-driven.
+- **Durcissement en-têtes** : `robots.txt` (text/plain, Disallow: /) + layer `X-Robots-Tag` global
+  posé en dernier dans `after_routes`. 3 tests `hardening.rs`.
+- **Captures Playwright** (`e2e/screenshots.capture.ts`) : 2 tests conditionnels (skip sauf `CAPTURE=1`),
+  génèrent `docs/assets/admin-list.png` + `docs/assets/unlock.png`. `testMatch` étendu aux `.capture.ts`.
+- **CHANGELOG** (`cliff.toml` git-cliff) : 2 passes preprocessor gitmoji, `CHANGELOG.md` v0.1.0
+  avec 207/208 commits (phases 0-6), zéro gitmoji résiduel.
+- **README refondu** : 11 sections FR, badges CI/Quality Gate/Coverage/License, captures, quickstart
+  Docker+dev, Connecter Claude MCP, archi+invariants, sécurité robots/X-Robots-Tag.
+- `sonar.tests=frontend/src,backend/tests` (T4), `cargo deny` vert.
+
+**Critères de sortie atteints :** e2e vert en CI, image GHCR publiée, `deploy.sh` propre,
+repo présentable FOSS. `deploy.sh` testé sur box = responsabilité humaine (hors CI).
 
 ## Phase 7 — Peaufinage graphique / web
 
@@ -168,3 +180,19 @@ settings fonctionnel **en side-panel** (locale + thème persistés, défaut thè
 infos MCP) ; serving `/c` rend des **pages d'erreur HTML stylées** (plus de JSON brut sur slug
 inconnu / sans version) ; ajouter une locale = déposer un JSON (ou une config minimale), sans
 toucher au code d'import.
+
+## Phase 8 — Documentation publique (Fumadocs / GitHub Pages)
+
+> Stub — contenu TBD. Référencé depuis le README (lien TBD).
+
+Landing marketing + documentation détaillée hébergées sur **GitHub Pages** (ou équivalent),
+construites avec **Fumadocs** (framework MDX adapté aux projets React).
+
+Périmètre pressenti :
+- **Landing** : présentation du projet, captures, quickstart en ligne, lien GHCR.
+- **Documentation technique** : guide d'installation, référence des variables d'env,
+  guide de connexion MCP, sécurité (robots/X-Robots-Tag, rate-limit, fail-secure secrets).
+- **Déploiement** : workflow GitHub Actions `pages` déclenché sur push `main` ou tag.
+- **Lien** : le README renvoie vers la doc publiée (URL à renseigner quand disponible).
+
+**Sortie :** site docs accessible publiquement, pipeline CI docs vert, lien dans le README.

@@ -5,6 +5,50 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 6 LIVRÉE (T8 : vérification finale + mémoire)
+
+### Dernière chose faite
+**Phase 6 complète et clôturée.** Vérification finale de toutes les gates :
+- `cargo fmt --all --check` : OK
+- `cargo clippy --all-targets --all-features -- -D warnings` : 0 issue
+- `cargo nextest run` : **136/136 verts** (13 binaires)
+- `pnpm lint + pnpm typecheck + pnpm test` : 0 erreur, **54/54 Vitest verts**
+- `pnpm exec playwright test` : **4 passés, 2 skippés** (captures skippées sans CAPTURE=1, normal)
+
+Revue `deploy.sh` : `set -euo pipefail` présent, `docker compose pull/up -d/image prune -f` présents,
+garde `chown 65532:65532 data` idempotente (best-effort avec message d'aide si droits insuffisants),
+aucun secret en dur.
+
+**Réconciliations T8 effectuées :**
+- INDEX.md : "5 tests" → "6 tests" MCP + "135/135" → "136/136" + description complète des 6 tests
+- INDEX.md : CAPTURE condition précisée ("skip sauf `CAPTURE=1`" ; `CI=1` = `reuseExistingServer`, indépendant)
+- `.env.example` : commentaire `SESSION_SECRET` aligné avec `UNLOCK_COOKIE_SECRET` (≥ 64 octets, fail-secure)
+- ROADMAP.md : Phase 6 LIVRÉE + stub Phase 8 (Fumadocs) ajouté
+- ENVIRONMENT.md : toolchain git-cliff, CAPTURE=1 vs CI=1, badges Sonar visibilité publique
+- CONVENTIONS.md : pattern e2e MCP transport HTTP + pattern durcissement X-Robots-Tag global
+- QUIRKS.md : CAPTURE=1 ≠ CI=1 (rôles distincts)
+- BACKLOG.md : git-cliff en CI (release automatisée)
+- INDEX.md : Phase 6 ajoutée dans "Phases closes"
+
+### Trucs en suspens
+- **Revue finale de branche** (`main..feat/phase-6-finalisation`) à passer avant merge/PR (via `finishing-a-development-branch`). Ne pas merger sans revue verte.
+- **Scan Sonar local** (optionnel) : `ENVIRONMENT.md §Scan local` pour vérifier la gate `new_coverage ≥ 80%` avant push si des doutes subsistent.
+- `deploy.sh` testé sur la box réelle = responsabilité humaine (hors CI par construction).
+- Lien Phase 8 (Fumadocs) dans le README = TBD (indiqué comme tel, non bloquant).
+
+### Prochaine chose à creuser
+- **Revue de branche** (opus / `superpowers:finishing-a-development-branch`) puis merge/PR de `feat/phase-6-finalisation` sur `main`.
+- **Phase 7** (peaufinage graphique : titres de page, logo, menu Settings side-panel, pages d'erreur `/c` stylées) selon priorité produit.
+- **Phase 8** (Fumadocs / GitHub Pages) : landing + doc détaillée.
+
+### Notes pour future Claude
+- CAPTURE=1 et CI=1 sont indépendants : CAPTURE contrôle le skip, CI active reuseExistingServer. Ne jamais documenter comme indissociables.
+- `serverInfo.name = "rmcp"` (pas "latch") est un comportement connu de rmcp 1.8 (`from_build_env()`). Ne pas asserter ce champ dans les tests. Fix BACKLOG.
+- La branche `feat/phase-6-finalisation` part de `main` (après Phase 5 mergée). Les 136 tests nextest incluent les 6 tests MCP HTTP réels (transport Streamable HTTP).
+- git-cliff installé localement via `cargo install git-cliff`. Cliff.toml à la racine. Régénérer : `git cliff --output CHANGELOG.md`.
+
+---
+
 ## 2026-06-25 — Phase 6 T5 : captures Playwright (hors CI) — DONE
 
 ### Dernière chose faite

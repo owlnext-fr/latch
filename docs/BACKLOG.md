@@ -3,6 +3,13 @@
 > Idées et durcissements écartés *consciemment* de la v1, gardés pour ne pas les
 > redécouvrir. Rien ici n'est un manque : ce sont des choix de périmètre.
 
+## git-cliff en CI (release automatisée) (Phase 6 – 2026-06-25)
+`CHANGELOG.md` est aujourd'hui généré manuellement (`git cliff --output CHANGELOG.md`). Pour
+automatiser la génération à chaque release, ajouter un job CI déclenché sur un push de tag `v*`
+qui : (1) lance `git cliff --tag $TAG --output CHANGELOG.md`, (2) commite + pousse le CHANGELOG
+mis à jour (ou l'intègre à la GitHub Release). Hors périmètre Phase 6 (génération manuelle suffit
+pour la v1) ; à ajouter au moment où la cadence de releases le justifie.
+
 ## Auth MCP — Modèle 2 (vrai OAuth 2.1)
 401 + `WWW-Authenticate`, métadonnées `.well-known/oauth-protected-resource`,
 authorization-code + PKCE + consentement, client pré-enregistré ou DCR. La voie

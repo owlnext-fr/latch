@@ -6,6 +6,12 @@
 ## Playwright : `testMatch` par défaut = `*.spec.ts` seulement (2026-06-25)
 Sans configuration explicite, Playwright ne découvre que les fichiers `*.spec.ts` (et `*.spec.js`). Un fichier nommé `*.capture.ts` n'est pas trouvé → `No tests found` silencieux. **Fix** : ajouter `testMatch: /.*\.(spec|capture)\.ts$/` dans `playwright.config.ts`. Cette option étend la découverte sans perturber les specs CI existantes.
 
+## Playwright captures : `CAPTURE=1` ≠ `CI=1` — rôles distincts (2026-06-25)
+Les tests de capture (`e2e/screenshots.capture.ts`) utilisent deux variables d'env aux rôles indépendants :
+- **`CAPTURE=1`** : contrôle le **skip** du test (`test.skip(!process.env.CAPTURE, "...")`). Sans cette variable, les tests sont découverts (grâce à `testMatch`) mais skippés immédiatement — zéro temps de build.
+- **`CI=1`** : active `reuseExistingServer: true` dans `playwright.config.ts`. Permet de réutiliser un serveur déjà lancé (évite un rebuild complet). Orthogonal au skip.
+**Commande de capture** : `CAPTURE=1 pnpm exec playwright test screenshots.capture` (depuis `frontend/`). En CI on peut combiner `CAPTURE=1 CI=1 …` pour réutiliser le serveur existant, mais seul `CAPTURE=1` est obligatoire pour déclencher les captures. Ne pas documenter `CAPTURE=1 CI=1` comme indissociables — le skip est contrôlé par `CAPTURE` seul.
+
 ## SonarCloud : Automatic Analysis EXCLUSIVE du scanner CI (2026-06-25)
 SonarCloud propose deux modes d'analyse : **Automatic Analysis** (déclenché par SonarCloud lui-même sur chaque push, sans configuration) et **scanner CI** (job GitHub Actions qui pilote `sonar-scanner`). Les deux sont **mutuellement exclusifs** : activer les deux produit une erreur `You are running CI analysis while Automatic Analysis is enabled`. **Procédure** : désactiver l'Automatic Analysis dans les settings SonarCloud (`Administration > Analysis Method > Automatic Analysis = OFF`) AVANT de créer le job CI. Une fois désactivé, le job CI devient l'unique source de scan.
 
