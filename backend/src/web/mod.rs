@@ -293,6 +293,19 @@ mod tests {
         assert_eq!(r.unwrap(), "dev-fallback");
     }
 
+    #[test]
+    fn required_prod_empty_string_is_err() {
+        assert!(resolve_required(Some(String::new()), true, "fb", "X").is_err());
+    }
+
+    #[test]
+    fn required_dev_empty_string_uses_fallback() {
+        assert_eq!(
+            resolve_required(Some(String::new()), false, "fb", "X").unwrap(),
+            "fb"
+        );
+    }
+
     // --- host_authority ---
     #[test]
     fn host_authority_strips_scheme_and_path() {
