@@ -136,11 +136,33 @@ jobs:
           ADMIN_USER: admin
           ADMIN_PASS: secret
 
-  # 7. Build de l'image (push GHCR public seulement sur main / tag)
+  # 8. Analyse SonarQube Cloud (Quality Gate bloquant)
+  sonar:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: cd frontend && pnpm install --frozen-lockfile --ignore-scripts
+      - run: cd frontend && pnpm test:cov
+      - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e  # v8.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # 9. Build de l'image (push GHCR public seulement sur main / tag)
   docker:
     name: docker build
     runs-on: ubuntu-latest
-    needs: [fmt-clippy, test-backend, supply-chain, frontend, supply-chain-front, e2e]
+    needs: [fmt-clippy, test-backend, supply-chain, frontend, supply-chain-front, e2e, sonar]
     permissions:
       contents: read
       packages: write
