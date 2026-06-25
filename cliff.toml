@@ -1,0 +1,36 @@
+[changelog]
+header = "# Changelog\n\nToutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.\n"
+body = """
+{% if version %}## [{{ version }}] — {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## [Non publié]{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {{ commit.message | upper_first }}\
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+# Strippe les gitmoji en tête de message AVANT le parsing conventionnel (pass 1),
+# puis nettoie les gitmoji résiduels insérés en milieu de message type « + 📝 docs: » (pass 2).
+commit_preprocessors = [
+    { pattern = '^[\x{1F300}-\x{1FFFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{FE00}-\x{FEFF}\x{200D}✅🔒]+\s*', replace = "" },
+    { pattern = '\s*[\x{1F300}-\x{1FFFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{FE00}-\x{FEFF}\x{200D}✅🔒\x{1F004}\x{1F0CF}]+\s*', replace = " " },
+]
+commit_parsers = [
+    # La règle Sécurité est volontairement AVANT ^feat : un commit hardening/robots/sécu
+    # doit migrer vers « Sécurité » plutôt que de tomber dans « Ajouts ».
+    { message = ".*\\b(sécu|hardening|robots)\\b", group = "Sécurité" },
+    { message = "^feat", group = "Ajouts" },
+    { message = "^fix", group = "Corrections" },
+    { message = "^(chore|refactor|perf|style)", group = "Interne" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^test", group = "Tests" },
+    { message = "^(ci|build)", group = "Interne" },
+    { message = ".*", group = "Divers" },
+]
+protect_breaking_commits = true
+tag_pattern = "v[0-9]*"
