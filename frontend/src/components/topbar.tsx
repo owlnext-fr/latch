@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { useLogout } from '@/hooks/use-auth'
@@ -30,6 +31,17 @@ export function Topbar() {
         latch
       </Button>
       <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('settings.title')}
+          onClick={() => {
+            router.navigate({ to: '/settings' })
+          }}
+        >
+          <Settings />
+        </Button>
         <LocaleSwitcher />
         <Button
           type="button"

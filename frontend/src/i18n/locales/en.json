@@ -98,5 +98,11 @@
   "toast.version_deleted": "Version deleted.",
   "toast.copied": "Copied to clipboard.",
   "list.versions_count_one": "{{count}} version",
-  "list.versions_count_other": "{{count}} versions"
+  "list.versions_count_other": "{{count}} versions",
+  "settings.title": "Settings",
+  "settings.mcp_intro": "Connect Claude's MCP connector with the URL and token below.",
+  "settings.mcp_url": "MCP endpoint URL",
+  "settings.deploy_token": "Deploy token",
+  "settings.public_base_url": "Public base URL",
+  "settings.copy_mcp_url": "Copy MCP URL"
 }
