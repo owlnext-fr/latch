@@ -72,6 +72,11 @@ impl Hooks for App {
         // (deep-links client). nest_service strip le préfixe /admin ; les routes
         // /api/* et /_health restent prioritaires (non masquées).
         let dist = crate::web::spa_dist_dir();
+        // Assets statiques (JS/CSS) exposés sous /assets — partagés entre le bundle
+        // admin et le bundle unlock. La base Vite est '/' donc les deux bundles
+        // référencent /assets/... sans préfixe /admin.
+        let assets = ServeDir::new(dist.join("assets"));
+        let router = router.nest_service("/assets", assets);
         let index = dist.join("index.html");
         let spa = ServeDir::new(&dist).fallback(ServeFile::new(index));
         let router = router.nest_service("/admin", spa);
