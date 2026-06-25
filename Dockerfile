@@ -1,15 +1,18 @@
 # syntax=docker/dockerfile:1
 
 ###############################################################################
-# Stage 1 — build de la SPA Yew (Trunk → wasm32)
+# Stage 1 — build de la SPA React (Vite + pnpm)
 ###############################################################################
-FROM rust:1-bookworm AS frontend
-RUN rustup target add wasm32-unknown-unknown \
- && cargo install trunk --version ^0.21 --locked
-WORKDIR /src
-COPY . .
-# Trunk télécharge wasm-bindgen-cli tout seul (version alignée sur la crate).
-RUN cd frontend && trunk build --release
+FROM node:24-bookworm-slim AS frontend
+RUN corepack enable
+WORKDIR /src/frontend
+# Couche cache : deps seules (lock copié avant la source)
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+# Source + schéma OpenAPI commité (pour gen:api si lancé ; sinon schema.d.ts est commité)
+COPY frontend/ ./
+COPY openapi.json /src/openapi.json
+RUN pnpm build      # vite build → /src/frontend/dist
 
 ###############################################################################
 # Stage 2 — build du backend (SQLite « bundled » → binaire autonome)
