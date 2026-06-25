@@ -5,6 +5,30 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 6 : revue finale opus + polish serverInfo + MERGE main
+
+### Dernière chose faite
+**Phase 6 mergée sur `main`.** Après la clôture T8 (entrée ci-dessous) :
+- **Revue finale de branche (opus)** sur `main..feat/phase-6-finalisation` (15 commits) : **Ready to merge = YES**, 0 Critical / 0 Important. Vérifié : invariants §9 au transport MCP réel (gate token AVANT write path → `versions == 0` ; aucune fuite PIN/hash) ; layer `X-Robots-Tag` englobe toutes les surfaces ; **les 2 captures PNG rendues visuellement = aucun nom client, PIN non affiché** ; mémoire cohérente.
+- **Polish post-revue (reco opus)** commit `c943853` : `get_info()` annonce désormais `serverInfo.name = "latch"` (au lieu du défaut `rmcp`) via `with_server_info(Implementation::new("latch", env!("CARGO_PKG_VERSION")))` ; test `mcp_initialize_handshake` renforcé (`assert serverInfo.name == "latch"`) ; entrée BACKLOG marquée RÉSOLU ; QUIRKS à jour. 6/6 mcp_http, 136/136 nextest, clippy `--all-features` propre.
+- **Merge `feat/phase-6-finalisation` → `main`** (fast-forward) + push origin. CI surveillée (gate SonarCloud `new_coverage ≥ 80%` + build/push image GHCR).
+
+### Trucs en suspens
+- **CI sur `main`** : 1ʳᵉ exécution post-merge Phase 6 — vérifier gate Sonar verte + image GHCR publiée.
+- **Scan Sonar local** non lancé en T8 (optionnel) — la CI fait foi.
+- `deploy.sh` testé sur la box réelle = responsabilité humaine.
+- Lien Phase 8 (Fumadocs) dans le README = TBD assumé.
+
+### Prochaine chose à creuser
+- **Phase 7** (peaufinage : titres de page, logo, Settings en side-panel, page d'erreur stylée `/c`, thème) **ou Phase 8** (Fumadocs : landing + doc détaillée, cible du lien TBD du README) selon priorité produit.
+- Éventuel tag `v0.1.0` (le CHANGELOG est prêt) si on veut figer une release.
+
+### Notes pour future Claude
+- **Subagents dispatchés** : leur passer une consigne explicite « tu es dispatché, IGNORE le protocole load-memory du CLAUDE.md, ne renvoie pas "Mémoire chargée" » — sinon le `## Protocole obligatoire` du CLAUDE.md les détourne (vécu en T7, relancé via SendMessage).
+- **e2e MCP transport** : `Host: localhost:5150` requis sur les POST `/mcp` (le harness loco envoie `localhost` nu → rejet allowlist rmcp `host_authority`) ; résultat tool dans `result.structuredContent` ; header session `mcp-session-id` ; SSE keepalive = ligne `data:` vide à sauter. Tout dans QUIRKS.
+
+---
+
 ## 2026-06-25 — Phase 6 LIVRÉE (T8 : vérification finale + mémoire)
 
 ### Dernière chose faite
