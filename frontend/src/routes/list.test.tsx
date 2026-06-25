@@ -67,6 +67,23 @@ describe('ListPage', () => {
   })
 
   it('SECURITY — PIN is never rendered in the list (§9.2)', async () => {
+    // The list DTO type (ProjectListItem) has no `pin` field — the backend never
+    // sends a PIN in list responses. This test proves the invariant structurally:
+    //   1. We deliberately do NOT put a pin value in the fixture (the type forbids it).
+    //   2. We pick a sentinel 6-digit string that would only appear if the component
+    //      fabricated or leaked a PIN — then assert it is absent from the DOM.
+    //   3. We also confirm the "PIN required" access badge IS rendered, proving we
+    //      actually exercised the code_enabled=true branch.
+    //
+    // The previous assertion (`not.toMatch(/\bpin\b/i)`) was silently broken:
+    // the slug "mon-projet-k7Qp2maZ" ends with "Z", so "ZPIN" in the concatenated
+    // textContent has no word boundary before it — the regex never matched even when
+    // the badge was there. It was a tautological guard. This test cannot be fooled
+    // by adjacent text: queryByText uses exact DOM node matching.
+
+    // Sentinel PIN: not present in fixture data or i18n keys.
+    const SENTINEL_PIN = '999888'
+
     mockProjectsList(PROJECTS)
     renderWithRouter('/')
 
@@ -74,14 +91,27 @@ describe('ListPage', () => {
       expect(screen.getByText('Mon Projet')).toBeInTheDocument()
     })
 
-    // The list DTO has no pin field — verify no PIN digits leaked
-    // ProjectListItem structurally has no pin — assert it cannot appear
-    const allText = document.body.textContent ?? ''
-    // A PIN would be a 6-digit number. We check that no pin-like pattern
-    // (that would come from a ProjectListItem with a pin field) is rendered.
-    // The fixture has no pin at all — if pin appeared it would mean the component
-    // is fabricating data or the DTO changed.
-    expect(allText).not.toMatch(/\bpin\b/i)
+    // The access badge IS rendered (code_enabled=true → "PIN required").
+    // This confirms the branch was exercised.
+    expect(screen.getByText('PIN required')).toBeInTheDocument()
+
+    // No 6-digit sentinel PIN digit-string leaked into any DOM node.
+    // Because ProjectListItem carries no pin field, this can only appear if
+    // someone incorrectly fabricated PIN data in the list renderer.
+    expect(screen.queryByText(SENTINEL_PIN)).toBeNull()
+
+    // Belt-and-suspenders: no element in the document renders any raw 6-digit
+    // string that resembles a PIN (digit-only, 6 chars). We check text nodes
+    // directly rather than textContent concatenation to avoid word-boundary issues.
+    const allElements = document.body.querySelectorAll('*')
+    for (const el of allElements) {
+      // Only check leaf text nodes (elements with no element children)
+      if (el.children.length === 0) {
+        const text = el.textContent?.trim() ?? ''
+        // A leaked PIN would be a standalone 6-digit string
+        expect(text).not.toMatch(/^\d{6}$/)
+      }
+    }
   })
 
   it('shows empty state when no projects exist', async () => {
@@ -119,7 +149,7 @@ describe('ListPage', () => {
     expect(copyButtons).toHaveLength(PROJECTS.length)
   })
 
-  it('renders dash for project with no active version', async () => {
+  it('renders dash for project with no active version and "Deployed" for one with active version', async () => {
     mockProjectsList(PROJECTS)
     renderWithRouter('/')
 
@@ -129,5 +159,12 @@ describe('ListPage', () => {
 
     // Project with active_version_id null shows the common.dash character
     expect(screen.getByText('—')).toBeInTheDocument()
+
+    // Project with active_version_id != null shows "Deployed" (not the raw PK like "v3")
+    // The PK is meaningless to users; we show a neutral indicator instead.
+    expect(screen.getByText('Deployed')).toBeInTheDocument()
+    // Ensure the raw PK is NOT shown as a version number (that would be misleading)
+    expect(screen.queryByText('v3')).toBeNull()
+    expect(screen.queryByText(/^v\d+$/)).toBeNull()
   })
 })

@@ -69,7 +69,7 @@ export function DetailPage() {
           <p className="text-muted-foreground text-sm">{t('common.loading')}</p>
         ) : isError || !project ? (
           <p className="text-destructive text-sm">
-            {t('error.server', { code: '' })}
+            {t('error.network')}
           </p>
         ) : (
           <>
@@ -188,7 +188,7 @@ export function DetailPage() {
                   <div className="flex flex-col items-center gap-3 py-8">
                     <Zap className="h-8 w-8 text-muted-foreground" />
                     <p className="text-center text-muted-foreground">
-                      {t('deploy.dropzone_idle')}
+                      {t('detail.no_versions')}
                     </p>
                     <Button
                       type="button"

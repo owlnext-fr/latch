@@ -1,35 +1,14 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { server } from '@/test/msw'
 import { renderWithRouter } from '@/test/utils'
 
-// openapi-fetch constructs relative URLs ("/api/login") that Node's fetch
-// rejects. Patch the useLogin hook to POST with an absolute URL instead.
-vi.mock('@/hooks/use-auth', async () => {
-  const { useMutation } = await import('@tanstack/react-query')
-  return {
-    useLogin: () =>
-      useMutation({
-        mutationFn: async (body: { user: string; pass: string }) => {
-          const res = await fetch('http://localhost/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })
-          if (!res.ok) throw new Error(String(res.status))
-          return res.json()
-        },
-      }),
-    useLogout: () =>
-      useMutation({
-        mutationFn: async () => {
-          await fetch('http://localhost/api/logout', { method: 'POST' })
-        },
-      }),
-  }
-})
+// No vi.mock — the real useLogin hook is exercised through the production
+// api client (openapi-fetch with baseUrl = window.location.origin + lazy
+// globalThis.fetch), which MSW intercepts in jsdom exactly as it does for
+// the list/detail tests. This ensures regressions in use-auth.ts are caught.
 
 // Wait for the router to mount LoginPage, then fill and submit the form.
 async function fillAndSubmit(user: string, pass: string) {
@@ -41,7 +20,9 @@ async function fillAndSubmit(user: string, pass: string) {
 describe('LoginPage', () => {
   it('shows error message on 401', async () => {
     server.use(
-      http.post('http://localhost/api/login', () => new HttpResponse(null, { status: 401 })),
+      http.post(`${window.location.origin}/api/login`, () =>
+        new HttpResponse(null, { status: 401 }),
+      ),
     )
 
     renderWithRouter('/login')
@@ -55,7 +36,9 @@ describe('LoginPage', () => {
 
   it('navigates to / on successful login', async () => {
     server.use(
-      http.post('http://localhost/api/login', () => HttpResponse.json({ ok: true })),
+      http.post(`${window.location.origin}/api/login`, () =>
+        HttpResponse.json({ ok: true }),
+      ),
     )
 
     const { router } = renderWithRouter('/login')

@@ -49,7 +49,7 @@ export function useCreateProject() {
       void qc.invalidateQueries({ queryKey: ['projects'] })
       toast.success(t('toast.project_created'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -76,7 +76,7 @@ export function useUpdateProject() {
       void qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.project_updated'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -96,10 +96,15 @@ export function useDeleteProject() {
       void qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.project_deleted'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
+// useSetCode and useClearCode are intentionally SILENT on success (no toast).
+// They are sub-mutations of the ProjectForm save flow: `updateProject` always
+// fires first and emits the single "project updated" toast for the whole save.
+// Adding a toast here would produce a double-toast on every edit that touches
+// the access code. The onError path still shows an error so failures are visible.
 export function useSetCode() {
   const qc = useQueryClient()
   const { t } = useTranslation()
@@ -121,8 +126,9 @@ export function useSetCode() {
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: ['projects'] })
       void qc.invalidateQueries({ queryKey: ['project', id] })
+      // No toast: the parent form save (updateProject) already toasted once.
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -140,8 +146,9 @@ export function useClearCode() {
     onSuccess: (_data, id) => {
       void qc.invalidateQueries({ queryKey: ['projects'] })
       void qc.invalidateQueries({ queryKey: ['project', id] })
+      // No toast: the parent form save (updateProject) already toasted once.
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -168,7 +175,7 @@ export function useDeploy() {
       void qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_deployed'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -189,7 +196,7 @@ export function useActivateVersion() {
       void qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_activated'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
 
@@ -210,6 +217,6 @@ export function useDeleteVersion() {
       void qc.invalidateQueries({ queryKey: ['project', id] })
       toast.success(t('toast.version_deleted'))
     },
-    onError: () => toast.error(t('error.server', { code: '' })),
+    onError: () => toast.error(t('error.network')),
   })
 }
