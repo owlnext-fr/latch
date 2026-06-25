@@ -140,7 +140,7 @@ Le backend ne sert que `/assets` (mount ServeDir), pas la racine du dist. Un fav
 via `/src/assets/latch-logo.svg` dans le HTML → Vite le bundle sous `/assets/<hash>.svg`, servi.
 Stratégie SVG-only assumée (pas de bundle multi-tailles : outil interne noindex).
 
-lucide-react 1.21.0 a no brand icons (Github undefined) → use inline SVG (components/github-icon.tsx).
+lucide-react 1.21.0 ne fournit PAS d'icônes de marque (`Github` = undefined) → utiliser un SVG inline (`components/github-icon.tsx`).
 
 ## rmcp 1.8 — `ServerInfo` est `#[non_exhaustive]` (2026-06-25)
 `ServerInfo` dans rmcp 1.8 est marquée `#[non_exhaustive]` → impossible à construire avec un struct literal `ServerInfo { name: "...", ... }` (erreur de compilation « cannot create non-exhaustive struct using struct expression »). **Fix** : construire via `ServerInfo::default()`, puis assigner les champs (`name`, `version`), puis appeler `.with_instructions("...")`. Pattern retenu dans `LatchMcp::get_info()`.

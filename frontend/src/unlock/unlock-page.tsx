@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
 import { Logo } from '@/components/logo'
 import { useDocumentTitle } from '@/hooks/use-document-title'
@@ -23,7 +33,9 @@ export function UnlockPage() {
   const [busy, setBusy] = useState(false)
 
   useDocumentTitle(
-    brand ? t('unlock.page_title_brand', { brand }) : t('unlock.page_title_neutral'),
+    brand
+      ? t('unlock.page_title_brand', { brand })
+      : t('unlock.page_title_neutral'),
   )
 
   useEffect(() => {
@@ -69,55 +81,78 @@ export function UnlockPage() {
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
         <Logo className="size-12" />
         <Card className="w-full">
-        <CardHeader>
-          <CardTitle>
-            {brand ? t('unlock.title_brand', { brand }) : t('unlock.title_neutral')}
-          </CardTitle>
-          <CardDescription>{t('unlock.instructions')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void doUnlock()
-            }}
-            className="flex flex-col gap-4"
-          >
-            <div className="flex flex-col items-center gap-4">
-              <Label htmlFor="pin">{t('unlock.pin_label')}</Label>
-              <InputOTP
-                id="pin"
-                maxLength={6}
-                pattern={REGEXP_ONLY_DIGITS}
-                value={pin}
-                onChange={(v) => {
-                  setPin(v)
-                  if (error) setError(null)
-                }}
-                onComplete={() => void doUnlock()}
-                aria-invalid={error ? true : undefined}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} aria-invalid={error ? true : undefined} />
-                  <InputOTPSlot index={1} aria-invalid={error ? true : undefined} />
-                  <InputOTPSlot index={2} aria-invalid={error ? true : undefined} />
-                  <InputOTPSlot index={3} aria-invalid={error ? true : undefined} />
-                  <InputOTPSlot index={4} aria-invalid={error ? true : undefined} />
-                  <InputOTPSlot index={5} aria-invalid={error ? true : undefined} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            {error && (
-              <p role="alert" className="text-center text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <Button type="submit" loading={busy} disabled={pin.length < 6}>
-              {t('unlock.submit')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <CardHeader>
+            <CardTitle>
+              {brand
+                ? t('unlock.title_brand', { brand })
+                : t('unlock.title_neutral')}
+            </CardTitle>
+            <CardDescription>{t('unlock.instructions')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void doUnlock()
+              }}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex flex-col items-center gap-4">
+                <Label htmlFor="pin">{t('unlock.pin_label')}</Label>
+                <InputOTP
+                  id="pin"
+                  maxLength={6}
+                  pattern={REGEXP_ONLY_DIGITS}
+                  value={pin}
+                  onChange={(v) => {
+                    setPin(v)
+                    if (error) setError(null)
+                  }}
+                  onComplete={() => void doUnlock()}
+                  aria-invalid={error ? true : undefined}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot
+                      index={0}
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <InputOTPSlot
+                      index={1}
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <InputOTPSlot
+                      index={2}
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <InputOTPSlot
+                      index={3}
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <InputOTPSlot
+                      index={4}
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <InputOTPSlot
+                      index={5}
+                      aria-invalid={error ? true : undefined}
+                    />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              {error && (
+                <p
+                  role="alert"
+                  className="text-center text-sm text-destructive"
+                >
+                  {error}
+                </p>
+              )}
+              <Button type="submit" loading={busy} disabled={pin.length < 6}>
+                {t('unlock.submit')}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
