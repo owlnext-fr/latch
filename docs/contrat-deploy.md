@@ -32,7 +32,7 @@ Chaque adaptateur le mappe : web → status + JSON ; MCP → tool error. Loco ga
 
 Workspace à deux membres. Le **cœur vit comme module dans l'app backend**, pas en
 crate séparée (choix assumé : friction minimale, cohérent avec l'injection de
-dépendances façon Symfony). Le frontend est une crate Yew distincte (cible wasm32).
+dépendances façon Symfony). Le frontend est une **app React** (`frontend/`, Vite + pnpm).
 
 ```
 latch/                 # workspace
@@ -53,11 +53,21 @@ latch/                 # workspace
         slug.rs             #   slug lisible + suffixe aléatoire
         storage.rs          #   trait Storage + FsStorage (volume)
         errors.rs           #   CoreError (thiserror)
+      dto/                  # DTOs admin (inlinés, ex-latch-dto)
+        mod.rs              #   ProjectListItem, ProjectDetail, VersionItem, *Req, ToSchema
       models/
         _entities/          # SeaORM généré : projects, versions, sessions
         projects.rs …       # finders / helpers
     migration/              # migrations SeaORM
-  frontend/                 # crate Yew (latch-ui), buildée par Trunk
+  frontend/                 # app React (Vite + pnpm), buildée par `pnpm build`
+    src/
+      api/
+        schema.d.ts         # types TS générés par openapi-typescript depuis openapi.json
+        client.ts           # client openapi-fetch typé (credentials: 'include')
+      hooks/                # un hook TanStack Query par endpoint
+      routes/               # TanStack Router (code-based, basepath /admin)
+      components/           # shadcn/ui + composants maison
+      test/                 # utils renderWithProviders / renderWithRouter + MSW server
 ```
 
 ## 3. Modèle de données (SQLite)
@@ -88,12 +98,11 @@ latch/                 # workspace
 
 ## 4. Surface `/admin` — session cookie, API JSON + SPA
 
-> **⚠️ Migration en cours (2026-06-25)** : la SPA admin passe de **Yew** à **React/Vite/shadcn-ui**.
-> Tout ce qui suit (auth cookie, API `/api/*`, serving statique sous `/admin`, garde Origin,
-> invariants sécu) **reste valable** — c'est agnostique du framework front. Seul le **rendu**
-> (Yew → React) change. Détail : `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
-> Les mentions « Yew / shadcn-rs / Trunk / `latch-dto` partagé front » ci-dessous sont à relire
-> à cette aune (le partage de DTO Rust front↔back disparaît : côté React, types TS).
+> **Migration React livrée (2026-06-25)** : la SPA admin est désormais en **React/Vite/shadcn-ui**
+> (Plans 1-3, branch `feat/admin-react`). L'ancien frontend Yew (`latch-ui`) subsiste dans
+> l'historique git mais est retiré du workspace. Tout ce qui suit (auth cookie, API `/api/*`,
+> serving statique sous `/admin`, garde Origin, invariants sécu) est **agnostique du framework
+> front** et reste inchangé. Détail du choix : `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
 
 - **Auth = cookie de session same-origin** (l'équivalent du cookie Symfony), montée
   via `axum-session` dans `after_routes`, store table SQLite. **Pas** le système
@@ -123,21 +132,20 @@ latch/                 # workspace
   login-CSRF est jugé sans impact significatif car le compte admin est unique et partagé
   — connecter un visiteur dans la session de l'attaquant ne lui confère aucun privilège
   supplémentaire.
-- **Rendu** : la SPA Yew est buildée par Trunk et servie en **statique** par Loco,
-  avec **fallback SPA** (toute route admin inconnue → `index.html`). Les opérations
+- **Rendu** : la SPA React est buildée par Vite (`pnpm build`) et servie en **statique** par
+  Loco, avec **fallback SPA** (toute route admin inconnue → `index.html`). Les opérations
   passent par l'**API JSON** de `controllers/admin.rs`.
-- **Préfixage des routes** : l'API JSON est servie sous le préfixe **`/api/*`**
-  (re-préfixée depuis `/admin/*`) ; la SPA Yew est servie en statique sous **`/admin/*`**
-  via `nest_service("/admin", ServeDir + fallback index.html)` câblé dans `after_routes`,
-  avec un routeur client `BrowserRouter` **sans `basename`** + des routes `#[at("/admin/...")]`
-  **absolues** côté Yew (le `basename` est inutilisable : bug `strip_basename` de yew-router 0.18
-  sur l'URL racine — cf. QUIRKS). **`/admin`** et **`/api`** coexistent sur le même binaire Loco
-  sans conflit.
-- **Contrat de fil (DTO partagé)** : les types sérialisés échangés entre backend et frontend
-  sont définis dans la crate **`latch-dto`** (membre du workspace, cible native + wasm32),
-  source unique de vérité. Les conversions `Model → DTO` sont des **fonctions libres**
-  côté backend (`dto::to_list_item` / `dto::to_detail`) — l'orphan rule interdit
-  `From<&Model>` pour un type étranger.
+- **Préfixage des routes** : l'API JSON est servie sous le préfixe **`/api/*`** (re-préfixée
+  depuis `/admin/*`) ; la SPA React est servie en statique sous **`/admin/*`** via
+  `nest_service("/admin", ServeDir + fallback index.html)` câblé dans `after_routes`.
+  **`/admin`** et **`/api`** coexistent sur le même binaire Loco sans conflit.
+  Le routeur React est TanStack Router (code-based, `basepath: '/admin'`).
+- **Contrat de fil (types TS)** : les types sérialisés échangés entre backend et frontend
+  sont générés par **`openapi-typescript`** depuis `openapi.json` (commité, testé par drift)
+  vers `frontend/src/api/schema.d.ts`. Le client HTTP est **`openapi-fetch`** typé, avec
+  `credentials: 'include'` (cookie de session) ; le wrapper `fetch` est configuré pour
+  permettre l'interception MSW en test (cf. QUIRKS). Les conversions `Model → DTO` côté backend
+  restent des fonctions libres (`dto::to_list_item` / `dto::to_detail`).
 
 ## 5. Surface `/mcp` — Modèle 1
 
@@ -183,15 +191,16 @@ la dernière version active.
 
 ## 7. Admin — rails par page (contenu + comportement, pas layout)
 
-Le rendu fin est laissé à `shadcn-rs`. Grammaire d'interaction : **création/édition
-en side-panel** (scrim + Escape), **confirmations destructives en side-panels *danger***
-(remplace la mention « modale » — les confirmations irréversibles sont des SheetContent
-danger, pas des Dialog/Modal). La page détail est en **lecture seule** (toute édition passe
-par un side-panel dédié, jamais inline). Actions principales en haut à droite, actions de
+Le rendu fin est assuré par **shadcn/ui** (Radix, base stone, thème oklch `bJfDPe2y`).
+Grammaire d'interaction : **création/édition en side-panel** (`<Sheet>` Radix, scrim + Escape),
+**confirmations destructives en side-panels *danger*** (les confirmations irréversibles sont des
+`<Sheet>` danger, pas des Dialog/Modal). La page détail est en **lecture seule** (toute édition
+passe par un side-panel dédié, jamais inline). Actions principales en haut à droite, actions de
 ligne et copie en **boutons-icône**. **Le slug est en lecture seule** en v1 (base éditable
 reportée au BACKLOG). L'URL publique est construite côté SPA via `window.location.origin`
 (pas de variable d'env `PUBLIC_BASE_URL` en v1 — admin et serving `/c` partagent la même
-origine).
+origine). L'UI est **internationalisée FR + EN** via `react-i18next`, défaut EN, langue
+persistée en localStorage.
 
 - **Login** `/admin/login` — identifiant + mot de passe (couple env), erreur sur
   mauvais credentials, rate-limit. → pose le cookie de session.
@@ -219,7 +228,7 @@ origine).
     État vide : ce bloc passe au premier plan.
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
   titre cliquable + **sélecteur de langue FR/EN** + logout. Compte unique → pas de menu utilisateur.
-  L'UI est **internationalisée (FR + EN, défaut EN)** via `rust-i18n` ; la langue est persistée
+  L'UI est **internationalisée (FR + EN, défaut EN)** via `react-i18next` ; la langue est persistée
   (localStorage) et détectée du navigateur au premier accès. Détails d'implémentation : CONVENTIONS.
 - **Logout** — action : détruit la session → redirige vers le login.
 

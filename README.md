@@ -8,15 +8,17 @@ sur un seul binaire [Loco](https://loco.rs) :
 
 - **Serving client** `/c/<slug>` — sert la version active d'un prototype, avec
   page de déverrouillage stylée + PIN si le projet est protégé.
-- **Admin** `/admin` — SPA [Yew](https://yew.rs) (session cookie) : projets,
+- **Admin** `/admin` — SPA React/Vite (session cookie) : projets,
   versions, déploiement manuel, configuration des codes.
 - **MCP** `/mcp` — endpoint appelé par Claude pour déployer un prototype.
 
-> ⚠️ Projet en cours de construction (Phase 0 — scaffold). Voir `docs/ROADMAP.md`.
-
 ## Stack
 
-Loco (axum) + SeaORM + SQLite (`bundled`) · Yew + shadcn-rs (Trunk) · rmcp ≥ 1.4.
+**Backend** : Loco (axum) + SeaORM + SQLite (`bundled`) · rmcp ≥ 1.4.
+
+**Frontend** : React + Vite + TypeScript + pnpm · TanStack Router/Query ·
+shadcn/ui (Radix, stone oklch) + Tailwind v4 · react-i18next (FR/EN) · sonner ·
+openapi-fetch/openapi-typescript (client typé depuis `openapi.json`).
 
 ## Développement
 
@@ -27,14 +29,31 @@ Loco (axum) + SeaORM + SQLite (`bundled`) · Yew + shadcn-rs (Trunk) · rmcp ≥
 cd backend && cargo loco start        # lance l'app (auto-migrate au boot)
 cd backend && cargo loco db migrate   # migrations explicites
 
-# Qualité (depuis la racine — default-members = backend, le frontend wasm est à part)
+# Qualité backend (depuis la racine)
 cargo fmt --all
 cargo clippy --all-targets -- -D warnings
 cargo nextest run                     # tests backend (ou: cargo test)
 
-# Frontend (SPA Yew)
-cd frontend && trunk serve            # dev server
-cd frontend && trunk build --release  # bundle wasm de prod
+# Frontend (depuis frontend/)
+cd frontend && pnpm dev               # dev server React/Vite (HMR, port 5173)
+cd frontend && pnpm build             # bundle de prod → dist/
+```
+
+## Qualité
+
+```bash
+# Backend
+cargo fmt --all && cargo clippy --all-targets -- -D warnings
+cargo nextest run
+cargo deny check
+
+# Frontend
+cd frontend && pnpm lint
+cd frontend && pnpm typecheck
+cd frontend && pnpm test
+
+# E2E
+cd frontend && pnpm exec playwright test
 ```
 
 ## Déploiement

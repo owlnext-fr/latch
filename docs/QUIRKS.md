@@ -42,12 +42,16 @@ loco start`). L'alias `cargo loco` est à la racine (`.cargo/config.toml`, `run 
 et reste trouvé depuis `backend/` par recherche ascendante. Les commandes `fmt`/`clippy`/
 `test` n'ont pas ce souci (pas de config) et tournent depuis la racine.
 
-## Crate wasm (frontend) dans un workspace → `default-members` (2026-06-24)
+## [Yew] Crate wasm (frontend) dans un workspace → `default-members` (2026-06-24)
+> **Archivé** — la crate Yew est retirée du workspace (migration React).
+
 **Symptôme** : `cargo build`/`clippy --workspace` tente de compiler `latch-ui` (Yew) pour
 la cible hôte native → échoue (web-sys/wasm-only). **Cause** : un membre wasm dans un
 workspace mixte. **Workaround** : `default-members = ["backend", "backend/migration"]`
 dans le `Cargo.toml` racine → les commandes sans `--workspace` ignorent le frontend.
 Le frontend se build via `trunk` ou `cargo … -p latch-ui --target wasm32-unknown-unknown`.
+_(Aujourd'hui le `default-members` reste `["backend", "backend/migration"]` — le frontend React
+n'est pas un crate Cargo, donc `--workspace` n'en a jamais été affecté.)_
 
 ## rmcp < 1.4.0 — DNS rebinding (CVE-2026-42559)
 Le transport Streamable HTTP ne validait pas le `Host` avant la 1.4.0. **Épingler
@@ -147,6 +151,14 @@ admin, utiliser **`session.destroy()`** (contrat §4). `session.purge()` n'exist
 accueillant), pas un 401 (qui déclencherait le popup natif — précisément ce qu'on
 fuit en remplaçant le Basic Auth).
 
+---
+
+## Historique Yew — obsolète depuis migration React (2026-06-25)
+
+> Ces quirks concernaient la crate Yew (`latch-ui`, `shadcn-rs`, Trunk, wasm32) retirée du
+> workspace lors de la migration React (Plans 1-3, feat/admin-react). Conservés pour référence
+> en cas de consultation de l'historique git.
+
 ## `yew-router = 0.18` (PAS 0.21) pour `yew 0.21` — numérotation divergente (2026-06-24)
 La numérotation de `yew-router` **diverge** de `yew` : `yew-router 0.18` correspond à `yew 0.21`, `yew-router 0.19` à `yew 0.22`, `yew-router 0.20` à `yew 0.23`. Piège classique : chercher `yew-router = "0.21"` → introuvable ou mauvaise version. Épingler `yew-router = "0.18"` avec `yew = "0.21"`.
 
@@ -240,6 +252,8 @@ dans `openapi.json`. Un doc-comment verbeux (notes QUIRKS, contexte Context7, TO
 **Règle** : garder les doc-comments des handlers courts et orientés API publique. Les notes
 internes vont dans les commentaires `//` (pas `///`) ou dans les docs mémoire.
 
+## Quirks React (stack courante)
+
 ## Vitest + `@testing-library/jest-dom` : matchers manquants si `types` absent du tsconfig (2026-06-25)
 **Symptôme** : `pnpm typecheck` échoue sur `Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'` — même si `vitest.setup.ts` importe `@testing-library/jest-dom/vitest`. **Cause** : l'augmentation de module (`declare module 'vitest' { interface Assertion ... }`) doit être visible lors de la vérification des fichiers `src/**/*.test.tsx`. Elle n'est chargée que si `@testing-library/jest-dom/vitest` est dans `types[]` de `tsconfig.app.json` (qui inclut `src/`). L'import dans `vitest.setup.ts` suffit pour le **runtime** Vitest, pas pour le **typecheck** `tsc`. **Fix** : ajouter `"@testing-library/jest-dom/vitest"` dans `compilerOptions.types` de `tsconfig.app.json`.
 
@@ -248,6 +262,50 @@ internes vont dans les commentaires `//` (pas `///`) ou dans les docs mémoire.
 
 ## MSW `jsonOnce` body : typer en `JsonBodyType`, pas `unknown` (2026-06-25)
 `HttpResponse.json(body)` accepte `JsonBodyType` (exporté de `msw`). Passer `unknown` produit une erreur TS `Argument of type 'unknown' is not assignable to parameter of type 'JsonBodyType'`. **Fix** : importer `type JsonBodyType from 'msw'` et typer le paramètre `body` en conséquence.
+
+## openapi-fetch capture `globalThis.fetch` au module load → wrapper MSW requis (2026-06-25)
+`createClient()` de `openapi-fetch` capture `globalThis.fetch` **à l'import du module**, avant
+que MSW n'installe son service worker ou son intercepteur Node. Dans les tests Vitest (jsdom),
+le mock MSW n'intercède donc pas si le client est créé normalement. **Workaround** : passer un
+wrapper dans `frontend/src/api/client.ts` :
+```ts
+const client = createClient<paths>({
+  fetch: (input) => globalThis.fetch(input),   // évalué à l'appel, pas à l'import
+  credentials: 'include',
+});
+```
+Ainsi `globalThis.fetch` est résolu à l'appel, après que MSW a remplacé la référence.
+
+## ResizeObserver polyfill requis pour Radix en jsdom (Vitest) (2026-06-25)
+Les composants Radix (Popover, Sheet, Select…) appellent `ResizeObserver` en interne.
+`jsdom` ne l'implémente pas → `ReferenceError: ResizeObserver is not defined` dans les tests.
+**Fix** : dans `vitest.setup.ts`, avant les imports Radix :
+```ts
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+```
+
+## pnpm version épinglée obligatoire — corepack sinon tire pnpm 11 (2026-06-25)
+Sans `"packageManager": "pnpm@9.15.9"` dans `frontend/package.json`, corepack active
+la dernière version de pnpm (actuellement 11). pnpm 11 a une politique `minimumReleaseAge`
+qui rejette les paquets récemment publiés dans le lockfile (`ERR_PNPM_OUTDATED_LOCKFILE`).
+**Règle** : toujours épingler `pnpm@9.15.9` (ou la version stabilisée retenue) dans
+`packageManager`. Vérifier au premier `docker build` ou CI (les étapes `pnpm install`
+peuvent diverger silencieusement entre local/CI si `corepack enable` est présent sans pin).
+
+## `shadcn init --preset bJfDPe2y` : `npm_config_ignore_workspace_root_check=true` obligatoire (2026-06-25)
+Le template Vite de `create-next-app` / `create vite` pose un `pnpm-workspace.yaml` dans
+`frontend/`. Lors de l'exécution de `shadcn init`, pnpm détecte un « workspace root » et
+refuse d'installer des paquets directement (`ERR_PNPM_ADDING_TO_ROOT`). **Workaround** :
+```bash
+npm_config_ignore_workspace_root_check=true pnpm dlx shadcn init --preset bJfDPe2y
+```
+Cette variable d'env est passée à pnpm dlx et contourne la garde de workspace root.
+Le `pnpm-workspace.yaml` peut être retiré si le frontend est un package autonome (pas un
+workspace pnpm multi-packages).
 
 ## Thème de marque : export générateur shadcn (oklch) → triplets HSL (2026-06-25)
 La CSS vendorisée de `shadcn-rs` consomme les couleurs en **`hsl(var(--color-X))`** avec des

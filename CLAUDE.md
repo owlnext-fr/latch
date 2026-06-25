@@ -3,8 +3,8 @@
 > Orchestrateur. Ce fichier ne contient **pas** les décisions : il dit dans quel
 > ordre les lire et comment travailler. Le contenu normatif vit dans `docs/`.
 >
-> **Nom : `latch`.** Repo : `github.com/owlnext-fr/latch`. Crates : `latch`
-> (backend) + `latch-ui` (frontend Yew). Package : `ghcr.io/owlnext-fr/latch`.
+> **Nom : `latch`.** Repo : `github.com/owlnext-fr/latch`. Crate backend : `latch` ;
+> app React : `frontend/` (Vite). Package : `ghcr.io/owlnext-fr/latch`.
 > Domaine de serving : `latch.owlnext.fr`.
 
 ## Ce qu'est ce projet, en deux phrases
@@ -44,7 +44,12 @@ pas la dernière publiée.
 | Framework web, routing, `after_routes`, sessions | `loco-rs` | Pré-1.0, breaking changes fréquents |
 | ORM, entités, migrations, transactions | `sea-orm` | API de query/transaction précise |
 | Endpoint MCP, transport Streamable HTTP, `allowed_hosts` | `rmcp` | A sauté en 1.x ; CVE Host-header < 1.4.0 |
-| Composants admin (SPA) | `yew`, `shadcn-rs` | Yew 0.21 ; `shadcn-rs` en 0.1, API instable |
+| Routing SPA admin | `@tanstack/react-router` | Code-based, basepath `/admin` |
+| Data-fetching + cache SPA | `@tanstack/react-query` | Invalidation + stale-while-revalidate |
+| Composants UI admin | `shadcn/ui` (Radix) | Base stone oklch, preset bJfDPe2y |
+| Formulaires SPA | `react-hook-form` / `zod` | Schémas de validation |
+| i18n SPA | `react-i18next` | FR + EN, défaut EN |
+| Client API typé | `openapi-fetch` / `openapi-typescript` | Généré depuis `openapi.json` → `schema.d.ts` |
 | Cookie signé (déverrouillage client) | `axum-extra` (SignedCookieJar) / `cookie` | Détails de signature/scoping |
 
 ## Carte des chantiers — où vit quoi
@@ -85,7 +90,7 @@ humaine, surtout si la branche/`main` est déjà poussée).
 Une tâche n'est terminée que si **tout** ce qui suit est vrai :
 - `cargo fmt` et `cargo clippy` (warnings = erreurs) passent ;
 - les tests verts à chaque couche concernée : unit (cœur), intégration (Loco +
-  SQLite de test), MCP (gate token), wasm (`wasm-bindgen-test`), e2e (Playwright) ;
+  SQLite de test), MCP (gate token), frontend (Vitest + Testing Library / MSW), e2e (Playwright) ;
 - les critères de sortie de la phase ROADMAP sont remplis ;
 - la doc reste cohérente avec le code (si une décision a changé, le contrat est mis à jour) ;
 - `docs/HANDOFF.md` reçoit une entrée datée, et `docs/INDEX.md` est mis à jour si un

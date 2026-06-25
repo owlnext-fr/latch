@@ -12,15 +12,14 @@ adaptateurs un par un, puis l'e2e qui valide le tout assemblé, puis le packagin
 ## Phase 0 — Scaffold & squelette CI/Docker
 
 Mettre en place le terrain sans logique métier.
-- Workspace 2 crates : `backend/` (Loco, template **avec DB**) + `frontend/` (Yew).
+- Workspace : `backend/` (Loco, template **avec DB**) + `frontend/` (app React, Vite + pnpm).
 - **Retirer l'auth users/JWT** générée par Loco (on n'utilise pas la table `users`).
 - Désactiver Redis/worker.
-- `Cargo.toml` : versions épinglées (Loco, rmcp ≥ 1.4.0, yew 0.21, shadcn-rs 0.1),
-  `libsqlite3-sys` `bundled`.
-- Squelette CI (fmt/clippy/test vides mais qui tournent), Dockerfile multi-stage,
+- `Cargo.toml` : versions épinglées (Loco, rmcp ≥ 1.4.0), `libsqlite3-sys` `bundled`.
+- Squelette CI (fmt/clippy/test vides mais qui tournent), Dockerfile multi-stage (Node + Rust + runtime),
   `docker-compose.yml`, `deploy.sh`, dual-license, README minimal.
 
-**Sortie :** `cargo loco start` démarre, `trunk build` produit un bundle, l'image se
+**Sortie :** `cargo loco start` démarre, `pnpm build` produit un bundle React, l'image se
 construit, la CI passe au vert sur un projet vide.
 
 ## Phase 1 — Cœur (services) + modèle + migrations
@@ -53,20 +52,23 @@ ni `use loco_rs` dans `src/services/`.
 401 sans session, deploy transactionnel, switch, **test-invariant de sécu** (pas de
 hash en réponse, pas de PIN en liste).
 
-## Phase 3 — SPA admin
+## Phase 3 — SPA admin ✅ LIVRÉE (2026-06-25)
 
-> **⚠️ 2026-06-25** : livrée en **Yew** (Phase 3 + polish UX/i18n complets), puis **décision de
-> migrer vers React/Vite/shadcn-ui** (friction `shadcn-rs` 0.1 + wasm). Crate Yew retirée ;
-> migration React = chantier en cours sur `feat/admin-react`. Le **comportement (contrat §7)
-> ne change pas** — seul le rendu. Voir `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
-> **Item futur** : Fumadocs (mini-landing + doc complète, GH Pages) — chantier séparé.
+> Livrée en deux temps : (a) Yew + polish UX/i18n complets ; (b) **migration React/Vite/shadcn-ui**
+> décidée (friction `shadcn-rs` 0.1 + wasm), exécutée en Plans 1-3 sur `feat/admin-react`.
+> Crate Yew (`latch-ui`) retirée du workspace (reste dans l'historique git).
+> Le **comportement (contrat §7) n'a pas changé** — seul le rendu.
+> Détail du choix : `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`.
 
-Implémenter les rails du contrat §7 (à l'origine avec `shadcn-rs`, désormais shadcn/ui React).
-- Login, liste, détail (accès / config / versions / déploiement), side-panel
-  création/édition, modales de confirmation destructive, copie URL + PIN, prévisualisation.
-- Build Trunk servi en statique par Loco + fallback SPA.
+Livrables React (Plans 1-3, tous verts) :
+- **Plan 1** — Backend : DTO inlinés `backend/src/dto/`, annotations utoipa, `openapi.json` commité
+  + test drift, Swagger UI dev.
+- **Plan 2** — Frontend React : scaffold Vite/pnpm/shadcn, client typé openapi-fetch, shell TanStack
+  Router/Query, harness Vitest+MSW, Login, liste projets, ProjectForm, détail/deploy/danger panels,
+  hooks `use-projects`.
+- **Plan 3** — Infra : stage Docker Node 24, CI pistes back/front→e2e→docker, Playwright e2e.
 
-**Sortie :** parcours admin manuel complet ; `wasm-bindgen-test` verts (dose mesurée).
+**Critères de sortie :** parcours admin manuel complet ; Vitest verts ; Playwright e2e verts.
 
 ## Phase 4 — Serving `/c/<slug>` (deux états)
 

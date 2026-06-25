@@ -9,11 +9,12 @@
   `libsqlite3-sys` en feature **`bundled`** → le binaire embarque SQLite, l'image
   runtime n'a aucune lib système à fournir.
 - **MCP** : `rmcp` (transport `transport-streamable-http-server`), **≥ 1.4.0**.
-- **Frontend** : ⚠️ **migration en cours Yew → React/Vite/shadcn-ui/Tailwind** (2026-06-25 ;
-  crate Yew `frontend/` retirée, stack React à figer en session neuve — cf.
-  `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md`). Reste servi en
-  **statique** par Loco sous `/admin` (mécanisme inchangé). _(Ancien : crate Yew `latch-ui` +
-  `shadcn-rs`, build Trunk wasm.)_
+- **Frontend** : **React + Vite + TypeScript + pnpm** (livré Plans 1-3, 2026-06-25).
+  TanStack Router (code-based, basepath `/admin`) + TanStack Query + openapi-fetch/openapi-typescript
+  (client typé depuis `openapi.json` → `frontend/src/api/schema.d.ts`) + shadcn/ui (Radix, base
+  **stone**, preset oklch `bJfDPe2y`) + Tailwind v4 + react-hook-form/zod + react-i18next (FR/EN,
+  défaut EN) + sonner. Servi en **statique** par Loco sous `/admin` (mécanisme inchangé).
+  _(Historique : crate Yew `latch-ui` + `shadcn-rs`, build Trunk wasm — voir branche git pré-migration.)_
 - **Cookie signé** (déverrouillage client) : `axum-extra` (`SignedCookieJar`) ou
   `cookie` — résoudre l'API exacte via Context7.
 - Pas de hachage de mot de passe : le PIN est récupérable (contrat §3), l'`ADMIN_PASS`
@@ -23,31 +24,39 @@
 
 ## 2. Versions épinglées
 
-Épingler dans `Cargo.toml`, et **ne pas recopier un numéro traîné dans un tuto**.
+Épingler dans `Cargo.toml` et `frontend/package.json`, et **ne pas recopier un numéro traîné dans un tuto**.
 Résoudre via Context7 la version courante au moment du bootstrap.
 
 - **Loco** : pré-1.0 (lignée 0.16.x), historique de breaking changes → **figé**.
 - **rmcp** : **≥ 1.4.0** impératif (CVE Host-header < 1.4.0). A sauté 0.x → 1.x.
-- **Yew** : 0.21. **shadcn-rs** : 0.1 (API instable, lib jeune — cf. QUIRKS).
 - **SeaORM** : aligné sur la version embarquée par Loco.
+- **Node** : 24 (`.nvmrc` dans `frontend/`). **pnpm** : via corepack, **épinglé `pnpm@9.15.9`**
+  dans `packageManager` du `package.json` (corepack sinon tire pnpm 11 dont la politique
+  `minimumReleaseAge` rejette le lockfile — cf. QUIRKS).
+- **shadcn/ui** : thème stone oklch via `--preset bJfDPe2y` ; initialisé avec
+  `npm_config_ignore_workspace_root_check=true` (le template Vite pose un `pnpm-workspace.yaml` — cf. QUIRKS).
+- **Vitest** : jsdom, globals ; **Playwright** : e2e navigateur réel.
 
 ## 3. Commandes
 
 ```bash
 # Backend
-cargo loco start                 # lancer l'app
+cargo loco start                 # lancer l'app (depuis backend/)
 cargo loco db migrate            # migrations
 cargo nextest run                # tests backend (unit + intégration)
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all
 
 # Frontend (dans frontend/)
-trunk serve                      # dev server SPA
-trunk build --release            # build wasm de prod (sert d'input au Docker)
-wasm-pack test --headless --firefox   # ou cargo test --target wasm32 selon setup
+pnpm dev                         # dev server React/Vite (HMR)
+pnpm build                       # bundle de prod → dist/ (input Docker)
+pnpm test                        # Vitest (unit + composants + MSW)
+pnpm lint                        # ESLint
+pnpm typecheck                   # tsc --noEmit
 
 # E2E
-npx playwright test              # contre la stack montée (SPA buildée + Loco + DB de test)
+pnpm exec playwright test        # depuis frontend/ — contre la stack montée
+# (ou: npx playwright test si pas de pnpm context)
 
 # Supply-chain
 cargo deny check                 # licences + advisories
@@ -79,27 +88,25 @@ Couvert en couches. Chaque couche est un critère de sortie de phase (ROADMAP).
   aucun PIN n'apparaît dans une liste (casse le build si violé — contrat §9).
 - **MCP** : gate `deploy_token` testé sur *tous* les tools (lecture comprise) ;
   `deploy_prototype` crée bien une version.
-- **Frontend Yew** : `wasm-bindgen-test` en headless, **à dose mesurée** (sur 3-4
-  écrans, l'e2e porte la confiance réelle, pas le test unitaire de composant).
+- **Frontend React** : **Vitest** + Testing Library (jsdom) + **MSW** (mock des routes API).
+  Tests au niveau composant (renderWithProviders/renderWithRouter). À dose mesurée :
+  l'e2e porte la confiance réelle sur les flux complets.
 - **E2E Playwright** : navigateur réel contre la stack montée — login, création de
   projet, deploy, bascule de version, `/c/<slug>` qui sert l'active, projet protégé
   qui affiche la page de déverrouillage + flux unlock, logout.
 
-> Honnêteté : Playwright tire un toolchain **Node en CI/dev**. Le « pas de Node »
-> qu'on s'offre vaut pour le **runtime**, pas pour l'outillage de test.
+> Node est requis pour le **frontend et les tests** (Vite, pnpm, Vitest, Playwright).
+> Le « pas de Node » ne vaut que pour le **runtime** de l'image (distroless).
 
 ## 6. CI — GitHub Actions
 
 Jobs (séparés, cache agressif pour rester rapide : cache cargo `target` + registry,
-cache wasm/trunk) :
+cache pnpm/node_modules) :
 
-1. `fmt` + `clippy` (warnings = erreurs).
-2. Tests backend (`cargo nextest`).
-3. `trunk build` + `wasm-bindgen-test`.
-4. E2E Playwright sur la stack montée.
-5. `cargo deny` / `cargo audit` (licences + advisories — c'est ce qui aurait levé le
-   CVE rmcp).
-6. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
+1. **Backend** : `fmt` + `clippy` (warnings = erreurs) + `cargo nextest` + `cargo deny`/`audit`.
+2. **Frontend** : `pnpm install` + `pnpm lint` + `pnpm typecheck` + `pnpm test`.
+3. **E2E** : Playwright sur la stack montée (dépend de #1 + #2).
+4. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
    **public** du repo (`ghcr.io/owlnext-fr/latch`). Tags dérivés par
    `docker/metadata-action` (modèle *release-driven*) :
    - tag git `vX.Y.Z` → `X.Y.Z`, `X.Y`, `latest`, `sha-xxxxxxx` ;
@@ -113,9 +120,9 @@ Badge CI dans le README, dual-license, CHANGELOG en commits conventionnels.
 ## 7. Docker
 
 - **Dockerfile multi-stage** :
-  1. étape **Trunk/wasm** : build de la SPA Yew (`trunk build --release`).
+  1. étape **Node 24** (`node:24-bookworm-slim`) : `pnpm install` + `pnpm build` → `frontend/dist/`.
   2. étape **build Rust** : compile le backend (statique, SQLite `bundled`).
-  3. **runtime minimal** (distroless ou alpine) : binaire + assets SPA, rien d'autre.
+  3. **runtime minimal** (distroless ou alpine) : binaire + assets SPA (`frontend/dist/`), rien d'autre.
 - **Entrypoint** : `migrate` **puis** `start` (premier boot sur volume vierge = pas
   de schéma sinon).
 - **Volume `data/`** : le `.sqlite` **et** les fichiers HTML des versions ensemble.

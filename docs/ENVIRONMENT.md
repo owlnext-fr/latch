@@ -11,19 +11,25 @@
 - `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client.
 - `SESSION_SECRET` — clé HMAC de signature du cookie de session admin (≥ 64 bytes). En dev : clé de secours déterministe (voir `web/mod.rs`). **Obligatoire en prod.**
 - `LATCH_STORAGE_ROOT` — racine du volume HTML des versions. Défaut : `data`. En prod : `/data` (volume Docker). Utilisé par `storage_from_ctx`.
-- `LATCH_SPA_DIST` — racine des assets buildés de la SPA (Trunk `dist/`). Défaut dev (CWD `backend/`) : `../frontend/dist`. Prod (image) : `/app/frontend/dist` (posé par le Dockerfile). Lu par `web::spa_dist_dir()`.
+- `LATCH_SPA_DIST` — racine des assets buildés de la SPA React (Vite `dist/`). Défaut dev (CWD `backend/`) : `../frontend/dist`. Prod (image) : `/app/frontend/dist` (posé par le Dockerfile). Lu par `web::spa_dist_dir()`.
 - `DATABASE_URL` — URI SQLite. Dev (défaut) : `sqlite://latch_development.sqlite?mode=rwc`.
   Prod (image) : `sqlite:///data/latch.sqlite?mode=rwc` (volume monté). Modèle : `.env.example`.
 - `PORT` — port d'écoute backend (défaut `5150`).
 
 ## Repo & exécution (cette instance)
 - **Path repo** : `/srv/owlnext/latch` · **branche par défaut** : `main` (commits directs / branches courtes).
-- **Toolchain** : Rust 1.96, `wasm32-unknown-unknown`, Trunk 0.21, Docker 29, Node 24,
+- **Toolchain backend** : Rust 1.96, Docker 29,
   **`sea-orm-cli`** (≈ 1.1.x, aligné sur `sea-orm`) — requis par `cargo loco db entities`
   (`cargo install sea-orm-cli`), cf. QUIRKS.
+- **Toolchain frontend** : Node 24 (`.nvmrc` dans `frontend/`), **pnpm** via corepack (épinglé
+  `pnpm@9.15.9` dans `packageManager`), Playwright (installé dans `frontend/node_modules`).
 - **Lancer le serveur** : `cd backend && cargo loco start` (Loco lit `./config` depuis le
   CWD → impératif depuis `backend/`, cf. QUIRKS). `fmt`/`clippy`/`test` : depuis la racine.
-- **Build image locale** : `docker build -t ghcr.io/owlnext-fr/latch:dev .` (multi-stage).
+- **Frontend dev** : `cd frontend && pnpm dev` (Vite HMR, port 5173 par défaut).
+- **Frontend build** : `cd frontend && pnpm build` (bundle → `frontend/dist/`).
+- **Tests frontend** : `cd frontend && pnpm test` (Vitest) ; `pnpm exec playwright test` (e2e).
+- **Build image locale** : `docker build -t ghcr.io/owlnext-fr/latch:dev .` (multi-stage Node + Rust + runtime).
+- **DB e2e** : `LATCH_E2E_DB=/tmp/latch-e2e.sqlite` (SQLite de test pour Playwright, séparée de la dev).
 
 ## Serving
 - Domaine : `latch.owlnext.fr` (Caddy en façade, TLS + reverse proxy).

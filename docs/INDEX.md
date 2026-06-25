@@ -37,7 +37,11 @@
 - [x] API JSON re-préfixée sous `/api/*` (depuis `/admin/*`) + conversions libres `dto::to_list_item`/`to_detail` — Phase 3 — 2026-06-24
 - [x] `web::spa_dist_dir()` + `nest_service("/admin", ServeDir + ServeFile fallback)` dans `after_routes` — serving SPA Yew sous `/admin` avec fallback `index.html` — Phase 3 — 2026-06-24
 
-## Frontend (SPA Yew)
+## Frontend (SPA Yew) — **SUPERSEDED** (migré vers React, Plans 1-3, 2026-06-25)
+
+> La crate Yew (`latch-ui`) est retirée du workspace. Les livrables ci-dessous restent dans
+> l'historique git (branche pré-migration). Le comportement UI (contrat §7) est repris par la SPA React.
+
 - [x] Crate `latch-ui` (Yew 0.21 CSR) buildée par Trunk → bundle wasm `dist/` — Phase 0 — 2026-06-24
 - [x] Router Yew (yew-router 0.18, BrowserRouter basename="/admin", routes absolues `#[at("/admin/...")]`) + scaffold SPA (AuthProvider, Protected, pages Login/List/Detail) — Phase 3 — 2026-06-24
 - [x] Utilitaires SPA : `pin::generate()`, `url::public_url(slug)` (window.location.origin), `clipboard::copy_to_clipboard(text)` — Phase 3 — 2026-06-24
@@ -63,7 +67,9 @@
 - [x] Toasts câblés sur tous les retours d'action (création/édition/déploiement/activation/suppression/copie) + erreurs — Polish UX — 2026-06-25
 - [x] i18n complet + intros de page + accessibilité (`<a onclick>` → `<button class="linkish">`, breadcrumb `<button>`) sur Login/List/Detail/panels — Polish UX — 2026-06-25
 
-## Frontend React (Migration Plan 2 — feat/admin-react)
+## Frontend React (SPA — feat/admin-react, Plans 1-3)
+
+### Plan 2 — Scaffold, composants, shell, liste
 - [x] Harness Vitest (jsdom, globals) + MSW (`src/test/msw.ts` : `server` + `jsonOnce`) + `vitest.setup.ts` — Plan 2 T4 — 2026-06-25
 - [x] Helper `src/test/utils.tsx` : `renderWithProviders` (I18nextProvider + QueryClientProvider retry:false) — Plan 2 T4 — 2026-06-25
 - [x] `CopyButton` React : `navigator.clipboard.writeText` + `toast.success(t('toast.copied'))`, bouton-icône `Copy` lucide + aria-label — Plan 2 T4 — 2026-06-25
@@ -75,10 +81,21 @@
 - [x] `routes/list.tsx` : Table shadcn (nom bouton, URL+CopyButton, badge accès coloré, version active), état vide, ProjectForm stub — Plan 2 T6 — 2026-06-25
 - [x] `routes/list.test.tsx` : 6 tests MSW (hooks réels, PIN jamais rendu §9.2) — Plan 2 T6 — 2026-06-25
 - [x] `components/ui/{table,badge}.tsx` ajoutés (shadcn@latest) — Plan 2 T6 — 2026-06-25
+- [x] `routes/login.tsx` + `routes/detail.tsx` : login formulaire, page détail (accès, versions, actions) — Plan 2 — 2026-06-25
+- [x] `components/project-form.tsx` : side-panel Sheet créer/éditer (RHF+zod, PinField, Toggle accès) — Plan 2 — 2026-06-25
+- [x] `components/deploy-panel.tsx` : side-panel Sheet deploy (upload HTML, case activer, dropzone) — Plan 2 — 2026-06-25
+- [x] Side-panels danger : `DeleteProjectPanel` / `DeleteVersionPanel` (Sheet danger, confirmation) — Plan 2 — 2026-06-25
+- [x] `frontend/src/api/schema.d.ts` généré par openapi-typescript depuis `openapi.json` — Plan 2 T1 — 2026-06-25
+- [x] `frontend/src/api/client.ts` : client openapi-fetch typé, `credentials: 'include'`, wrapper MSW — Plan 2 T1 — 2026-06-25
+
+### Plan 3 — Infra, CI, e2e
+- [x] Stage Docker Node 24 (`node:24-bookworm-slim`) : `pnpm install` + `pnpm build` en multi-stage — Plan 3 — 2026-06-25
+- [x] CI pistes parallèles back/front → e2e → docker (GitHub Actions) — Plan 3 — 2026-06-25
+- [x] Playwright e2e : login, liste, création projet, deploy, détail, activation version, logout — Plan 3 — 2026-06-25
 
 ## Infra (CI / Docker / déploiement)
-- [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24
-- [x] CI GitHub Actions **verte sur main** (fmt/clippy, tests, build SPA, cargo-deny bloquant, docker GHCR) — Phase 0 — 2026-06-24
+- [x] Dockerfile multi-stage (Node 24 pnpm build → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
+- [x] CI GitHub Actions **verte sur main** (back: fmt/clippy/nextest/cargo-deny ; front: lint/typecheck/vitest ; e2e Playwright ; docker GHCR) — Phase 0 + Plan 3 — 2026-06-24/2026-06-25
 - [x] Images GHCR versionnées (`metadata-action` : semver+latest+sha) + pin déploiement (`LATCH_IMAGE_TAG`) — Phase 0 — 2026-06-24
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24
 
@@ -86,7 +103,7 @@
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
 - [x] Phase 2 — adaptateur web admin — 2026-06-24
-- [x] Phase 3 — SPA Yew admin — 2026-06-24
+- [x] Phase 3 — SPA admin (Yew, puis migrée React — Plans 1-3) — 2026-06-24/2026-06-25
 - [ ] Phase 4 — serving `/c/<slug>`
 - [ ] Phase 5 — endpoint MCP
 - [ ] Phase 6 — e2e, durcissement, packaging

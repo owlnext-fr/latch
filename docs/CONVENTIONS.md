@@ -243,6 +243,143 @@ async fn login_then_access_protected_route() {
 _(à remplir : un tool qui valide `deploy_token` en premier, puis appelle le service,
 puis mappe l'erreur en tool error.)_
 
+## Composants React (shadcn/ui) — patterns courants
+
+### Hook TanStack Query par endpoint (`use-projects.ts`)
+
+Un fichier de hooks par domaine (`hooks/use-projects.ts`). Chaque mutation invalide le cache
+et affiche un toast sonner. Pattern :
+
+```ts
+// frontend/src/hooks/use-projects.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { client } from '@/api/client'
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data, error } = await client.GET('/api/projects')
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: CreateProjectReq) => {
+      const { data, error } = await client.POST('/api/projects', { body })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      toast.success(t('toast.project_created'))
+    },
+    onError: () => toast.error(t('toast.error_generic')),
+  })
+}
+```
+
+**Règles :**
+- Un hook par endpoint, pas de client générique magic.
+- `invalidateQueries` après toute mutation (liste + détail si besoin).
+- Toast sonner dans `onSuccess` / `onError` (pas dans le composant).
+- Le client `openapi-fetch` est typé depuis `schema.d.ts` → pas de cast `as`.
+
+### Side-panel via Radix `<Sheet>`
+
+```tsx
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+
+<Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+  <SheetContent>
+    <SheetHeader><SheetTitle>{t('form.title_create')}</SheetTitle></SheetHeader>
+    {/* formulaire */}
+  </SheetContent>
+</Sheet>
+```
+
+**Règles :**
+- `onOpenChange={(v) => !v && onClose()}` : fermer sur Escape ou clic scrim.
+- Confirmations destructives = `<Sheet>` avec variante danger (classe `destructive`).
+
+### Formulaire react-hook-form + zod
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const schema = z.object({ name: z.string().min(1), pin: z.string().length(6) })
+type FormValues = z.infer<typeof schema>
+
+function ProjectForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+  })
+  // ...
+}
+```
+
+**Règles :**
+- Un schéma zod par formulaire ; les erreurs sont typées.
+- `register` + `errors` pour chaque champ ; pas de state local pour les valeurs.
+
+### Client `openapi-fetch` typé
+
+```ts
+// frontend/src/api/client.ts
+import createClient from 'openapi-fetch'
+import type { paths } from './schema.d.ts'
+
+export const client = createClient<paths>({
+  fetch: (input) => globalThis.fetch(input),  // LOAD-BEARING pour MSW — cf. QUIRKS
+  credentials: 'include',
+})
+```
+
+**Règles :**
+- `fetch: (input) => globalThis.fetch(input)` obligatoire pour que MSW intercepte en test.
+- `credentials: 'include'` pour le cookie de session admin.
+- Typage complet : `client.GET('/api/projects')` → `{ data, error }` typés depuis `schema.d.ts`.
+
+### Tests MSW avec `renderWithProviders` / `renderWithRouter`
+
+```tsx
+// frontend/src/test/utils.tsx
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '../i18n'
+
+export function renderWithProviders(ui: React.ReactElement) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+    </I18nextProvider>
+  )
+}
+```
+
+**Règles :**
+- `retry: false` dans le QueryClient de test (évite les retries qui font timeout).
+- MSW server : `beforeAll(server.listen)`, `afterEach(server.resetHandlers)`, `afterAll(server.close)`.
+- `server.use(jsonOnce('GET', '/api/projects', 200, body))` pour surcharger par test.
+- Tester l'invariant §9.2 dans chaque test de liste : `expect(screen.queryByText('1234')).not.toBeInTheDocument()`.
+
+---
+
+## Historique Yew — obsolète depuis migration React (2026-06-25)
+
+> Ces conventions concernaient la crate Yew (`latch-ui`, `shadcn-rs`, Trunk, wasm32) retirée du
+> workspace lors de la migration React (Plans 1-3, feat/admin-react). Conservées pour référence
+> en cas de consultation de l'historique git.
+
 ## Composant Yew (shadcn-rs) type
 
 Une **page** charge ses données via `use_state` + `use_effect_with((), ...)` (spawn_local + client API), gère trois états (`Loading` / `Ready(data)` / `Failed(msg)`), et bascule l'auth sur `ApiError::Unauthorized`.

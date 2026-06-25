@@ -67,25 +67,53 @@ En v1, le slug est en lecture seule (base lisible auto-générée + suffixe fixe
 ## Override `PUBLIC_BASE_URL` (Phase 3 – 2026-06-24)
 En v1, la SPA construit l'URL publique via `window.location.origin` (admin et serving `/c` sur la même origine). Si l'admin et le serving `/c/<slug>` étaient un jour sur des hosts distincts (ex. CDN ou sous-domaine dédié), il faudrait un `PUBLIC_BASE_URL` injecté au build ou à l'exécution. Non nécessaire aujourd'hui : même binaire, même origin.
 
-## Couche de toast globale SPA (Phase 3 – 2026-06-24)
-`shadcn-rs` expose `Toast`/`Sonner` en déclaratif, mais `duration` (auto-dismiss) n'est pas implémenté en 0.1. En v1 : feedback inline dans les formulaires + confirmation « Copié ! » éphémère via `CopyButton`. Amélioration future : intégrer un vrai provider de toasts (ou attendre que shadcn-rs l'implémente) pour les feedbacks transients (succès de déploiement, erreurs réseau, etc.).
+## Couche de toast globale SPA ~~(Phase 3 – 2026-06-24)~~ — **Résolu par React (sonner)**
+~~shadcn-rs~~ La migration React a adopté **sonner** comme provider de toasts (auto-dismiss,
+programmatique). Toutes les mutations TanStack Query déclenchent `toast.success` / `toast.error`
+dans `onSuccess` / `onError`. Ce backlog est **clos**.
 
-## Remontée d'erreur sur `activate_version` (Phase 3 – 2026-06-24)
-La SPA page détail (`pages/detail.rs`) active une version via `POST /api/projects/{id}/versions/{n}/activate` puis recharge la page (reload implicite). Si l'activation échoue (erreur serveur), l'erreur est actuellement silencieuse — le rechargement donne un feedback implicite. Amélioration : afficher l'erreur retournée par l'API avant le reload.
+## Remontée d'erreur sur `activate_version` ~~(Phase 3 – Yew)~~ — **Résolu par React**
+La SPA React affiche les erreurs via `onError` du hook `useActivateVersion` (toast sonner).
+Ce backlog est **clos**.
 
-## Polish UI login.rs — effacer l'erreur au re-submit (Phase 3 – 2026-06-24)
-Dans `pages/login.rs`, si l'utilisateur soumet le formulaire une seconde fois après une erreur, l'ancienne erreur reste affichée pendant la requête en cours. À corriger : `error.set(None)` avant `busy.set(true)` dans le handler `onsubmit`, pour effacer le message d'erreur précédent dès le nouveau submit.
+## Polish UI login.rs / `activate_version` / dropzone flicker ~~(Yew punchlist)~~ — **Clos (Yew retiré)**
+Ces items concernaient la SPA Yew (`pages/login.rs`, `activate_version`, `ondragleave`).
+Avec la migration React, la SPA est réécrite — ces bugs Yew ne se posent plus. **Clos.**
 
-## Chantier polish produit + i18n avant distribution (Phase 3 – 2026-06-24, test live)
-Retours du test manuel (Playwright) avec l'humain. **Détail complet + patchs UX prioritaires : `docs/superpowers/specs/2026-06-24-phase-3-punchlist-ux.md`.** Items « plus gros » (après les patchs UX immédiats) :
-- **Passer toute l'UI en anglais (EN)** — actuellement en français (labels, boutons, messages, explications). Petite couche i18n ou chaînes centralisées.
-- **Explications sur les champs de formulaire** (helper text sous chaque champ) et **sur les pages** (intro/contexte par écran) pour utilisateur non-technique.
-- **Dropzone** pour l'upload HTML (remplacer l'`<input type=file>` brut).
-- **Snackbars/toasts** pour tous les retours d'action (recoupe « couche de toast globale » ci-dessus).
-- **Revue UX d'ensemble pour distribution** : états de chargement, messages d'erreur, accessibilité (`<a>`-sans-href → `<button>`, focus, labels), cohérence.
-- **Self-review produit** (pas seulement code) après les patchs.
+## Chantier polish produit + i18n avant distribution — partiellement résolu par React
+- ~~Passer l'UI en EN~~ → **Résolu** : react-i18next FR/EN, défaut EN.
+- ~~Explications sur les champs~~ → **Résolu** : helper text dans `ProjectForm` React.
+- ~~Dropzone~~ → **Résolu** : dropzone dans `DeployPanel` React.
+- ~~Toasts~~ → **Résolu** : sonner sur toutes les mutations.
+- **Restant** : revue UX d'ensemble pour distribution (accessibilité clavier, états de chargement
+  sur l'activation, cohérence sur mobiles).
 
-## Dropzone `ondragleave` flicker sur les éléments enfants (Task 8) — fix possible via `pointer-events:none` sur le contenu interne ou check `relatedTarget`. Cosmétique.
+## Enrichir `ProjectListItem` : `active_version_n` + `version_count` (Plan 2 review – 2026-06-25)
+La liste projets affiche « Deployed » / tiret au lieu du numéro de version réel. Le DTO
+`ProjectListItem` ne porte pas `active_version_n` (numéro de la version active) ni `version_count`
+(nombre total de versions). L'affichage actuel repose sur la présence/absence de `active_version_id`.
+**À ajouter** : deux champs dans le DTO backend (`dto::to_list_item`) + migration/query JOIN, puis
+les colonnes correspondantes dans `routes/list.tsx`. Non-breaking sur l'API (ajout de champs).
+
+## Bouton « Activer » : état pending (Plan 2 review – 2026-06-25)
+Le bouton « Activer » dans la liste des versions (page détail) ne désactive pas immédiatement
+pendant la mutation `useActivateVersion`. L'utilisateur peut cliquer plusieurs fois. À corriger :
+passer l'`isPending` du hook en `disabled` sur le bouton. Simple, faible risque.
+
+## Code-splitting — bundle frontend 604 kB (Plan 2 review – 2026-06-25)
+Le bundle Vite de production est ~604 kB (non gzippé). Le routing TanStack Router permet
+du lazy-loading par route (`lazy(() => import('./routes/detail'))`). À évaluer après stabilisation
+des routes : le découpage par route (list / detail / login) réduirait le First Load JS.
+
+## Reusable workflows CI (Plan 3 review – 2026-06-25)
+Les jobs GitHub Actions back/front/e2e sont définis inline dans `ci.yml`. Refactorer en
+`workflow_call` réutilisables dans `.github/workflows/` améliorerait la lisibilité et
+permettrait de les déclencher séparément. Non-bloquant pour la v1.
+
+## `deny.toml` — transitives de `utoipa-swagger-ui 9` (Zlib) (revue finale Plan 1 – 2026-06-25)
+`rust-embed`, `zip`, `zlib-rs` (licence **Zlib**), `zopfli`, `arbitrary` sont entrées au
+lockfile avec `utoipa-swagger-ui 9`. L'allowlist stricte de `deny.toml` peut rejeter `Zlib`
+au prochain `cargo deny check licenses`. À compléter lors de la remise au vert supply-chain.
 
 ## Cookie `SecurityScheme` dans l'OpenAPI (revue finale Plan 1 – 2026-06-25)
 L'admin est protégé par cookie de session same-origin mais `ApiDoc` ne déclare pas de
@@ -94,9 +122,3 @@ L'admin est protégé par cookie de session same-origin mais `ApiDoc` ne déclar
 À ajouter via un `Modify`/`modifiers` utoipa (scheme `apiKey` cookie nommé `latch_admin`).
 Non bloquant.
 
-## `deny.toml` — transitives de `utoipa-swagger-ui 9` (revue finale Plan 1 – 2026-06-25)
-`rust-embed`, `zip`, `zlib-rs` (licence **Zlib**), `zopfli`, `arbitrary` sont entrées au
-lockfile avec l'ajout de `utoipa-swagger-ui 9`. L'allowlist stricte de `deny.toml` peut
-rejeter `Zlib` au prochain `cargo deny check licenses` (cf. QUIRKS « cargo-deny = liste
-blanche stricte »). À vérifier/compléter lors de la remise au vert de la supply-chain
-(Plan 3). Non bloquant (CI déjà rouge par design sur cette branche).
