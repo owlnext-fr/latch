@@ -86,10 +86,10 @@ pub(crate) async fn serve(
     // Projet protégé sans cookie valide → page de déverrouillage (avant de lire le HTML).
     if project.code_enabled {
         let pin = project.pin.clone().unwrap_or_default();
-        let key = crate::web::unlock_key()?;
+        let key = crate::web::unlock_key(&ctx)?;
         let jar = SignedCookieJar::from_headers(&headers, key);
         let now = chrono::Utc::now().timestamp();
-        let secret = crate::web::unlock_secret()?;
+        let secret = crate::web::unlock_secret(&ctx)?;
         let ok = match jar.get(UNLOCK_COOKIE_NAME) {
             Some(c) => verify_token(secret.as_bytes(), &slug, &pin, c.value(), now),
             None => false,
@@ -142,7 +142,7 @@ pub(crate) async fn unlock(
     }
 
     // PIN correct (ou projet libre) → poser le cookie signé liant le PIN courant.
-    let secret = crate::web::unlock_secret()?;
+    let secret = crate::web::unlock_secret(&ctx)?;
     let ttl = unlock_ttl_days();
     let exp = chrono::Utc::now().timestamp() + ttl * 86_400;
     let token = issue_token(secret.as_bytes(), &slug, &body.pin, exp);
@@ -155,7 +155,7 @@ pub(crate) async fn unlock(
         .max_age(time::Duration::days(ttl))
         .build();
 
-    let key = crate::web::unlock_key()?;
+    let key = crate::web::unlock_key(&ctx)?;
     let jar = SignedCookieJar::from_headers(&headers, key).add(cookie);
     Ok((jar, StatusCode::NO_CONTENT).into_response())
 }

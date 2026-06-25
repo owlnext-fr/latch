@@ -33,27 +33,31 @@ pub fn unlock_index() -> PathBuf {
     spa_dist_dir().join("unlock.html")
 }
 
-/// Secret HMAC du cookie de déverrouillage client. Doit faire ≥ 64 bytes
-/// (exigence de `cookie::Key`). En dev, clé de secours déterministe (insécurisée).
-/// En prod, `UNLOCK_COOKIE_SECRET` doit être défini avec ≥ 64 bytes d'entropie.
-pub fn unlock_secret() -> Result<String> {
-    let secret = std::env::var("UNLOCK_COOKIE_SECRET").unwrap_or_else(|_| {
-        "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!".to_string()
-    });
+/// Résout un secret de cookie. Fail-secure : hors Development/Test, l'env var
+/// est OBLIGATOIRE (pas de fallback). Le fallback de dev n'est toléré qu'en
+/// Development/Test. Erreur si trop court (< 64 octets, exigence de `cookie::Key`).
+fn resolve_cookie_secret(
+    env_value: Option<String>,
+    is_prod: bool,
+    dev_fallback: &str,
+    label: &str,
+) -> Result<String> {
+    let secret = match env_value {
+        Some(s) => s,
+        None if is_prod => {
+            return Err(loco_rs::Error::Message(format!(
+                "{label} doit être défini en production (≥ 64 octets aléatoires)"
+            )))
+        }
+        None => dev_fallback.to_string(),
+    };
     if secret.len() < 64 {
         return Err(loco_rs::Error::Message(format!(
-            "UNLOCK_COOKIE_SECRET trop court : {} octets (minimum 64)",
+            "{label} trop court : {} octets (minimum 64)",
             secret.len()
         )));
     }
     Ok(secret)
-}
-
-/// `Key` du `SignedCookieJar` (signature anti-falsification du cookie unlock).
-pub fn unlock_key() -> Result<axum_extra::extract::cookie::Key> {
-    Ok(axum_extra::extract::cookie::Key::from(
-        unlock_secret()?.as_bytes(),
-    ))
 }
 
 /// `true` si l'on doit poser `Secure` sur le cookie (fail-secure : tout env hors
@@ -65,13 +69,34 @@ pub fn cookie_secure(ctx: &AppContext) -> bool {
     )
 }
 
+/// Secret HMAC du cookie de déverrouillage client. Doit faire ≥ 64 bytes
+/// (exigence de `cookie::Key`). En dev/test, clé de secours déterministe (insécurisée).
+/// En prod, `UNLOCK_COOKIE_SECRET` doit être défini avec ≥ 64 bytes d'entropie.
+/// Fail-secure : refuse de démarrer en prod sans secret explicite.
+pub fn unlock_secret(ctx: &AppContext) -> Result<String> {
+    resolve_cookie_secret(
+        std::env::var("UNLOCK_COOKIE_SECRET").ok(),
+        cookie_secure(ctx),
+        "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!",
+        "UNLOCK_COOKIE_SECRET",
+    )
+}
+
+/// `Key` du `SignedCookieJar` (signature anti-falsification du cookie unlock).
+pub fn unlock_key(ctx: &AppContext) -> Result<axum_extra::extract::cookie::Key> {
+    Ok(axum_extra::extract::cookie::Key::from(
+        unlock_secret(ctx)?.as_bytes(),
+    ))
+}
+
 /// Construit le `SessionStore` : pool SQLite dérivé de la connexion Loco, table
 /// `sessions` (déjà migrée), cookie signé + flags adaptés à l'environnement.
 ///
 /// En production, la variable `SESSION_SECRET` doit être définie (≥ 64 bytes).
-/// En dev, une clé de secours déterministe est utilisée (insécurisée, suffisante pour
+/// En dev/test, une clé de secours déterministe est utilisée (insécurisée, suffisante pour
 /// le développement local uniquement). Un `SESSION_SECRET` trop court retourne une
 /// erreur claire au lieu de paniquer.
+/// Fail-secure : refuse de démarrer en prod sans secret explicite.
 pub async fn build_session_store(
     ctx: &AppContext,
 ) -> Result<axum_session::SessionStore<SessionPool>> {
@@ -87,19 +112,13 @@ pub async fn build_session_store(
         loco_rs::environment::Environment::Development | loco_rs::environment::Environment::Test
     );
 
-    let secret = std::env::var("SESSION_SECRET").unwrap_or_else(|_| {
-        // En dev uniquement : clé déterministe de secours (64 bytes, non-aléatoire).
-        // En prod, SESSION_SECRET doit être défini avec ≥ 64 bytes d'entropie.
-        "dev-only-insecure-session-secret-please-override-in-production!!".to_string()
-    });
-    // Garde explicite : `Key::from` exige ≥ 64 bytes et panique sinon.
-    // On renvoie une erreur claire plutôt qu'un panic au démarrage.
-    if secret.len() < 64 {
-        return Err(loco_rs::Error::Message(format!(
-            "SESSION_SECRET trop court : {} octets (minimum 64)",
-            secret.len()
-        )));
-    }
+    let secret = resolve_cookie_secret(
+        std::env::var("SESSION_SECRET").ok(),
+        is_prod,
+        "dev-only-insecure-session-secret-please-override-in-production!!",
+        "SESSION_SECRET",
+    )?;
+
     let key = axum_session::Key::from(secret.as_bytes());
 
     let config = axum_session::SessionConfig::default()
@@ -117,4 +136,84 @@ pub async fn build_session_store(
         .await
         .map_err(|e| loco_rs::Error::Message(format!("session store init: {e}")))?;
     Ok(store)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_cookie_secret;
+
+    const DEV_FALLBACK: &str =
+        "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!";
+    const LABEL: &str = "UNLOCK_COOKIE_SECRET";
+
+    /// Une valeur exactement 64 octets ASCII.
+    fn secret_64() -> String {
+        "a".repeat(64)
+    }
+
+    /// Une valeur trop courte (< 64 octets).
+    fn secret_short() -> String {
+        "toocourt".to_string()
+    }
+
+    // --- prod (is_prod = true) ---
+
+    #[test]
+    fn prod_no_env_var_returns_err() {
+        let result = resolve_cookie_secret(None, true, DEV_FALLBACK, LABEL);
+        assert!(
+            result.is_err(),
+            "prod sans env var doit retourner une erreur"
+        );
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains(LABEL),
+            "le message d'erreur doit mentionner la variable : {msg}"
+        );
+    }
+
+    #[test]
+    fn prod_valid_env_var_returns_ok() {
+        let val = secret_64();
+        let result = resolve_cookie_secret(Some(val.clone()), true, DEV_FALLBACK, LABEL);
+        assert!(result.is_ok(), "prod avec secret valide doit réussir");
+        assert_eq!(result.unwrap(), val);
+    }
+
+    #[test]
+    fn prod_short_env_var_returns_err() {
+        let result = resolve_cookie_secret(Some(secret_short()), true, DEV_FALLBACK, LABEL);
+        assert!(
+            result.is_err(),
+            "prod avec secret trop court doit retourner une erreur"
+        );
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("trop court"),
+            "message d'erreur doit mentionner 'trop court' : {msg}"
+        );
+    }
+
+    // --- dev (is_prod = false) ---
+
+    #[test]
+    fn dev_no_env_var_uses_fallback() {
+        let result = resolve_cookie_secret(None, false, DEV_FALLBACK, LABEL);
+        assert!(result.is_ok(), "dev sans env var doit utiliser le fallback");
+        assert_eq!(result.unwrap(), DEV_FALLBACK);
+    }
+
+    #[test]
+    fn dev_short_env_var_returns_err() {
+        let result = resolve_cookie_secret(Some(secret_short()), false, DEV_FALLBACK, LABEL);
+        assert!(
+            result.is_err(),
+            "dev avec secret explicite trop court doit retourner une erreur"
+        );
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("trop court"),
+            "message d'erreur doit mentionner 'trop court' : {msg}"
+        );
+    }
 }

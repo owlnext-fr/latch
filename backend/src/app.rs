@@ -65,7 +65,7 @@ impl Hooks for App {
         let store = crate::web::build_session_store(ctx).await?;
         // Fail-fast : un UNLOCK_COOKIE_SECRET trop court en prod doit casser le boot,
         // pas produire un 500 à la première requête /c protégée.
-        crate::web::unlock_secret()?;
+        crate::web::unlock_secret(ctx)?;
         let router = router.layer(axum_session::SessionLayer::new(store));
 
         // SPA servie sous /admin : assets si le fichier existe, sinon index.html
