@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
+import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import i18n from '@/i18n'
 import { router } from '@/router'
@@ -18,11 +19,19 @@ setUnauthorizedHandler(() => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <I18nextProvider i18n={i18n}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster richColors position="top-right" />
-      </QueryClientProvider>
-    </I18nextProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="latch.theme"
+      disableTransitionOnChange
+    >
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+          <Toaster richColors position="top-right" />
+        </QueryClientProvider>
+      </I18nextProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
