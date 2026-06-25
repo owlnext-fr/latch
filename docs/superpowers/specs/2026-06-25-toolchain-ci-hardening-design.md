@@ -94,20 +94,39 @@ sonar.exclusions=frontend/src/api/schema.d.ts,**/*.config.ts
 ## §2 — « Bloquant dès le départ » → résorption du backlog
 
 Le mode *new-code-only* a été **explicitement refusé** : le gate doit être vert **sur
-l'existant**. Conséquence assumée : **une passe de remédiation du frontend fait partie de ce
-chantier**.
+l'existant**. Conséquence assumée : **une passe de remédiation fait partie de ce chantier**.
 
-Déroulé :
+### Backlog réel (mesuré — pré-scan CLI du 2026-06-25, commit `2b039e2`)
 
-1. **Premier scan sur une branche** (pas `main`) → récupérer la liste réelle des *issues*.
-2. **Triage** de chaque issue : corriger / marquer *false-positive* ou *won't-fix* dans Sonar /
-   accepter via exclusion ciblée et justifiée.
+Santé globale **saine** : 2719 ncloc, **0 bug**, **0 security hotspot**, fiabilité **A**,
+maintenabilité **A** (dette ~3 h). Le Quality Gate échoue sur **une seule** condition :
+`new_security_rating = C` (porté par les 22 « vulnerabilities », qui sont du durcissement
+CI/Docker). **64 issues, ~6 patterns mécaniques :**
+
+| Nb | Règle | Type | Fichiers | Traitement |
+|---|---|---|---|---|
+| 15 | githubactions:S7637 — pin actions à un SHA | Vuln | `.github/workflows/ci.yml` | **fold dans la réécriture CI** |
+| 21 | typescript:S3735 — `void` interdit | Smell | `use-projects.ts` (15) + composants | retirer `void`, mécanique |
+| 8 | typescript:S6759 — props React `readonly` | Smell | composants | `Readonly<Props>` |
+| 5 | S6505 (githubactions ×4 / docker ×1) — pas de scripts à l'install | Vuln | `ci.yml`, `Dockerfile` | `--ignore-scripts` |
+| 4 | typescript:S7764 — `globalThis` vs `window` | Smell | front | mécanique |
+| 4 | typescript:S3358 — ternaires imbriqués | Smell | front | dé-imbriquer |
+| 1 | docker:S8549 — deps Rust `--locked` | Vuln | `Dockerfile` | **fold** (cargo-chef `--locked`) |
+| 1 | docker:S6471 — conteneur non-root | Vuln | `Dockerfile` | **triage** : fix (distroless `:nonroot`) ou *won't-fix* justifié (item BACKLOG assumé) |
+| 1 | docker:S6596 — tag d'image figé | Smell | `Dockerfile` | **fold** (pin `rust:1.x`) |
+| 4 | divers (S1874, S7735, S5906, S6819) | Smell | front | singletons |
+
+**Conclusion : la résorption tient dans CE chantier, pas de plan séparé.** ~19 des 22
+vulnérabilités sont des modifs `ci.yml`/`Dockerfile` **déjà touchées** par cargo-chef + confort
+CI → corrigées *en passant*. Le reste = nettoyage TS/React mécanique (filet : tests Vitest).
+
+### Déroulé
+
+1. ~~Premier scan~~ → **fait** (branche `chore/toolchain-ci-hardening`). Inventaire ci-dessus.
+2. **Triage** : corriger la majorité ; trancher les 2-3 cas discutables (non-root, `void`
+   idiomatiques) → fix ou *won't-fix* justifié dans Sonar.
 3. **Ne déclarer le job bloquant** (ajout aux `needs` de `docker`, gate `wait=true`) **qu'une
    fois le gate vert**, pour ne jamais casser `main` pendant la résorption.
-
-> **Risque honnête** : la taille du backlog est **inconnue avant le 1ᵉʳ scan** (VSCode « rempli
-> de warnings »). Si la remédiation s'avère volumineuse, elle pourra basculer dans **son propre
-> plan/spec séparé** — décision prise après le premier scan, communiquée avant engagement.
 
 ---
 
