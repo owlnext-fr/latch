@@ -7,7 +7,8 @@
 ## Variables d'environnement attendues (`.env`)
 - `ADMIN_USER` — identifiant admin.
 - `ADMIN_PASS` — mot de passe admin (comparé à temps constant, non hashé).
-- `DEPLOY_TOKEN` — secret applicatif validé par les tools MCP.
+- `DEPLOY_TOKEN` — secret applicatif validé par TOUS les tools MCP (`deploy_prototype` + `list_projects`). Comparaison à temps constant (`secure_compare`). **OBLIGATOIRE en prod** (le boot refuse de démarrer si absent hors Dev/Test — fail-secure). Injecter via `.env` ou secret Docker.
+- `LATCH_PUBLIC_BASE_URL` — URL publique racine de l'instance (ex. `https://latch.owlnext.fr`). Slash terminal normalisé automatiquement. **OBLIGATOIRE en prod** (fail-secure). Utilisée par : (a) `allowed_hosts` rmcp (dérivé via `web::host_authority()`, défense contre DNS rebinding) ; (b) champ `url` retourné par `deploy_prototype` (`<LATCH_PUBLIC_BASE_URL>/c/<slug>`) ; (c) réponse `GET /api/settings` (`public_base_url` + `mcp_url`). En dev : `http://localhost:5150`.
 - `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client (≥ 64 bytes, `Key::from()` panique en dessous). **OBLIGATOIRE en prod** (le boot refuse de démarrer si absente hors Dev/Test — fail-secure). En dev, un fallback déterministe de 64 chars est utilisé. Générer : `openssl rand -hex 32`.
 - `LATCH_UNLOCK_TTL_DAYS` — durée de vie du cookie d'unlock (jours). Défaut : 30.
 - `LATCH_UNLOCK_RL_IP_BURST` — governor IP : burst (réservation burst). Défaut : 5.
@@ -29,17 +30,47 @@
   - `sonar.organization=owlnext-fr`
   - `sonar.projectKey=owlnext-fr_latch`
   - Ces valeurs sont dans `sonar-project.properties` (commité).
-- **Scan local (Docker)** :
-  ```bash
-  # Depuis la racine du repo ; backend-lcov.info doit exister (cargo llvm-cov nextest --lcov --output-path backend-lcov.info)
-  # et coverage/lcov.info (pnpm test:cov dans frontend/)
-  docker run --rm \
-    -e SONAR_TOKEN="$(grep SONAR_TOKEN .env.local | cut -d= -f2)" \
-    -v "$(pwd):/usr/src" \
-    sonarsource/sonar-scanner-cli
-  ```
 - **`.env.local`** (gitignoré) : fichier optionnel pour stocker le token localement pour les scans manuels. Format : `SONAR_TOKEN=<votre_token>`. Ne jamais commiter ce fichier.
 - **Automatic Analysis** : DÉSACTIVÉ dans les settings SonarCloud (`Administration > Analysis Method`) — le scanner CI est l'unique source (les deux modes sont exclusifs, cf. QUIRKS).
+
+### Scan local (Docker) — recette complète
+
+**Prérequis :** `cargo-llvm-cov` installé (`cargo install cargo-llvm-cov`) + composant `llvm-tools-preview` (`rustup component add llvm-tools-preview`) + `cargo-deny` + Docker + `.env.local` contenant `SONAR_TOKEN=<token>`.
+
+**Étape 1 — Générer la couverture Rust (depuis la racine du repo) :**
+```bash
+cargo llvm-cov nextest --lcov --output-path backend-lcov.info
+```
+
+**Étape 2 — Générer la couverture frontend :**
+```bash
+cd frontend && pnpm test:cov
+# produit frontend/coverage/lcov.info
+```
+
+**Étape 3 — CRITIQUE : remappe les chemins absolus avant le scan local.**
+`cargo-llvm-cov` écrit des chemins absolus (`/srv/owlnext/latch/…`) dans `backend-lcov.info`.
+Le container `sonarsource/sonar-scanner-cli` monte le repo sous `/usr/src` → chemin différent →
+le sensor Rust LCOV **ignore silencieusement** tout le backend → couverture spurieusement basse
+et **faux échec de gate**. Fix obligatoire avant le scan local (pas nécessaire en CI où les chemins correspondent) :
+```bash
+sed -i "s#$(pwd)/#/usr/src/#g" backend-lcov.info
+```
+
+**Étape 4 — Lancer le scan (scoped à la branche courante) :**
+```bash
+docker run --rm \
+  -e SONAR_TOKEN="$(grep SONAR_TOKEN .env.local | cut -d= -f2)" \
+  -v "$(pwd):/usr/src" \
+  sonarsource/sonar-scanner-cli \
+  -Dsonar.branch.name="$(git rev-parse --abbrev-ref HEAD)" \
+  -Dsonar.qualitygate.wait=true
+```
+`-Dsonar.branch.name=<branch>` scoped le scan à la branche, sans polluer `main`.
+`sonar.qualitygate.wait=true` → sortie non-zéro si la gate échoue.
+
+**Gate :** `new_coverage ≥ 80%` sur le code neuf, ratings A, 0 duplication new code.
+Cf. QUIRKS pour le détail du piège chemin absolu/`/usr/src`.
 
 ## Toolchain couverture Rust
 - **`cargo-llvm-cov`** : installé en CI via `taiki-e/install-action@v2` (`tool: cargo-llvm-cov,nextest`). Localement : `cargo install cargo-llvm-cov`.
@@ -63,7 +94,11 @@
 
 ## Serving
 - Domaine : `latch.owlnext.fr` (Caddy en façade, TLS + reverse proxy).
-- Path MCP : `/mcp` _(option : path non devinable — à figer si retenu)._
+- Path MCP : `/mcp` (figé — monté via `nest_service("/mcp", …)` dans `after_routes`).
+  URL complète : `<LATCH_PUBLIC_BASE_URL>/mcp` (ex. `https://latch.owlnext.fr/mcp`).
+  `allowed_hosts` = autorité de `LATCH_PUBLIC_BASE_URL` (ex. `latch.owlnext.fr`) — dérivé automatiquement.
+- Path admin : `/admin` (SPA React statique + API JSON sous `/api/*`).
+- Path serving client : `/c/<slug>` (page de déverrouillage ou proto HTML actif).
 
 ## Box de déploiement
 - _(host, chemin du repo/compose, emplacement du volume `data/` — à remplir)._
@@ -77,5 +112,11 @@
   remettre l'ancien tag + `./deploy.sh`.
 
 ## Connexion du connecteur MCP côté Claude web
-- _(procédure de branchement aux designers — dépend de la formule OWLNEXT,
-  laissée hors périmètre build ; à documenter au moment du branchement)._
+
+Wiring déduit de la doc rmcp + architecture Phase 5 (non encore validé en prod — à confirmer au 1er branchement) :
+
+1. Récupérer `mcp_url` et `deploy_token` depuis le panneau Settings (`/admin/settings`).
+2. Dans Claude web → Paramètres → Connecteurs MCP (ou équivalent selon la formule) : renseigner l'URL MCP (`https://latch.owlnext.fr/mcp`). Pas d'OAuth, pas de header d'auth — l'auth est dans l'argument `deploy_token` de chaque tool.
+3. Tester avec `list_projects(deploy_token=<valeur>)`.
+
+> _(Procédure UI exacte côté Claude web à documenter au moment du branchement réel — dépend de la formule OWLNEXT.)_

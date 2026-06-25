@@ -94,6 +94,12 @@ Couvert en couches. Chaque couche est un critère de sortie de phase (ROADMAP).
 - **E2E Playwright** : navigateur réel contre la stack montée — login, création de
   projet, deploy, bascule de version, `/c/<slug>` qui sert l'active, projet protégé
   qui affiche la page de déverrouillage + flux unlock, logout.
+- **Couverture new-code ≥ 80% (BLOQUANT CI)** : la gate SonarCloud `new_code_coverage ≥ 80%`
+  porte sur les lignes **nouvelles ou modifiées** (pas la couverture totale). Elle est bloquante
+  dans le job `sonar` (le job `docker` en dépend — pas d'image publiée si la gate échoue).
+  Les tests doivent être **substantiels** : tester les branches, les cas d'erreur, les invariants
+  — pas uniquement le happy path. Vérifiable en local avant push via le scan Sonar Docker
+  (cf. `docs/ENVIRONMENT.md §Scan local`).
 
 > Node est requis pour le **frontend et les tests** (Vite, pnpm, Vitest, Playwright).
 > Le « pas de Node » ne vaut que pour le **runtime** de l'image (distroless).
@@ -105,7 +111,7 @@ cache pnpm/node_modules) :
 
 1. **Backend** (`fmt-clippy` + `test-backend`) : `fmt` + `clippy --all-features` (warnings = erreurs) + `cargo nextest` (+ `cargo llvm-cov nextest --lcov` → artefact `backend-lcov`) + `cargo deny`/`audit`.
 2. **Frontend** : `pnpm install --ignore-scripts` + `pnpm lint` + `pnpm typecheck` + `pnpm test:cov` (→ `coverage/lcov.info`).
-3. **SonarQube** (gate bloquant) : télécharge l'artefact `backend-lcov` + exécute `sonar-scanner`. Analyse front + IaC + couverture Rust (lcov). Gate : `new_code_coverage ≥ 80%`, `new_security_rating = A`. Secret : `SONAR_TOKEN` (GitHub Actions secret). Dépend de #1 + #2.
+3. **SonarQube** (gate bloquant) : télécharge l'artefact `backend-lcov` + exécute `sonar-scanner`. Analyse front + IaC + couverture Rust (lcov). Gate : `new_code_coverage ≥ 80%`, `new_security_rating = A`. Secret : `SONAR_TOKEN` (GitHub Actions secret). Dépend de #1 + #2. **Vérifiable en local** avant push : cf. `docs/ENVIRONMENT.md §Scan local` (recette Docker complète, dont le remap des chemins lcov — cf. QUIRKS).
 4. **E2E** : Playwright sur la stack montée (dépend de #1 + #2).
 5. Sur **tag** (ou `main`) : build de l'image multi-stage → **push GHCR**, package
    **public** du repo (`ghcr.io/owlnext-fr/latch`). Tags dérivés par

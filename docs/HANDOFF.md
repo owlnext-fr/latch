@@ -5,6 +5,40 @@
 > significative — l'idée est de se resituer en 30 secondes.
 
 
+## 2026-06-25 — Phase 5 LIVRÉE : endpoint MCP + panneau Settings
+
+### Dernière chose faite
+**Phase 5 complète** (endpoint MCP + panneau Settings) livrée et validée. Récapitulatif :
+
+- **Helpers `web/mod.rs`** : `deploy_token(ctx)`, `public_base_url(ctx)` (trailing-slash normalisé), `host_authority(base)` — fail-secure ; helper privé `resolve_required` (rejette chaîne vide).
+- **Adaptateur MCP** (`backend/src/mcp/mod.rs`) : `LatchMcp` + `#[tool_router]`/`#[tool_handler]`/`ServerHandler`, monté via `nest_service("/mcp", StreamableHttpService)` + `LocalSessionManager` dans `app.rs::after_routes`. `rmcp` épinglé `"1.4"` (floor CVE-2026-42559), résout **1.8.0**. `allowed_hosts` = `web::host_authority(public_base_url)`.
+- **Tools** : `deploy_prototype` (gate token FIRST, slug préexistant, `activate` défaut `true`, retourne `DeployResult { url, version, code_protected }`) ; `list_projects` (gate FIRST, retourne **enveloppe objet** `{ projects: [...] }` — pas de tableau racine, cf. quirk rmcp 1.8).
+- **`LATCH_PUBLIC_BASE_URL`** : nouvelle variable runtime fail-secure (source hôte public → `allowed_hosts` + `url` deploy_prototype). **`DEPLOY_TOKEN`** aussi fail-secure au boot.
+- **`GET /api/settings`** (AdminAuth) : `{ deploy_token, mcp_url, public_base_url }`, enregistré dans `openapi.rs`, `openapi.json` + `schema.d.ts` régénérés.
+- **Frontend** : `hooks/use-settings.ts`, `routes/settings.tsx` (topbar icon, PinField pour deploy_token, CopyButton pour mcp_url, public_base_url texte, loading/error), route `/settings`, i18n `settings.*` EN+FR.
+- **Tests** : 127 backend (gate token, deploy_prototype crée version, slug inconnu → erreur, invariants sécu, settings 401), 54 frontend. Clippy `--all-features` clean. Cargo-deny OK.
+- **SonarCloud gate PASSED** sur la branche : new_coverage ~94.8%, ratings A.
+- **Mémoire mise à jour** (Task 8) : contrat §5/§9, ROADMAP, INDEX, ENVIRONMENT, QUIRKS, CONVENTIONS, BOOTSTRAP, .env.example, CLAUDE.md.
+
+### Trucs en suspens
+- **Branchement réel Claude web à confirmer** : l'endpoint MCP a été testé via tests handler-level (gate token, déploiement) mais le branchement au cloud Anthropic (Claude web → connecteur MCP → `/mcp`) reste à valider au 1er test prod. Déduit de la doc rmcp (cf. ROADMAP §5). Procédure dans ENVIRONMENT §Connexion connecteur MCP.
+- **e2e `/mcp` via transport HTTP** reporté Phase 6 (les tests actuels sont handler-level, sans serveur HTTP).
+- **Phase 7 (locale/thème)** : le panneau Settings Phase 5 affiche deploy_token/mcp_url/public_base_url — locale et thème restent Phase 7 (cf. ROADMAP).
+
+### Prochaine chose à creuser
+- **Phase 6** (e2e, durcissement, packaging publiable) : flux Playwright `/c/<slug>` complet + tests e2e MCP + README + CHANGELOG + cargo-deny audit.
+- **OU Phase 7** (titres de page, logo, menu Settings complet avec locale+thème) selon priorité produit.
+
+### Notes pour future Claude
+- **rmcp 1.8 quirks** (3 pièges, tous documentés dans QUIRKS.md) :
+  1. `ServerInfo` est `#[non_exhaustive]` → `::default()` + fields + `.with_instructions()`.
+  2. Tool output de type `array` racine → panique au boot → toujours envelopper dans un struct objet.
+  3. `#[tool]` réécrit en `Pin<Box<dyn Future>>` → directement `await`-able dans les tests handler-level.
+- **Scan Sonar local** : `backend-lcov.info` a des chemins absolus (`/srv/owlnext/latch/…`) → le container `sonar-scanner-cli` (qui monte sous `/usr/src`) les ignore silencieusement → faux échec de gate. **Fix** : `sed -i "s#$(pwd)/#/usr/src/#g" backend-lcov.info` avant le scan. CI n'a pas ce problème. Détail dans QUIRKS + ENVIRONMENT.
+- **Règle 80% new-coverage** : gate bloquante CI, consignée dans CLAUDE.md + BOOTSTRAP §5. Tests substantiels requis (branches + cas d'erreur + invariants).
+
+---
+
 ## 2026-06-25 — Chantier toolchain & CI LIVRÉ (branche `chore/toolchain-ci-hardening`)
 
 ### Dernière chose faite

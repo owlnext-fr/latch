@@ -149,18 +149,44 @@ latch/                 # workspace
 
 ## 5. Surface `/mcp` — Modèle 1
 
-- Montée dans `after_routes` via `nest_service("/mcp", StreamableHttpService)`.
-- **`rmcp ≥ 1.4.0`** (la < 1.4.0 ne validait pas le `Host` → DNS rebinding,
-  CVE-2026-42559). Configurer `allowed_hosts` pour inclure `latch.owlnext.fr` ;
-  Caddy valide aussi le `Host` en amont (défense en profondeur).
+- Montée dans `after_routes` via `nest_service("/mcp", StreamableHttpService)` avec
+  `LocalSessionManager` (une session MCP par requête HTTP, sans état côté serveur).
+- **`rmcp` épinglé `"1.4"` (floor), résout en 1.8.0.** La < 1.4.0 ne validait pas le
+  `Host` → DNS rebinding (CVE-2026-42559). Features : `server, macros, transport-streamable-http-server`.
+  `schemars` via `rmcp::schemars` (re-export). `allowed_hosts` dérivé de `LATCH_PUBLIC_BASE_URL`
+  via `web::host_authority(public_base_url)` — source unique, non bypassable.
+- **`LATCH_PUBLIC_BASE_URL`** (runtime, requis en prod, fail-secure) : URL publique racine de
+  l'instance (ex. `https://latch.owlnext.fr`). Slash terminal normalisé. Utilisée par :
+  (a) `allowed_hosts` rmcp — dérivé via `web::host_authority()` ; (b) valeur `url` retournée
+  par `deploy_prototype`. Le boot refuse de démarrer si absente hors Dev/Test.
+- **`DEPLOY_TOKEN`** fail-secure : résolu au démarrage, boot refusé si absent hors Dev/Test.
 - **Modèle 1** : l'endpoint ne réclame **rien au niveau HTTP** (Claude web s'y
   connecte sans OAuth). L'auth est **dans l'argument** : chaque tool exige un
-  `deploy_token` validé contre l'env (`DEPLOY_TOKEN`).
-- **Surface minimale** : `deploy_prototype(slug, html, deploy_token, [activate])`
+  `deploy_token` validé contre l'env (`DEPLOY_TOKEN`) via comparaison à temps constant
+  (`secure_compare`) — **premier geste, avant tout appel service**.
+- **Surface minimale** : `deploy_prototype(slug, html, deploy_token, activate?)`
   et `list_projects(deploy_token)`. La config des codes, la bascule de version, la
   suppression → **uniquement sur l'admin**, jamais exposées en MCP.
 - **Token sur TOUS les tools, lecture comprise** : un tool MCP est public tant qu'il
   ne valide pas le token ; gater `list_projects` évite de fuiter la liste des clients.
+
+### 5.1 Réponses des tools
+
+**`deploy_prototype(slug, html, deploy_token, activate?)`**
+- `slug` doit **préexister** en base : aucune auto-création. Slug inconnu → erreur.
+- `activate` : défaut **`true`** (la version déployée devient immédiatement active).
+- Token validé EN PREMIER (`secure_compare`) — avant toute lecture en base.
+- Réponse (succès) : `DeployResult { url: "<LATCH_PUBLIC_BASE_URL>/c/<slug>", version: <n>, code_protected: <bool> }`.
+  Le champ `url` utilise `LATCH_PUBLIC_BASE_URL` comme source de vérité.
+  **Jamais de hash, jamais de PIN.**
+
+**`list_projects(deploy_token)`**
+- Token validé EN PREMIER.
+- Réponse : enveloppe objet **`{ projects: [...] }`** (`ProjectListResult`), **PAS** un tableau racine.
+  Pourquoi : rmcp 1.8 panique à la construction du `tool_router` si le type de sortie d'un tool
+  a un schéma JSON de type `array` à la racine (MCP exige `object`) → enveloppe obligatoire.
+- Chaque entrée : `ProjectSummary { slug, name, code_protected, active_version: Option<i32> }`.
+  **Jamais de hash, jamais de PIN, jamais de `id` DB.**
 
 ## 6. Surface `/c/<slug>` — deux états, page de déverrouillage stylée
 
@@ -260,3 +286,19 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
 6. Cookie de déverrouillage **signé** et **scopé par projet** ; cookie admin
    `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin via
    `require_same_origin` (middleware `axum::from_fn`, 403 cross-origin).
+
+### 9.1 Note — `GET /api/settings` et le `deploy_token`
+
+`GET /api/settings` (protégé par `AdminAuth`, donc 401 sans session) expose :
+`{ deploy_token, mcp_url, public_base_url }`. Le `deploy_token` est bien exposé ici,
+à l'admin **authentifié**, pour lui permettre de configurer le connecteur Claude.
+
+Pourquoi cela ne viole PAS les invariants §9.1 et §9.2 :
+- Le `deploy_token` n'est **pas un hash** (§9.1) — c'est un secret applicatif, pas un
+  dérivé cryptographique de données utilisateur.
+- Le `deploy_token` n'est **pas un PIN projet** (§9.2) — les invariants §9.2 portent
+  sur le PIN de déverrouillage client ; `deploy_token` est le secret de l'adaptateur MCP.
+- L'endpoint est derrière `AdminAuth` : un visiteur non authentifié reçoit 401.
+
+`mcp_url = public_base_url + "/mcp"` (valeur informative pour la configuration du
+connecteur Claude). `public_base_url` = valeur de `LATCH_PUBLIC_BASE_URL`.

@@ -91,6 +91,7 @@ Une tâche n'est terminée que si **tout** ce qui suit est vrai :
 - `cargo fmt` et `cargo clippy` (warnings = erreurs) passent ;
 - les tests verts à chaque couche concernée : unit (cœur), intégration (Loco +
   SQLite de test), MCP (gate token), frontend (Vitest + Testing Library / MSW), e2e (Playwright) ;
+- tests **substantiels** — la gate SonarCloud `new_coverage ≥ 80%` sur le code neuf est bloquante (CI) et fait partie de « terminé » ; vérifiable en local via le scan Sonar (cf. `docs/ENVIRONMENT.md §Scan local`) ;
 - les critères de sortie de la phase ROADMAP sont remplis ;
 - la doc reste cohérente avec le code (si une décision a changé, le contrat est mis à jour) ;
 - `docs/HANDOFF.md` reçoit une entrée datée, et `docs/INDEX.md` est mis à jour si un

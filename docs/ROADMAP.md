@@ -87,16 +87,35 @@ Livrables React (Plans 1-3, tous verts) :
 rate-limit) ; frontend Vitest+build verts (`dist/unlock.html`) ; cargo-deny vert ;
 validé navigateur (Task 9).
 
-## Phase 5 — Endpoint MCP
+## Phase 5 — Endpoint MCP + panneau Settings ✅ LIVRÉE (2026-06-25)
 
-- `mcp/` : `deploy_prototype` + `list_projects`, montés via `after_routes`
-  (`nest_service("/mcp", …)`), `rmcp ≥ 1.4.0`, `allowed_hosts` incluant
-  `latch.owlnext.fr`. **Token validé sur tous les tools.**
-- `deploy_prototype` appelle le même `services::deploy()` que l'admin.
+> Spec/plan : `docs/superpowers/` (tasks 1-8). SonarCloud gate PASSED (~94.8% new_coverage).
 
-**Sortie :** tests verts — gate token sur tous les tools (lecture comprise),
-`deploy_prototype` crée une version. **À confirmer au premier branchement réel :** que
-Claude web se connecte à un serveur MCP sans auth HTTP (déduit de la doc, non testé).
+**Backend :**
+- `mcp/mod.rs` : `LatchMcp { db, storage, deploy_token, public_base_url, tool_router }`,
+  macros `#[tool_router]`/`#[tool_handler]`/`ServerHandler`, montés via `after_routes`
+  (`nest_service("/mcp", StreamableHttpService)`, `LocalSessionManager`).
+- `rmcp` épinglé `"1.4"` (floor CVE-2026-42559), résout en **1.8.0**.
+  `allowed_hosts` dérivé de `LATCH_PUBLIC_BASE_URL` via `web::host_authority()`.
+- `deploy_prototype(slug, html, deploy_token, activate?)` : token gate FIRST, slug préexistant
+  (pas d'auto-création), `activate` défaut `true`, retourne `DeployResult { url, version, code_protected }`.
+- `list_projects(deploy_token)` : token gate FIRST, retourne **enveloppe objet**
+  `{ projects: [...] }` (`ProjectListResult`, cf. §5.1 contrat).
+- Helpers `web/mod.rs` : `deploy_token(ctx)`, `public_base_url(ctx)` (trailing-slash normalisé),
+  `host_authority(base)` — fail-secure.
+- `GET /api/settings` (AdminAuth) : `SettingsResponse { deploy_token, mcp_url, public_base_url }`.
+- Nouvelle variable : `LATCH_PUBLIC_BASE_URL` (runtime, fail-secure, dérive `allowed_hosts`).
+
+**Frontend :**
+- `hooks/use-settings.ts`, `routes/settings.tsx` (Topbar + mcp_url copyable +
+  deploy_token via `PinField` masqué/révéler/copier + public_base_url texte + loading/error).
+- Route `/settings`, icône Settings dans la topbar, i18n `settings.*` (EN+FR).
+- Phase 7 (locale/thème) reste hors périmètre.
+
+**Tests :** 127 backend (dont gate token, deploy_prototype, slug inconnu, invariants sécu,
+settings 401), 54 frontend. Clippy `--all-features` clean. Cargo-deny OK.
+
+**À confirmer :** branchement réel Claude web (déduit de la doc rmcp, non testé en prod).
 
 ## Phase 6 — E2E, durcissement, packaging publiable
 

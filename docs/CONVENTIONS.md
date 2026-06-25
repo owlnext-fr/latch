@@ -239,9 +239,132 @@ async fn login_then_access_protected_route() {
 - `LATCH_STORAGE_ROOT` : utiliser `tempfile::tempdir()` + variable vivante jusqu'à la fin du test.
 - `X-Forwarded-For: 1.2.3.4` pour déclencher le rate-limit `tower_governor` (garantit l'extraction de clé IP).
 
-## Tool MCP type
-_(à remplir : un tool qui valide `deploy_token` en premier, puis appelle le service,
-puis mappe l'erreur en tool error.)_
+## Adaptateur MCP type (skeleton complet) — Phase 5
+
+Structure `LatchMcp` : `db`, `storage`, `deploy_token` (String), `public_base_url` (String),
+`tool_router` (généré par `#[tool_router]`). Montage dans `after_routes` via
+`nest_service("/mcp", StreamableHttpService::new(LocalSessionManager::new(latch_mcp)))`.
+
+```rust
+// backend/src/mcp/mod.rs
+use rmcp::{ServerHandler, model::ServerInfo, schemars, tool};
+
+pub struct LatchMcp {
+    db: DatabaseConnection,
+    storage: Arc<dyn Storage>,
+    deploy_token: String,
+    public_base_url: String,
+    tool_router: rmcp::handler::server::tool::ToolRouter<Self>,
+}
+
+#[rmcp::tool_router]
+impl LatchMcp {
+    pub fn new(db: DatabaseConnection, storage: Arc<dyn Storage>,
+               deploy_token: String, public_base_url: String) -> Self {
+        Self { db, storage, deploy_token, public_base_url, tool_router: Self::tool_router() }
+    }
+
+    #[tool(description = "Deploy a prototype HTML file.")]
+    async fn deploy_prototype(&self, #[tool(aggr)] params: DeployParams) -> Result<DeployResult, ErrorData> {
+        // 1. Gate token EN PREMIER
+        if !crate::services::security::secure_compare(&params.deploy_token, &self.deploy_token) {
+            return Err(ErrorData::new(rmcp::model::ErrorCode::INVALID_PARAMS, "unauthorized", None));
+        }
+        // 2. Appeler les services
+        let svc_projects = ProjectsService::new(self.db.clone());
+        let project = svc_projects.get_by_slug(&params.slug).await
+            .map_err(map_core_err)?;
+        let svc_deploy = DeployService::new(self.db.clone(), self.storage.clone());
+        let version = svc_deploy.deploy(project.id, &params.html, params.activate.unwrap_or(true)).await
+            .map_err(map_core_err)?;
+        Ok(DeployResult {
+            url: format!("{}/c/{}", self.public_base_url, params.slug),
+            version: version.n,
+            code_protected: project.code_enabled,
+        })
+    }
+
+    #[tool(description = "List all projects.")]
+    async fn list_projects(&self, #[tool(aggr)] params: ListParams) -> Result<ProjectListResult, ErrorData> {
+        if !crate::services::security::secure_compare(&params.deploy_token, &self.deploy_token) {
+            return Err(ErrorData::new(rmcp::model::ErrorCode::INVALID_PARAMS, "unauthorized", None));
+        }
+        let projects = ProjectsService::new(self.db.clone()).list().await.map_err(map_core_err)?;
+        Ok(ProjectListResult {
+            projects: projects.into_iter().map(|p| ProjectSummary { /* ... */ }).collect(),
+        })
+    }
+}
+
+#[rmcp::tool_handler]
+impl ServerHandler for LatchMcp {
+    fn get_info(&self) -> ServerInfo {
+        let mut info = ServerInfo::default();
+        info.server_info.name = "latch".into();
+        info.server_info.version = env!("CARGO_PKG_VERSION").into();
+        info.with_instructions("Deploy and list prototypes via latch.")
+    }
+}
+
+fn map_core_err(e: CoreError) -> ErrorData {
+    ErrorData::new(rmcp::model::ErrorCode::INTERNAL_ERROR, e.to_string(), None)
+}
+```
+
+**Règles :**
+- Gate `deploy_token` **toujours en premier**, avant toute lecture en base.
+- Envelopper les listes dans un struct objet (jamais `Vec<T>` directement — rmcp 1.8 panique si le schéma racine est `array`, cf. QUIRKS).
+- `ServerInfo` est `#[non_exhaustive]` en 1.8 → `ServerInfo::default()` + champs + `.with_instructions()` (cf. QUIRKS).
+- `map_core_err` : helper privé, une seule définition par module `mcp/`.
+- `allowed_hosts` dans `StreamableHttpServerConfig` dérivé de `LATCH_PUBLIC_BASE_URL` via `web::host_authority(base)`.
+
+## Test de handler MCP (niveau handler, sans transport HTTP) — Phase 5
+
+rmcp 1.8 : la macro `#[tool]` produit des méthodes directement `await`-ables (cf. QUIRKS).
+Pattern de test : instancier `LatchMcp` avec une DB in-memory et un storage tempdir, appeler
+la méthode du handler directement.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::test_support::test_db;
+
+    async fn make_mcp(token: &str) -> LatchMcp {
+        let db = test_db().await;
+        let storage = Arc::new(crate::services::storage::MemStorage::new()); // ou tempdir FsStorage
+        LatchMcp::new(db, storage, token.into(), "http://localhost:5150".into())
+    }
+
+    #[tokio::test]
+    async fn deploy_rejects_bad_token() {
+        let m = make_mcp("good-token").await;
+        let result = m.deploy_prototype(DeployParams {
+            slug: "demo-abc12345".into(),
+            html: "<html></html>".into(),
+            deploy_token: "bad-token".into(),
+            activate: None,
+        }).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, rmcp::model::ErrorCode::INVALID_PARAMS);
+    }
+
+    #[tokio::test]
+    async fn deploy_unknown_slug_is_error() {
+        let m = make_mcp("tok").await;
+        let result = m.deploy_prototype(DeployParams {
+            slug: "inexistant-abc12345".into(), html: "<html/>".into(),
+            deploy_token: "tok".into(), activate: None,
+        }).await;
+        assert!(result.is_err()); // slug inconnu → CoreError::NotFound → ErrorData
+    }
+}
+```
+
+**Règles :**
+- Pas de serveur HTTP → pas de `#[serial]` nécessaire (DB in-memory par test).
+- Tester : gate token bad → erreur, gate token ok → succès, slug inconnu → erreur.
+- Les tests d'intégration via transport HTTP restent reportés Phase 6.
 
 ## Composants React (shadcn/ui) — patterns courants
 
@@ -700,6 +823,55 @@ Ok(html_response(html))                                             // (headers 
 - Rate-limit `/unlock` : deux `GovernorLayer` empilés via `tower::ServiceBuilder` (pas `.layer().layer()`
   direct sur le `MethodRouter` → casse l'inférence axum 0.8) ; extracteurs custom `IpSlugKeyExtractor`
   (clé `"{ip}|{slug}"`) + `SlugKeyExtractor` (clé `slug`). In-memory (reset au reboot, assumé).
+
+## `useSettings` — hook Settings + PinField pour secret générique — Phase 5
+
+La page Settings suit le même pattern que les hooks Query : un hook dédié + `PinField` pour
+afficher un secret masqué/révéler/copier.
+
+```ts
+// frontend/src/hooks/use-settings.ts
+import { useQuery } from '@tanstack/react-query'
+import { client } from '@/api/client'
+
+export function useSettings() {
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await client.GET('/api/settings')
+      if (error) throw error
+      return data
+    },
+  })
+}
+```
+
+```tsx
+// frontend/src/routes/settings.tsx (extrait)
+import { useSettings } from '@/hooks/use-settings'
+import { PinField } from '@/components/pin-field'
+
+export function SettingsRoute() {
+  const { data, isLoading, isError } = useSettings()
+  if (isLoading) return <Spinner />
+  if (isError || !data) return <ErrorState />
+  return (
+    <div>
+      {/* deploy_token masqué, révéler, copier — même PinField qu'en Detail */}
+      <PinField pin={data.deploy_token} />
+      {/* mcp_url : texte + CopyButton */}
+      <span>{data.mcp_url}</span><CopyButton text={data.mcp_url} />
+      {/* public_base_url : texte seul */}
+      <span>{data.public_base_url}</span>
+    </div>
+  )
+}
+```
+
+**Règles :**
+- `PinField` est réutilisable pour tout secret (pas seulement le PIN projet) : il masque, révèle et copie n'importe quelle chaîne. Pas besoin de créer un composant ad hoc pour `deploy_token`.
+- La page Settings n'a **pas de mutation** (lecture seule) — invalider uniquement si une opération externe peut changer les valeurs.
+- `queryKey: ['settings']` — distinct de `['projects']`.
 
 ## Bouton avec état de chargement (`Button loading`) — Phase 4
 

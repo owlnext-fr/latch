@@ -123,11 +123,24 @@
 - [x] Bordure OTP foncée (`oklch(0.85 0.003 48.717)`, même teinte que `--input`) + retrait favicon `/vite.svg` — itération UI — 2026-06-25
 - [x] Fix sécu : fail-secure `UNLOCK_COOKIE_SECRET`/`SESSION_SECRET` (`resolve_cookie_secret`, refus de boot prod sans secret) — revue auto — 2026-06-25
 
+## Phase 5 — Endpoint MCP + panneau Settings
+
+- [x] Helpers `backend/src/web/mod.rs` : `deploy_token(ctx)`, `public_base_url(ctx)` (trailing-slash normalisé), `host_authority(base)` — fail-secure — Phase 5 — 2026-06-25
+- [x] `backend/src/mcp/mod.rs` : `LatchMcp` (struct + `#[tool_router]`/`#[tool_handler]`/`ServerHandler`), monté via `nest_service("/mcp", StreamableHttpService)` + `LocalSessionManager` dans `after_routes` — Phase 5 — 2026-06-25
+- [x] Tool `deploy_prototype(slug, html, deploy_token, activate?)` : gate token FIRST (`secure_compare`), slug préexistant (pas d'auto-création), `activate` défaut `true`, retourne `DeployResult { url, version, code_protected }` — Phase 5 — 2026-06-25
+- [x] Tool `list_projects(deploy_token)` : gate token FIRST, retourne `ProjectListResult { projects: Vec<ProjectSummary> }` (enveloppe objet, jamais tableau racine), `ProjectSummary { slug, name, code_protected, active_version: Option<i32> }` — Phase 5 — 2026-06-25
+- [x] `rmcp` épinglé `"1.4"` floor (CVE-2026-42559), résout **1.8.0** ; `allowed_hosts` dérivé de `LATCH_PUBLIC_BASE_URL` via `host_authority()` — Phase 5 — 2026-06-25
+- [x] `GET /api/settings` (`AdminAuth`) : `SettingsResponse { deploy_token, mcp_url, public_base_url }`, enregistré dans `openapi.rs` + `openapi.json` + `schema.d.ts` régénérés — Phase 5 — 2026-06-25
+- [x] `frontend/src/hooks/use-settings.ts` + `frontend/src/routes/settings.tsx` : topbar, `mcp_url` copyable, `deploy_token` via `PinField` masqué/révéler/copier, `public_base_url` texte, loading/error — Phase 5 — 2026-06-25
+- [x] Route `/settings`, icône Settings dans la topbar, i18n `settings.*` (EN+FR) — Phase 5 — 2026-06-25
+- [x] `LATCH_PUBLIC_BASE_URL` (nouvelle variable runtime, fail-secure, source hôte public + `allowed_hosts`) — Phase 5 — 2026-06-25
+- [x] Tests Phase 5 : 127 backend (dont gate token, deploy_prototype, slug inconnu, invariants sécu, settings 401), 54 frontend. Clippy `--all-features` clean. SonarCloud gate PASSED (~94.8% new_coverage) — Phase 5 — 2026-06-25
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
 - [x] Phase 2 — adaptateur web admin — 2026-06-24
 - [x] Phase 3 — SPA admin (Yew, puis migrée React — Plans 1-3) — 2026-06-24/2026-06-25
 - [x] Phase 4 — serving `/c/<slug>` — 2026-06-25
-- [ ] Phase 5 — endpoint MCP
+- [x] Phase 5 — endpoint MCP + panneau Settings — 2026-06-25
 - [ ] Phase 6 — e2e, durcissement, packaging

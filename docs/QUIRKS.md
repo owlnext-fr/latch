@@ -115,6 +115,39 @@ n'est pas un crate Cargo, donc `--workspace` n'en a jamais été affecté.)_
 **Cause** : le stage `dataprep` chown `/data` à `65532` seulement au moment de la construction de l'image. Les données existantes (bind-mount `./data` ou named volume) ne sont pas retouchées au runtime.
 **Workaround** : une fois, depuis l'hôte : `chown -R 65532:65532 ./data` (bind-mount) ou via un container helper `docker run --rm -v latch-data:/mnt alpine chown -R 65532:65532 /mnt` (named volume). La prochaine fois, le container écrit nativement en uid 65532.
 
+## Scan local Sonar : chemin absolu lcov ≠ `/usr/src` → couverture Rust silencieusement ignorée (2026-06-25)
+**Symptôme** : scan local via `sonarsource/sonar-scanner-cli` (Docker) affiche une couverture Rust à 0% (ou très basse) et la gate `new_coverage ≥ 80%` échoue, alors que la couverture CI est correcte (~94%).
+**Cause** : `cargo-llvm-cov` génère `backend-lcov.info` avec des **chemins absolus** locaux (ex. `SF:/srv/owlnext/latch/backend/src/…`). Le container `sonar-scanner-cli` monte le repo sous `/usr/src` → le sensor LCOV Rust ne retrouve pas les fichiers (chemin différent) → **il ignore silencieusement tout le backend** sans erreur explicite. En CI, le chemin du runner (`/home/runner/work/…`) correspond au chemin injecté → pas de problème.
+**Fix** : avant le scan local, remappe les chemins dans le fichier lcov :
+```bash
+sed -i "s#$(pwd)/#/usr/src/#g" backend-lcov.info
+```
+Cette commande réécrit `SF:/srv/owlnext/latch/` en `SF:/usr/src/` dans toutes les lignes `SF:` du fichier. CI n'a pas besoin de ce fix (les chemins correspondent). Cf. `docs/ENVIRONMENT.md §Scan local`.
+
+## rmcp 1.8 — `ServerInfo` est `#[non_exhaustive]` (2026-06-25)
+`ServerInfo` dans rmcp 1.8 est marquée `#[non_exhaustive]` → impossible à construire avec un struct literal `ServerInfo { name: "...", ... }` (erreur de compilation « cannot create non-exhaustive struct using struct expression »). **Fix** : construire via `ServerInfo::default()`, puis assigner les champs (`name`, `version`), puis appeler `.with_instructions("...")`. Pattern retenu dans `LatchMcp::get_info()`.
+
+## rmcp 1.8 — tool schema de type `array` à la racine → panic au boot (2026-06-25)
+Le `#[tool_router]` de rmcp 1.8 construit le schéma JSON de chaque tool au démarrage. Si le type de retour d'un tool produit un schéma JSON dont le type racine est `"array"` (ex. `Vec<ProjectSummary>` renvoyé directement), rmcp **panique au boot** avec un message sur un schéma invalide (le protocole MCP exige `object` à la racine). **Fix** : toujours envelopper les listes dans un struct :
+```rust
+// ❌ Panique au boot
+async fn list_projects(...) -> Vec<ProjectSummary> { ... }
+
+// ✅ OK — enveloppe objet
+pub struct ProjectListResult { pub projects: Vec<ProjectSummary> }
+async fn list_projects(...) -> ProjectListResult { ... }
+```
+Même idiome que `DeployResult` (pas de tableau racine). Cf. contrat §5.1.
+
+## rmcp 1.8 — `#[tool]` macro → `Pin<Box<dyn Future>>`, directement `await`-able (2026-06-25)
+La macro `#[tool]` de rmcp 1.8 réécrit les `async fn` en fonctions retournant `Pin<Box<dyn Future<Output=_>>>`. En pratique, ces fonctions sont directement `.await`-ables depuis les tests (pas de transport HTTP requis) :
+```rust
+// Test inline — level handler, sans transport HTTP
+let m = LatchMcp::new(db, storage, token.into(), base_url.into());
+let result = m.deploy_prototype(DeployParams { slug: "mon-projet-abc".into(), ... }).await;
+```
+Ce pattern permet des **tests unitaires de handler** (gate token, logique) sans monter un serveur HTTP. Les tests d'intégration complets (transport streamable HTTP) restent reportés Phase 6. Cf. `docs/CONVENTIONS.md §Test de handler MCP`.
+
 ## rmcp < 1.4.0 — DNS rebinding (CVE-2026-42559)
 Le transport Streamable HTTP ne validait pas le `Host` avant la 1.4.0. **Épingler
 ≥ 1.4.0** et configurer `allowed_hosts` (inclure `latch.owlnext.fr`). Caddy valide
