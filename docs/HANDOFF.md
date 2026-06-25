@@ -4,22 +4,27 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
-## 2026-06-25 — T2 : retrait crate `latch-dto` (Plan 1, feat/admin-react)
+## 2026-06-25 — Migration React Plan 1 : Backend OpenAPI livré (feat/admin-react, T1-T7)
 
 ### Dernière chose faite
-- **`latch-dto` supprimée du workspace.** Retirée de `Cargo.toml` (`members`/`default-members`) et de `backend/Cargo.toml` (`[dependencies]`). Répertoire supprimé via `git rm -r latch-dto`. Workspace réduit à 2 membres : `backend` + `backend/migration`.
-- Vérification : `cargo fmt --all && cargo clippy --all-targets -- -D warnings` propre + **84 tests verts** (`cargo nextest run`). Aucune référence résiduelle à `latch_dto`.
-- Commit : `0b7c236 🔥 chore(dto): retrait de la crate latch-dto (inlinée dans backend/src/dto)`.
+- **T1 — DTO inlinés dans `backend/src/dto/`.** `latch-dto` supprimée du workspace (`Cargo.toml` membres + `backend/Cargo.toml`). Répertoire supprimé via `git rm -r latch-dto`. Workspace réduit à 2 membres : `backend` + `backend/migration`. Commit : `0b7c236`.
+- **T2 — Réponses typées.** Structs `OkResponse`/`DeployResponse`/`ActivateResponse` dans `crate::dto` remplacent les `serde_json::json!` ad-hoc dans les handlers. Tous les handlers retournent des types `ToSchema`.
+- **T3 — Dérivation `utoipa::ToSchema`** sur tous les DTOs de `backend/src/dto/`. Dépendances `utoipa 5` et `utoipa-swagger-ui 9` (axum 0.8 natif — v8 tire axum 0.7) ajoutées à `backend/Cargo.toml`.
+- **T4 à T6 — `#[utoipa::path]` sur toutes les routes `/api/*`.** Annotations placées AVANT `#[debug_handler]`. Structs d'`ApiDoc` (`paths(...)`, `components(schemas(...))`) dans `backend/src/openapi.rs`.
+- **T7 — `openapi.json` committé + test de drift + Swagger UI.** `openapi.json` à la racine du repo, régénérable via `UPDATE_OPENAPI=1 cargo test --test openapi_drift`. Swagger UI exposée sous `/api-docs` en mode dev uniquement (`is_prod` guard). Test drift `backend/tests/openapi_drift.rs` fait partie de la suite nextest.
+- Vérification finale : `cargo fmt --all` propre, `cargo clippy --all-targets -- -D warnings` 0 warning, `cargo nextest run` vert (tous les tests d'intégration, security_invariants, openapi_drift, dto::tests, openapi::tests). Aucune référence résiduelle à `latch_dto`.
 
 ### Trucs en suspens
-- **T3 à T8 du Plan 1** (`feat/admin-react`) : réponses typées, annotations `#[utoipa::path]`, `ApiDoc`, `openapi.json`, Swagger UI, clôture mémoire.
+- **Plan 2** (app React côté frontend) : scaffolding Vite + React, `openapi-typescript` depuis `openapi.json`, client `openapi-fetch`, Query/RHF+zod/i18next/sonner, pages + panels, tests Vitest + MSW.
 
 ### Prochaine chose à creuser
-- **T3 — Réponses typées** (`Ok`/`Deploy`/`Activate`) selon le brief `task-3-brief.md`.
+- Écrire le spec + plan du Plan 2. Consulter `docs/superpowers/specs/2026-06-25-admin-react-migration-decision.md` pour le périmètre exact.
 
 ### Notes pour future Claude
-- Le workspace n'a plus de crate `latch-dto`. Tout est dans `crate::dto` (module `backend/src/dto/mod.rs`). Les types sont identiques, juste inlinés.
-- La suite (T3…T8) suit le plan 1 : ajouter `utoipa` + schéma OpenAPI, puis brancher la SPA React.
+- Le workspace n'a plus de crate `latch-dto`. Tout est dans `crate::dto` (`backend/src/dto/mod.rs`). Les types sont identiques, juste inlinés.
+- Pour régénérer `openapi.json` après un changement de handler ou de DTO : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (depuis la racine ou `backend/`).
+- Le Swagger UI (`/api-docs`) ne s'expose qu'en dev (`Environment::Development`). En prod, route absente. Ne pas inverser ce guard.
+- Épingler `utoipa-swagger-ui = "9"` : v8 tire `axum 0.7` (conflit de types avec l'axum 0.8 du projet). Cf. QUIRKS.
 
 ---
 

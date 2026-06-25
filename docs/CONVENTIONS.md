@@ -472,6 +472,52 @@ let classes = classes!("switch", "size-md",
 // is_checked = checked  (PAS d'état interne — c'est le bug d'origine du Switch)
 ```
 
+## Endpoint OpenAPI (utoipa) type
+
+Chaque handler `/api/*` porte un `#[utoipa::path(...)]` (avant `#[debug_handler]`) décrivant
+méthode, `path` (préfixe `/api` inclus), `params` (path params typés), `request_body`, et
+`responses` (avec `body = <DTO ToSchema>`). Les réponses non-DTO (`{ok:true}`, `{id,n}`) sont
+des structs `ToSchema` dédiées dans `crate::dto`, pas des `serde_json::json!`. Le handler est
+ajouté à `openapi::ApiDoc` (`paths(...)`), son DTO de réponse à `components(schemas(...))`.
+Après tout changement : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` pour régénérer
+`openapi.json`. Les handlers annotés sont `pub(crate)` si la macro exige la visibilité.
+
+```rust
+// Exemple — backend/src/controllers/admin.rs
+#[utoipa::path(
+    get,
+    path = "/api/projects",
+    responses(
+        (status = 200, description = "Liste des projets", body = Vec<ProjectListItem>),
+        (status = 401, description = "Non authentifié"),
+    ),
+    security(("admin_session" = []))
+)]
+#[debug_handler]
+pub(crate) async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    let items: Vec<ProjectListItem> = svc.list().await.map_err(into_response)?
+        .iter().map(ProjectListItem::from_model).collect();
+    format::json(items)
+}
+
+// backend/src/openapi.rs — enregistrement du handler et du DTO
+#[derive(OpenApi)]
+#[openapi(
+    paths(controllers::admin::list, /* ... */),
+    components(schemas(ProjectListItem, ProjectDetail, /* ... */)),
+)]
+pub struct ApiDoc;
+```
+
+**Règles :**
+- `#[utoipa::path(...)]` TOUJOURS avant `#[debug_handler]` — l'ordre inverse casse la dérivation macro.
+- Les réponses typed utilisent `body = <Type>` avec `<Type>` qui dérive `utoipa::ToSchema` (dans `crate::dto`).
+- Les structs de réponse ad-hoc (`OkResponse`, `DeployResponse`, `ActivateResponse`) vivent dans `crate::dto`, pas inline.
+- Enregistrer dans `ApiDoc` : `paths(module::handler)` + `components(schemas(Type))` — les deux sont nécessaires.
+- Régénérer `openapi.json` : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (écrit à la racine du workspace).
+- Garder les doc-comments des handlers **concis et orientés API** : utoipa les déverse en `description` dans le JSON → fuite dans le client TS généré (Plan 2).
+
 ## Accessibilité : `<a onclick>` sans href → `<button class="linkish">`
 
 Une cellule/élément cliquable qui navigue via le router (pas une vraie URL) doit être un

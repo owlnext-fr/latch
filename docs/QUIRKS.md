@@ -213,6 +213,33 @@ vivent sur la classe `.switch.size-md` de `components.css` (le `.switch` seul n'
 largeur). Le `Toggle` doit émettre `class="switch size-md"` (+ `switch-checked`/`switch-disabled`),
 sinon le contrôle est invisible (taille nulle).
 
+## utoipa-swagger-ui ≥ 9 obligatoire avec axum 0.8 (2026-06-25)
+`utoipa-swagger-ui` v8 tire `axum 0.7` (via sa dep `utoipa-axum 0.1`). Cela crée un conflit
+de types avec l'`axum 0.8` du projet (`axum::Router` de v7 ≠ `axum::Router` de v8) →
+erreurs de trait obscures à la compilation. **Épingler `utoipa-swagger-ui = "9"`** (axum 0.8
+natif), aligné sur `utoipa = "5"`. Ne jamais downgrader vers v8 pour "essayer".
+
+## utoipa `paths(module::handler)` ne requiert PAS `pub` sur le handler (2026-06-25)
+La macro `#[utoipa::path]` génère un struct de chemin `__path_<fn>` résolu par chemin de
+module. Les handlers `async fn` privés ou `pub(crate)` restent référençables depuis
+`openapi.rs` via `paths(controllers::admin::handler)` — aucune fuite de visibilité public
+n'est nécessaire. (Le plan suggérait prudemment `pub(crate)` — finalement inutile dans les
+cas standards ; utile uniquement si le compilateur le réclame explicitement pour un module
+non-réexporté.)
+
+## utoipa : feature `chrono` inutile si les dates sont sérialisées en `String` (2026-06-25)
+Nos DTO portent les dates sous forme `String` (`.to_rfc3339()` côté service), donc `utoipa`
+n'a pas besoin de connaître `chrono::DateTime`. `utoipa = "5"` sans `features = ["chrono"]`
+suffit. Ne pas ré-ajouter `features = ["chrono"]` par réflexe si une date apparaît dans un
+DTO : vérifier d'abord que c'est réellement un type `chrono::*` (pas un `String`).
+
+## utoipa : le doc-comment du handler devient la `description` OpenAPI (2026-06-25)
+Un `///` au-dessus d'un handler annoté `#[utoipa::path]` est capturé comme `description`
+dans `openapi.json`. Un doc-comment verbeux (notes QUIRKS, contexte Context7, TODOs internes)
+**fuite dans le contrat API** et sera ensuite déversé dans le client TypeScript généré (Plan 2).
+**Règle** : garder les doc-comments des handlers courts et orientés API publique. Les notes
+internes vont dans les commentaires `//` (pas `///`) ou dans les docs mémoire.
+
 ## Thème de marque : export générateur shadcn (oklch) → triplets HSL (2026-06-25)
 La CSS vendorisée de `shadcn-rs` consomme les couleurs en **`hsl(var(--color-X))`** avec des
 **triplets HSL** `H S% L%` (y compris des compositions alpha `hsl(var(--color-X) / 0.2)`). Les
