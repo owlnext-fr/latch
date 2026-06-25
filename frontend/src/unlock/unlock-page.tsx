@@ -82,22 +82,25 @@ export function UnlockPage() {
                 maxLength={6}
                 pattern={REGEXP_ONLY_DIGITS}
                 value={pin}
-                onChange={setPin}
+                onChange={(v) => {
+                  setPin(v)
+                  if (error) setError(null)
+                }}
                 onComplete={() => void doUnlock()}
                 aria-invalid={error ? true : undefined}
               >
                 <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
+                  <InputOTPSlot index={0} aria-invalid={error ? true : undefined} />
+                  <InputOTPSlot index={1} aria-invalid={error ? true : undefined} />
+                  <InputOTPSlot index={2} aria-invalid={error ? true : undefined} />
+                  <InputOTPSlot index={3} aria-invalid={error ? true : undefined} />
+                  <InputOTPSlot index={4} aria-invalid={error ? true : undefined} />
+                  <InputOTPSlot index={5} aria-invalid={error ? true : undefined} />
                 </InputOTPGroup>
               </InputOTP>
             </div>
             {error && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-center text-sm text-destructive">
                 {error}
               </p>
             )}
