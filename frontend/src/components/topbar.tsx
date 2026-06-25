@@ -1,14 +1,16 @@
+import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LocaleSwitcher } from '@/components/locale-switcher'
+import { SettingsSheet } from '@/components/settings-sheet'
 import { useLogout } from '@/hooks/use-auth'
 
 export function Topbar() {
   const router = useRouter()
   const { t } = useTranslation()
   const logout = useLogout()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   function handleLogout() {
     logout.mutate(undefined, {
@@ -36,13 +38,10 @@ export function Topbar() {
           variant="ghost"
           size="icon-sm"
           aria-label={t('settings.title')}
-          onClick={() => {
-            router.navigate({ to: '/settings' })
-          }}
+          onClick={() => setSettingsOpen(true)}
         >
           <Settings />
         </Button>
-        <LocaleSwitcher />
         <Button
           type="button"
           variant="ghost"
@@ -53,6 +52,7 @@ export function Topbar() {
           {t('common.logout')}
         </Button>
       </div>
+      <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   )
 }

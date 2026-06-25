@@ -75,6 +75,25 @@ describe('Topbar', () => {
     })
   })
 
+  it('opens the settings sheet when the settings icon is clicked', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get(`${ORIGIN}/api/settings`, () =>
+        HttpResponse.json({
+          mcp_url: 'https://latch.example/mcp',
+          deploy_token: 'tok-123456',
+          public_base_url: 'https://latch.example',
+        }),
+      ),
+    )
+    renderTopbar()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument(),
+    )
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    expect(await screen.findByText('https://latch.example/mcp')).toBeInTheDocument()
+  })
+
   it('logs out then navigates to /login', async () => {
     const user = userEvent.setup()
     server.use(

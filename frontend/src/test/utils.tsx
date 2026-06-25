@@ -13,7 +13,6 @@ import {
 import i18n from '@/i18n'
 import { LoginPage } from '@/routes/login'
 import { ListPage } from '@/routes/list'
-import { SettingsPage } from '@/routes/settings'
 
 function makeQueryClient() {
   return new QueryClient({
@@ -34,7 +33,7 @@ export function renderWithProviders(ui: ReactNode): RenderResult {
   return render(ui, { wrapper: AllProviders })
 }
 
-type TestPath = '/login' | '/' | '/settings'
+type TestPath = '/login' | '/'
 
 type TestRouter = ReturnType<typeof buildTestRouter>
 
@@ -57,12 +56,7 @@ function buildTestRouter(initialPath: TestPath) {
     path: '/',
     component: ListPage,
   })
-  const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/settings',
-    component: SettingsPage,
-  })
-  const routeTree = rootRoute.addChildren([loginRoute, listRoute, settingsRoute])
+  const routeTree = rootRoute.addChildren([loginRoute, listRoute])
   return createRouter({ routeTree, history })
 }
 
