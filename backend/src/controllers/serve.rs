@@ -2,11 +2,18 @@
 //! publique (pas de session admin). L'auth = code projet + cookie signé ;
 //! la barrière = rate-limit (contrat §6, §9.5). Aucune réponse ne porte le PIN.
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
 use loco_rs::prelude::*;
+use tower::ServiceBuilder;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+
+use crate::controllers::serve_ratelimit::{IpSlugKeyExtractor, SlugKeyExtractor};
 
 use crate::controllers::error::into_response;
 use crate::dto::UnlockReq;
@@ -153,9 +160,54 @@ pub(crate) async fn unlock(
     Ok((jar, StatusCode::NO_CONTENT).into_response())
 }
 
+fn env_u32(name: &str, default: u32) -> u32 {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
+fn env_u64(name: &str, default: u64) -> u64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
 pub fn routes() -> Routes {
+    // Burst & période réglables par env (défauts : IP+slug 5/1s, slug global 20/3s).
+    let ip_burst: u32 = env_u32("LATCH_UNLOCK_RL_IP_BURST", 5);
+    let ip_per_sec: u64 = env_u64("LATCH_UNLOCK_RL_IP_PER_SECOND", 1);
+    let slug_burst: u32 = env_u32("LATCH_UNLOCK_RL_SLUG_BURST", 20);
+    let slug_period: u64 = env_u64("LATCH_UNLOCK_RL_SLUG_PERIOD_SECS", 3);
+
+    let ip_layer = {
+        let config = Arc::new(
+            GovernorConfigBuilder::default()
+                .per_second(ip_per_sec)
+                .burst_size(ip_burst)
+                .key_extractor(IpSlugKeyExtractor)
+                .finish()
+                .expect("governor IP+slug config valide"),
+        );
+        GovernorLayer { config }
+    };
+    let slug_layer = {
+        let config = Arc::new(
+            GovernorConfigBuilder::default()
+                .period(Duration::from_secs(slug_period))
+                .burst_size(slug_burst)
+                .key_extractor(SlugKeyExtractor)
+                .finish()
+                .expect("governor slug config valide"),
+        );
+        GovernorLayer { config }
+    };
+
+    let unlock_layers = ServiceBuilder::new().layer(ip_layer).layer(slug_layer);
+
     Routes::new()
         .add("/api/public/{slug}", get(public_meta))
         .add("/c/{slug}", get(serve))
-        .add("/c/{slug}/unlock", post(unlock))
+        .add("/c/{slug}/unlock", post(unlock).layer(unlock_layers))
 }

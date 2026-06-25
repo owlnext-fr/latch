@@ -206,6 +206,34 @@ async fn unlock_good_pin_sets_cookie_then_serves_proto() {
 
 #[tokio::test]
 #[serial]
+async fn unlock_rate_limited_after_burst() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-eeeeeeee", true, Some("123456"), None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>x</h1>").await;
+        // Burst IP+slug = 5 ; au-delà → 429. Clé IP fixée via X-Forwarded-For.
+        let mut got_429 = false;
+        for _ in 0..12 {
+            let res = request
+                .post("/c/prot-eeeeeeee/unlock")
+                .add_header(
+                    axum::http::HeaderName::from_static("x-forwarded-for"),
+                    axum::http::HeaderValue::from_static("9.9.9.9"),
+                )
+                .json(&serde_json::json!({ "pin": "000000" }))
+                .await;
+            if res.status_code() == 429 {
+                got_429 = true;
+                break;
+            }
+        }
+        assert!(got_429, "le burst dépassé doit déclencher un 429 (§9.5)");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn rotating_pin_invalidates_cookie() {
     let _dist = fake_dist();
     let config = RequestConfigBuilder::new().save_cookies(true).build();
