@@ -166,3 +166,14 @@ fichier via `io::Error` ici, mais pas opaque non plus). Durcir : logger le déta
 serveur (observabilité) ET renvoyer un message générique `"internal error"`. Même pattern
 que le backlog `controllers/error.rs`.
 
+### Broutilles UI unlock (revue itération 2026-06-25)
+- Clés i18n admin mortes après le retrait des swaps de texte des boutons (`login.submitting`,
+  `deploy.deploying`, `danger.deleting`) — inoffensives, à supprimer un jour.
+- `InputOTPSeparator` vendorisé dans `components/ui/input-otp.tsx` mais inutilisé (boilerplate
+  shadcn gardé pour parité). À trimmer si on ne s'en sert jamais.
+- Bordure des slots OTP en valeur arbitraire `oklch(0.85 0.003 48.717)` (même teinte que `--input`,
+  plus foncée) **sans variante dark** : invisible aujourd'hui (page unlock en fond clair only). Si
+  le dark mode arrive sur cette surface, lier à un token plutôt qu'une valeur en dur.
+- ~~Favicon `/vite.svg` 404 sur `/admin`~~ — **corrigé** (lien favicon retiré d'`index.html` ;
+  l'asset Vite par défaut n'était qu'un placeholder de scaffold).
+
