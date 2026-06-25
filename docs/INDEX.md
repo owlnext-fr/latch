@@ -63,6 +63,14 @@
 - [x] Toasts câblés sur tous les retours d'action (création/édition/déploiement/activation/suppression/copie) + erreurs — Polish UX — 2026-06-25
 - [x] i18n complet + intros de page + accessibilité (`<a onclick>` → `<button class="linkish">`, breadcrumb `<button>`) sur Login/List/Detail/panels — Polish UX — 2026-06-25
 
+## Frontend React (Migration Plan 2 — feat/admin-react)
+- [x] Harness Vitest (jsdom, globals) + MSW (`src/test/msw.ts` : `server` + `jsonOnce`) + `vitest.setup.ts` — Plan 2 T4 — 2026-06-25
+- [x] Helper `src/test/utils.tsx` : `renderWithProviders` (I18nextProvider + QueryClientProvider retry:false) — Plan 2 T4 — 2026-06-25
+- [x] `CopyButton` React : `navigator.clipboard.writeText` + `toast.success(t('toast.copied'))`, bouton-icône `Copy` lucide + aria-label — Plan 2 T4 — 2026-06-25
+- [x] `PinField` React : lecture (masque `••••••`, œil révéler/masquer, CopyButton si pin), édition (Input 6 chiffres, disabled, onChange filtré) — Plan 2 T4 — 2026-06-25
+- [x] `LocaleSwitcher` React : boutons FR/EN, `i18n.changeLanguage`, `aria-pressed` sur langue active — Plan 2 T4 — 2026-06-25
+- [x] Tests Vitest : 10 tests verts (utils×2, PinField×5, CopyButton×2) ; typecheck + lint propres — Plan 2 T4 — 2026-06-25
+
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24
 - [x] CI GitHub Actions **verte sur main** (fmt/clippy, tests, build SPA, cargo-deny bloquant, docker GHCR) — Phase 0 — 2026-06-24

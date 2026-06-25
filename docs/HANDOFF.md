@@ -4,6 +4,34 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — Migration React Plan 2 T4 : harness Vitest+MSW + PinField/CopyButton/LocaleSwitcher (feat/admin-react)
+
+### Dernière chose faite
+- **Harness Vitest** : `frontend/vitest.config.ts` (jsdom, globals, alias `@/`), `frontend/vitest.setup.ts` (jest-dom + MSW server lifecycle), scripts `test`/`test:watch` dans `package.json`.
+- **MSW** : `src/test/msw.ts` exporte `server` (setupServer) + `jsonOnce` helper typé (`JsonBodyType`).
+- **`src/test/utils.tsx`** : `renderWithProviders(ui)` = `I18nextProvider` (i18n partagé) + `QueryClientProvider` (fresh QueryClient, `retry: false`). Pattern réutilisé par toutes les tasks suivantes.
+- **CopyButton** (`src/components/copy-button.tsx`) : icône `Copy` lucide, `aria-label` prop, `navigator.clipboard.writeText` + `toast.success(t('toast.copied'))`.
+- **PinField** (`src/components/pin-field.tsx`) : lecture (masque `••••••`, bouton œil Eye/EyeOff, CopyButton si pin non null) ; édition (`<input>`, `disabled`, `onChange` filtré non-digits max 6). Retourne `null` si pin null.
+- **LocaleSwitcher** (`src/components/locale-switcher.tsx`) : boutons FR/EN, `i18n.changeLanguage`, `aria-pressed` sur langue active.
+- **Tests** : 10/10 verts (utils×2, PinField×5, CopyButton×2 dont clipboard stub `vi.fn()`). TDD : RED → FAIL import → composants implémentés → GREEN.
+- **Typecheck** : fix `tsconfig.app.json` (`"@testing-library/jest-dom/vitest"` dans `types`) pour exposer les matchers aux tests. **Lint** : 0 warning/error.
+
+### Trucs en suspens
+- **Plan 2 T5+** : composants de niveau supérieur (AuthProvider, pages Login/List/Detail, ProjectForm, DeployPanel, etc.).
+- **CI/Docker** : toujours rouge par design (stage Trunk) — sera traité Plan 3.
+
+### Prochaine chose à creuser
+- Tâches 5+ du Plan 2 : routes TanStack Router (Login, List, Detail), AuthProvider, pages.
+- Le `renderWithProviders` est prêt — les tests de composants page pourront en hériter.
+
+### Notes pour future Claude
+- `@testing-library/jest-dom/vitest` doit figurer dans `types[]` de `tsconfig.app.json` (pas seulement dans `vitest.setup.ts`) sinon `pnpm typecheck` échoue sur `.toBeInTheDocument()` etc.
+- jsdom n'a pas `navigator.clipboard` → stub via `Object.assign(navigator, { clipboard: { writeText: vi.fn() } })` dans `beforeEach`.
+- `jsonOnce` dans `msw.ts` doit typer `body` en `JsonBodyType` (import MSW) pas `unknown`, sinon erreur TS.
+- `lucide-react` est déjà en dépendance — utiliser `Eye`/`EyeOff`/`Copy`.
+
+---
+
 ## 2026-06-25 — Migration React Plan 1 : Backend OpenAPI livré (feat/admin-react)
 
 > Plan 1/3 exécuté en Subagent-Driven (8 tâches). Détail tâche-par-tâche dans

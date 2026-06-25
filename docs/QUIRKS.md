@@ -240,6 +240,15 @@ dans `openapi.json`. Un doc-comment verbeux (notes QUIRKS, contexte Context7, TO
 **Règle** : garder les doc-comments des handlers courts et orientés API publique. Les notes
 internes vont dans les commentaires `//` (pas `///`) ou dans les docs mémoire.
 
+## Vitest + `@testing-library/jest-dom` : matchers manquants si `types` absent du tsconfig (2026-06-25)
+**Symptôme** : `pnpm typecheck` échoue sur `Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'` — même si `vitest.setup.ts` importe `@testing-library/jest-dom/vitest`. **Cause** : l'augmentation de module (`declare module 'vitest' { interface Assertion ... }`) doit être visible lors de la vérification des fichiers `src/**/*.test.tsx`. Elle n'est chargée que si `@testing-library/jest-dom/vitest` est dans `types[]` de `tsconfig.app.json` (qui inclut `src/`). L'import dans `vitest.setup.ts` suffit pour le **runtime** Vitest, pas pour le **typecheck** `tsc`. **Fix** : ajouter `"@testing-library/jest-dom/vitest"` dans `compilerOptions.types` de `tsconfig.app.json`.
+
+## jsdom n'a pas `navigator.clipboard` — stub obligatoire dans les tests CopyButton (2026-06-25)
+`navigator.clipboard` est `undefined` dans l'environnement jsdom de Vitest. Tout test qui invoque `navigator.clipboard.writeText(...)` échoue avec `TypeError: Cannot read properties of undefined (reading 'writeText')`. **Fix** : dans `beforeEach`, `Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })`. Ce stub écrase le descripteur pour la durée du test.
+
+## MSW `jsonOnce` body : typer en `JsonBodyType`, pas `unknown` (2026-06-25)
+`HttpResponse.json(body)` accepte `JsonBodyType` (exporté de `msw`). Passer `unknown` produit une erreur TS `Argument of type 'unknown' is not assignable to parameter of type 'JsonBodyType'`. **Fix** : importer `type JsonBodyType from 'msw'` et typer le paramètre `body` en conséquence.
+
 ## Thème de marque : export générateur shadcn (oklch) → triplets HSL (2026-06-25)
 La CSS vendorisée de `shadcn-rs` consomme les couleurs en **`hsl(var(--color-X))`** avec des
 **triplets HSL** `H S% L%` (y compris des compositions alpha `hsl(var(--color-X) / 0.2)`). Les
