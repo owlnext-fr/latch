@@ -287,7 +287,7 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
    `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin via
    `require_same_origin` (middleware `axum::from_fn`, 403 cross-origin).
 
-### 9.1 Note — `GET /api/settings` et le `deploy_token`
+### Note (hors-invariants) — `GET /api/settings` et le `deploy_token`
 
 `GET /api/settings` (protégé par `AdminAuth`, donc 401 sans session) expose :
 `{ deploy_token, mcp_url, public_base_url }`. Le `deploy_token` est bien exposé ici,
