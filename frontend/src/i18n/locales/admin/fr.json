@@ -1,4 +1,5 @@
 {
+  "_meta": { "name": "Français", "flag": "FR" },
   "common.loading": "Chargement…",
   "common.cancel": "Annuler",
   "common.save": "Enregistrer",
