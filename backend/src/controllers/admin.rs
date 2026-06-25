@@ -29,8 +29,11 @@ use crate::services::projects::{CreateProject, ProjectsService};
 #[debug_handler]
 async fn list(_auth: AdminAuth, State(ctx): State<AppContext>) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    let projects = svc.list().await.map_err(into_response)?;
-    let items: Vec<ProjectListItem> = projects.iter().map(crate::dto::to_list_item).collect();
+    let rows = svc.list_with_versions().await.map_err(into_response)?;
+    let items: Vec<ProjectListItem> = rows
+        .iter()
+        .map(|(p, vers)| crate::dto::to_list_item(p, vers))
+        .collect();
     format::json(items)
 }
 

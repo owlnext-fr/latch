@@ -211,14 +211,23 @@ export interface components {
         };
         /** @description Item de liste — **sans PIN** (invariant §9.2 : structurellement absent). */
         ProjectListItem: {
-            /** Format: int32 */
-            active_version_id?: number | null;
+            /**
+             * Format: int32
+             * @description Numéro (`n`) de la version active, ou `None` si aucun déploiement.
+             *     On n'expose PAS `active_version_id` (PK interne trompeuse) dans la liste.
+             */
+            active_version_n?: number | null;
             brand_name?: string | null;
             code_enabled: boolean;
             /** Format: int32 */
             id: number;
             name: string;
             slug: string;
+            /**
+             * Format: int32
+             * @description Nombre total de versions du projet.
+             */
+            version_count: number;
         };
         SetCodeReq: {
             pin: string;

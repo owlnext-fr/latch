@@ -29,7 +29,6 @@
   "list.create_first": "+ Create the first project",
   "list.copy_url_aria": "Copy the URL",
   "list.active": "active",
-  "list.deployed": "Deployed",
   "detail.back": "‹ Projects",
   "detail.intro": "Read-only overview. Use the actions to edit, deploy or delete.",
   "detail.access_title": "Public access",
@@ -97,5 +96,7 @@
   "toast.version_deployed": "Version deployed.",
   "toast.version_activated": "Version activated.",
   "toast.version_deleted": "Version deleted.",
-  "toast.copied": "Copied to clipboard."
+  "toast.copied": "Copied to clipboard.",
+  "list.versions_count_one": "{{count}} version",
+  "list.versions_count_other": "{{count}} versions"
 }

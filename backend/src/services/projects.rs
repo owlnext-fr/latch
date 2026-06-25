@@ -5,7 +5,9 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
 };
 
-use crate::models::_entities::projects;
+use std::collections::HashMap;
+
+use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::{pin, security, slug};
 
@@ -62,6 +64,29 @@ impl ProjectsService {
             .order_by_desc(projects::Column::Id)
             .all(&self.db)
             .await?)
+    }
+
+    /// Projets + leurs versions (pour enrichir la liste avec `active_version_n` + `version_count`).
+    /// Deux requêtes (projets, versions) regroupées en mémoire — pas de N+1.
+    pub async fn list_with_versions(
+        &self,
+    ) -> Result<Vec<(projects::Model, Vec<versions::Model>)>, CoreError> {
+        let projects = projects::Entity::find()
+            .order_by_desc(projects::Column::Id)
+            .all(&self.db)
+            .await?;
+        let all_versions = versions::Entity::find().all(&self.db).await?;
+        let mut by_project: HashMap<i32, Vec<versions::Model>> = HashMap::new();
+        for v in all_versions {
+            by_project.entry(v.project_id).or_default().push(v);
+        }
+        Ok(projects
+            .into_iter()
+            .map(|p| {
+                let vers = by_project.remove(&p.id).unwrap_or_default();
+                (p, vers)
+            })
+            .collect())
     }
 
     pub async fn get_by_slug(&self, slug: &str) -> Result<projects::Model, CoreError> {

@@ -94,17 +94,18 @@ export function ListPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {/* NOTE: `active_version_id` is a DB primary key, NOT the
-                        sequential version number (n). Rendering `v{id}` would show
-                        a misleading number to users (e.g. "v37" for version n=2).
-                        We therefore show a neutral "Deployed" indicator when a
-                        version is active, and "—" otherwise.
-                        BACKLOG: backend should enrich the list DTO with
-                        `active_version_n` (the sequential n) + `version_count`
-                        so the column can display "v2 / 3 versions" as per §7. */}
-                    {project.active_version_id != null
-                      ? t('list.deployed')
-                      : t('common.dash')}
+                    {/* `active_version_n` = numéro de version (n), pas le PK.
+                        Affiche "v{n} · {count} versions", ou "—" si aucun déploiement. */}
+                    {project.active_version_n != null ? (
+                      <span className="flex items-baseline gap-2">
+                        <span className="font-medium">{`v${project.active_version_n}`}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {t('list.versions_count', { count: project.version_count })}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">{t('common.dash')}</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

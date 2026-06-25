@@ -715,15 +715,17 @@
           "id",
           "slug",
           "name",
-          "code_enabled"
+          "code_enabled",
+          "version_count"
         ],
         "properties": {
-          "active_version_id": {
+          "active_version_n": {
             "type": [
               "integer",
               "null"
             ],
-            "format": "int32"
+            "format": "int32",
+            "description": "Numéro (`n`) de la version active, ou `None` si aucun déploiement.\nOn n'expose PAS `active_version_id` (PK interne trompeuse) dans la liste."
           },
           "brand_name": {
             "type": [
@@ -743,6 +745,11 @@
           },
           "slug": {
             "type": "string"
+          },
+          "version_count": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Nombre total de versions du projet."
           }
         }
       },

@@ -29,7 +29,6 @@
   "list.create_first": "+ Créer le premier projet",
   "list.copy_url_aria": "Copier l'URL",
   "list.active": "active",
-  "list.deployed": "Déployée",
   "detail.back": "‹ Projets",
   "detail.intro": "Vue en lecture seule. Utilisez les actions pour éditer, déployer ou supprimer.",
   "detail.access_title": "Accès public",
@@ -97,5 +96,7 @@
   "toast.version_deployed": "Version déployée.",
   "toast.version_activated": "Version activée.",
   "toast.version_deleted": "Version supprimée.",
-  "toast.copied": "Copié dans le presse-papier."
+  "toast.copied": "Copié dans le presse-papier.",
+  "list.versions_count_one": "{{count}} version",
+  "list.versions_count_other": "{{count}} versions"
 }

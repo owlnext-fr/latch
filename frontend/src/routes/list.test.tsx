@@ -16,7 +16,8 @@ const PROJECTS: ProjectListItem[] = [
     name: 'Mon Projet',
     slug: 'mon-projet-k7Qp2maZ',
     code_enabled: true,
-    active_version_id: 3,
+    active_version_n: 2,
+    version_count: 3,
     brand_name: null,
   },
   {
@@ -24,7 +25,8 @@ const PROJECTS: ProjectListItem[] = [
     name: 'Demo ACME',
     slug: 'demo-acme-xB3nLp9q',
     code_enabled: false,
-    active_version_id: null,
+    active_version_n: null,
+    version_count: 0,
     brand_name: 'ACME',
   },
 ]
@@ -64,6 +66,10 @@ describe('ListPage', () => {
 
     // Badge Open for code_enabled=false
     expect(screen.getByText('Open')).toBeInTheDocument()
+
+    // Active version shows the sequential n (v2) + the version count, not a PK.
+    expect(screen.getByText('v2')).toBeInTheDocument()
+    expect(screen.getByText('3 versions')).toBeInTheDocument()
   })
 
   it('SECURITY — PIN is never rendered in the list (§9.2)', async () => {
@@ -149,7 +155,7 @@ describe('ListPage', () => {
     expect(copyButtons).toHaveLength(PROJECTS.length)
   })
 
-  it('renders dash for project with no active version and "Deployed" for one with active version', async () => {
+  it('shows the active version number (v{n}) + count, dash when none', async () => {
     mockProjectsList(PROJECTS)
     renderWithRouter('/')
 
@@ -157,14 +163,12 @@ describe('ListPage', () => {
       expect(screen.getByText('Demo ACME')).toBeInTheDocument()
     })
 
-    // Project with active_version_id null shows the common.dash character
+    // Project with no active version (version_count 0) shows the dash.
     expect(screen.getByText('—')).toBeInTheDocument()
 
-    // Project with active_version_id != null shows "Deployed" (not the raw PK like "v3")
-    // The PK is meaningless to users; we show a neutral indicator instead.
-    expect(screen.getByText('Deployed')).toBeInTheDocument()
-    // Ensure the raw PK is NOT shown as a version number (that would be misleading)
-    expect(screen.queryByText('v3')).toBeNull()
-    expect(screen.queryByText(/^v\d+$/)).toBeNull()
+    // Project with active_version_n=2 / version_count=3 shows "v2" + "3 versions"
+    // (the sequential n, NOT the DB primary key).
+    expect(screen.getByText('v2')).toBeInTheDocument()
+    expect(screen.getByText('3 versions')).toBeInTheDocument()
   })
 })

@@ -16,7 +16,11 @@ pub struct ProjectListItem {
     pub name: String,
     pub code_enabled: bool,
     pub brand_name: Option<String>,
-    pub active_version_id: Option<i32>,
+    /// Numéro (`n`) de la version active, ou `None` si aucun déploiement.
+    /// On n'expose PAS `active_version_id` (PK interne trompeuse) dans la liste.
+    pub active_version_n: Option<i32>,
+    /// Nombre total de versions du projet.
+    pub version_count: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -151,15 +155,20 @@ pub struct ActivateResponse {
     pub active_version_id: i32,
 }
 
-/// Projet → item de liste (sans PIN).
-pub fn to_list_item(m: &projects::Model) -> ProjectListItem {
+/// Projet + ses versions → item de liste (sans PIN).
+/// `active_version_n` = le `n` de la version pointée par `active_version_id` (jamais le PK).
+pub fn to_list_item(m: &projects::Model, vers: &[versions::Model]) -> ProjectListItem {
+    let active_version_n = m
+        .active_version_id
+        .and_then(|aid| vers.iter().find(|v| v.id == aid).map(|v| v.n));
     ProjectListItem {
         id: m.id,
         slug: m.slug.clone(),
         name: m.name.clone(),
         code_enabled: m.code_enabled,
         brand_name: m.brand_name.clone(),
-        active_version_id: m.active_version_id,
+        active_version_n,
+        version_count: vers.len() as i32,
     }
 }
 
@@ -207,7 +216,7 @@ mod tests {
 
     #[test]
     fn list_item_never_serializes_pin() {
-        let json = serde_json::to_string(&to_list_item(&sample_model())).unwrap();
+        let json = serde_json::to_string(&to_list_item(&sample_model(), &[])).unwrap();
         assert!(
             !json.contains("424242"),
             "le PIN ne doit JAMAIS apparaître en liste (§9.2)"
