@@ -4,6 +4,48 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-26 — Phase 7 Lot 3 : Identité visuelle (Logo, titres, largeur, GitHub, favicon SVG) — LIVRÉE
+
+### Dernière chose faite
+**Phase 7 Lot 3 complète et vérifiée.** Passe 1 via implémentation Tasks 1-5 (spec/plan/exécution), validation complète en Task 6 :
+- Logo : composant `components/logo.tsx` (SVG immutualisé), topbar badge+texte (size-6), login/unlock (size-12)
+- Favicon : SVG-only `/src/assets/latch-logo.svg` → bundlé `/assets/<hash>.svg` par Vite dans les deux HTML (index.html + unlock.html)
+- Titres de page : hook `hooks/use-document-title.ts` appelé par route, schéma « Page — latch admin », clés i18n `title.*`
+- Liens externes : centralisés `lib/links.ts` (`GITHUB_URL`, `DOCS_URL`), rendus `Button asChild` avec `<a target="_blank" rel="noopener noreferrer">`
+- Largeur admin : `max-w-6xl` sur list/detail main (layout conforme)
+- Bouton GitHub : présent login (`lib/links.ts` GITHUB_URL)
+- Bouton « ? » doc topbar : présent (`lib/links.ts` DOCS_URL)
+- Icône GitHub : inline SVG composant `components/github-icon.tsx` (lucide-react 1.21.0 n'a pas `Github`)
+- Purge scaffold : vite.svg + react.svg retirés, favicon bundlé confirmé
+
+**Vérification finale depuis `frontend/` — gate complète :**
+- `rtk lint` : **0 erreur**
+- `pnpm typecheck` : **0 erreur**
+- `rtk vitest run --coverage` : **85/85 tests verts**, couverture Logo/useDocumentTitle/GithubIcon **100% new-code**
+- `pnpm build` : **build OK**, favicon `/assets/latch-logo-<hash>.svg` dans dist/index.html ET dist/unlock.html
+- `ls public/vite.svg src/assets/react.svg 2>&1 | grep "no such\|cannot"` → **OK: scaffold purgé**
+
+**Mémoire projet mise à jour (4 fichiers) :**
+- `docs/CONVENTIONS.md` : section Logo/titres/links/favicon + pattern /assets bundling
+- `docs/QUIRKS.md` : entrée favicon /assets + note lucide-react 1.21.0 sans brand icons
+- `docs/INDEX.md` : ligne Phase 7 Lot 3 (Logo/titres/largeur/GitHub/bouton doc/favicon SVG/purge)
+- `docs/HANDOFF.md` : cette entrée + note button.tsx asChild fix (suite Task 1-5)
+
+### Trucs en suspens
+- **Lot 4** : page d'erreur stylée `/c` + fusionnelle Lots 1–3 → deploy
+- **Note production** : lien doc pointe URL Phase 8 pas encore en ligne (BACKLOG)
+
+### Prochaine chose à creuser
+**Phase 7 Lot 4** : page d'erreur serving `/c` + merge Lots 1+2+3 groupé
+
+### Notes pour future Claude
+- **Favicon via /assets** : SVG-only assumé (past l'outil interne noindex). Référencer via `/src/assets/latch-logo.svg` dans HTML → Vite rewrites `/assets/<hash>.svg` servi par backend mount.
+- **Logo mutualisé** : `components/logo.tsx` réutilisé partout (taille CSS variable `size-*`). Pas de duplication SVG.
+- **lib/links.ts** : source unique d'URLs externes (GITHUB_URL, DOCS_URL) → appel par composants/tests centralisé.
+- **button.tsx fix** : `asChild` prop passait `false` à Slot.Root au lieu de `true` — suite Task 1, corrigé, test régression verte.
+
+---
+
 ## 2026-06-25 — Phase 7 Lot 2 : Panneau Settings unifié + Select + LanguageSelect + ThemeToggle — LIVRÉE
 
 ### Dernière chose faite

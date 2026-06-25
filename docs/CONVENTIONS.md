@@ -1000,6 +1000,19 @@ La CSS d'un asset spécifique-admin (ex. `flag-icons`) s'importe DANS le composa
 l'utilise (`language-select.tsx`), pas dans `index.css` partagé, pour ne pas alourdir le
 bundle public unlock.
 
+## Logo, titres de page, liens externes (Phase 7 Lot 3)
+
+- Logo : composant `components/logo.tsx` (`<img src={logoUrl} alt="latch">`, importe
+  `src/assets/latch-logo.svg`), mutualisé admin + unlock, taille par CSS (`size-6` topbar,
+  `size-12` login/unlock).
+- Favicon : SVG-only, `<link rel="icon" type="image/svg+xml" href="/src/assets/latch-logo.svg">`
+  dans index.html ET unlock.html. JAMAIS de fichier favicon à la racine (le backend ne sert que
+  `/assets` → 404 ; cf. QUIRKS). Vite réécrit `/src/assets/...` vers `/assets/<hash>`.
+- Titres : hook `hooks/use-document-title.ts` appelé par route. Schéma « Page — latch admin »
+  (clés i18n `title.*`).
+- Liens externes : centralisés dans `lib/links.ts` (`GITHUB_URL`, `DOCS_URL`), rendus via
+  `Button asChild` enveloppant un `<a target="_blank" rel="noopener noreferrer">`.
+
 ## i18n — locales auto-découvertes (Phase 7 Lot 1)
 
 Ajouter une langue = déposer `src/i18n/locales/{admin,unlock}/<code>.json` avec une

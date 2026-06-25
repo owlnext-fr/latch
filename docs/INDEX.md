@@ -175,3 +175,5 @@
 - [x] Phase 5 — endpoint MCP + panneau Settings — 2026-06-25
 - [x] Phase 6 — e2e, durcissement, packaging (robots.txt + X-Robots-Tag, e2e MCP HTTP ×6, e2e /c + unlock ×3, captures Playwright, CHANGELOG git-cliff, README refonte + badges) — 2026-06-25
 - [x] Phase 7 Lot 1 — Fondations i18n/thème (auto-découverte, ThemeProvider, anti-FOUC, mémoire) — 2026-06-25
+- [x] Phase 7 Lot 2 — Panneau Settings unifié (Select radix, language/theme toggles, MCP section, lazy fetch, mémoire) — 2026-06-25
+- [x] Phase 7 Lot 3 — Identité visuelle (Logo favicon SVG + topbar + login + unlock, titres de page dynamiques, largeur admin max-w-6xl, lien GitHub + bouton ? doc, inline GitHub SVG, mémoire) — 2026-06-26
