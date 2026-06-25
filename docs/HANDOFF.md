@@ -4,6 +4,53 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-26 — Phase 7 Lot 4 : Page d'erreur serving /c — LIVRÉE (Phase 7 ✅ COMPLÈTE)
+
+### Dernière chose faite
+**Phase 7 Lot 4 — page d'erreur stylée serving `/c` — clôturée et vérifiée.** Task 3 : gate complète + mémoire projet.
+
+**Gate finale (repo root)** :
+- `cargo fmt --all --check` : ✅ OK
+- `cargo clippy --all-targets --all-features -- -D warnings` : ✅ **No issues found**
+- `cargo nextest run` : ✅ **137/137 tests passed** (13 binaries, +1 test)
+- `cd frontend && rtk lint` : ✅ **No issues found**
+- `pnpm typecheck` : ✅ OK
+- `rtk vitest run --coverage` : ✅ **87/87 tests passed** ; couverture error-page **≥ 80%** (new-code total OK)
+- `pnpm build` : ✅ **build OK** ; `dist/error.html` **présent** (607 B)
+- Bundle isolation vérifiée : ✅ `grep -rl "ProjectForm\|deploy_token\|use-projects" dist/assets/*.js | grep -i error || echo "OK"` → **OK: bundle error sans code admin**
+
+**Livré** :
+- 3ᵉ entrée Vite `error.html` (3 fichiers : `src/error/{main,error-page,i18n}.tsx`)
+- `locales/error/{en,fr}.json` auto-découverts (2 clés : `title`, `message`)
+- `web::error_index()` → `PathBuf` vers `dist/error.html`
+- `serve.rs::serve_error_page(status)` : lit HTML, renvoie HTML + `no-store` + status code, fallback texte inline si manque
+- 5 branches Err terminales → `Ok(serve_error_page(...))` (404 slug inconnu, 404 pas de version, 500 DB/storage/version manquante)
+- Logs `tracing::error!` sur 500 (observabilité backend)
+- Page générique (zéro injection, pas de leak d'existence de slug)
+- `fake_dist()` écrit `error.html` ; test fallback inline quand absent
+
+**Mémoire projet mise à jour (6 fichiers)** :
+- `docs/CONVENTIONS.md` : section « Page d'erreur serving /c » (pattern 3ᵉ entrée Vite, serve_error_page, fallback)
+- `docs/QUIRKS.md` : entrée « fake_dist écrit unlock.html ET error.html » (fake_dist pose les 2 ; fallback testé)
+- `docs/BACKLOG.md` : item Phase 4 « Erreur opaque + sans log » marqué ~~RÉSOLU (Phase 7 Lot 4)~~
+- `docs/INDEX.md` : ligne Phase 7 Lot 4 (8 items, gate + isolation)
+- `docs/ROADMAP.md` : **Phase 7 ✅ LIVRÉE (2026-06-26)** — 4 lots complets (Lot 1/2/3/4)
+- `docs/HANDOFF.md` : cette entrée
+
+### Trucs en suspens
+- **Merge Lots 1+2+3+4 groupé** → piste CI séparée recommandée ; 4 branches Phase 7 à fusionner (feat/phase-7-lot-1-fondations, feat/phase-7-lot-2-settings, feat/phase-7-lot-3-identite, feat/phase-7-lot-4-error-page sur feat/phase-7-lot-1-fondations par ordre dépendance)
+
+### Prochaine chose à creuser
+- **Phase 8 — Documentation publique (Fumadocs)** : landing + doc détaillée, GitHub Pages, stub dans ROADMAP
+
+### Notes pour future Claude
+- **3ᵉ entrée Vite** : pattern réutilisable (2ᵉ = unlock, 3ᵉ = error) pour toute surface public à typage réactif. Procédé : dossier `src/<name>/`, globs locales JSON auto-découverte, entrée vite.config.ts `build.rollupOptions.input`.
+- **serve_error_page** : lire HTML, renvoyer Response + status (ne pas utiliser loco_rs::Error pour les pages publiques).
+- **Bundle isolation** : 2 globs Vite distincts (admin/error) garantissent aucun code admin dans error.js.
+- **Phase 7 fusionnée** : 4 lots, tous verts, prête pour merge → production.
+
+---
+
 ## 2026-06-26 — Phase 7 Lot 3 : Identité visuelle (Logo, titres, largeur, GitHub, favicon SVG) — LIVRÉE
 
 ### Dernière chose faite

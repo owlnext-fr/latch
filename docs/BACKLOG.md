@@ -174,13 +174,11 @@ Le governor slug-global (`LATCH_UNLOCK_RL_SLUG_BURST`/`PERIOD_SECS`) n'a pas de 
 d'intégration qui vérifie le rejet quand le plafond est atteint sur un seul slug (contrairement
 au per-IP qui est testé). À ajouter pour garantir la régression de la barrière §9.5.
 
-### Erreur opaque + sans log de `storage.read` dans `serve.rs` (Phase 4 – revue 2026-06-25)
-Le handler `serve` mappe une erreur `storage.read` via `.map_err(into_response)` **sans
-aucun log côté serveur** (pas de `tracing::error!`). La réponse 500 passe par
-`loco_rs::Error::Message` (inclut le texte de l'erreur IO ; pas de fuite du chemin de
-fichier via `io::Error` ici, mais pas opaque non plus). Durcir : logger le détail côté
-serveur (observabilité) ET renvoyer un message générique `"internal error"`. Même pattern
-que le backlog `controllers/error.rs`.
+### ~~Erreur opaque + sans log de `storage.read` dans `serve.rs`~~ — **RÉSOLU (Phase 7 Lot 4)**
+`serve.rs` logge désormais `tracing::error!` sur les 500 (DB/storage/version manquante)
+et renvoie une page d'erreur HTML générique au client (3ᵉ entrée Vite `error.html`,
+service de `serve_error_page(status)`). Le client ne reçoit aucun détail opaque ;
+le serveur loge tout pour l'observabilité. Cf. contrat §6 + CONVENTIONS.
 
 ### Broutilles UI unlock (revue itération 2026-06-25)
 - Clés i18n admin mortes après le retrait des swaps de texte des boutons (`login.submitting`,

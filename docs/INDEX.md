@@ -166,6 +166,15 @@
 - [x] Gate finale : lint 0 err, typecheck 0 err, tests 76 verts (new coverage ≥ 80%), build OK ; bundle isolation unlock vérifiée (no flag-icons CSS, no `settings.*` strings) — Phase 7 Lot 2 T6 — 2026-06-25
 - [x] Mémoire projet : CONVENTIONS (Select+helper-text pattern), QUIRKS (radix Select jsdom), INDEX (Lot 2), HANDOFF (entrée datée) — Phase 7 Lot 2 T6 — 2026-06-25
 
+## Phase 7 Lot 4 — Page d'erreur serving /c
+- [x] 3ᵉ entrée Vite `error.html` + `src/error/{main,error-page,i18n}.tsx` + `locales/error/*.json` auto-découverts — Phase 7 Lot 4 T1 — 2026-06-26
+- [x] `web::error_index()` retourne `PathBuf` vers `dist/error.html` — Phase 7 Lot 4 T2 — 2026-06-26
+- [x] `serve.rs::serve_error_page(status)` lit le HTML, renvoie HTML + `no-store` + status code, fallback texte inline si fichier manque — Phase 7 Lot 4 T2 — 2026-06-26
+- [x] 5 branches `Err` terminales de `serve` → `Ok(serve_error_page(...))` (404 slug inconnu, 404 pas de version, 500 DB/storage/version manquante) ; logs `tracing::error!` — Phase 7 Lot 4 T2 — 2026-06-26
+- [x] `fake_dist()` écrit `error.html` + test fallback inline quand absent — Phase 7 Lot 4 T2 — 2026-06-26
+- [x] Gate finale : cargo fmt/clippy/nextest + pnpm lint/typecheck/vitest/build, couverture error-page ≥ 80%, bundle isolation OK (no admin code), `dist/error.html` présent — Phase 7 Lot 4 T3 — 2026-06-26
+- [x] Mémoire projet : CONVENTIONS (page d'erreur pattern), QUIRKS (fake_dist + error.html), BACKLOG (mark Phase 4 item RÉSOLU), INDEX (Lot 4), ROADMAP (Phase 7 ✅ LIVRÉE 2026-06-26 + 4 lots), HANDOFF (entrée datée) — Phase 7 Lot 4 T3 — 2026-06-26
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24
@@ -174,6 +183,4 @@
 - [x] Phase 4 — serving `/c/<slug>` — 2026-06-25
 - [x] Phase 5 — endpoint MCP + panneau Settings — 2026-06-25
 - [x] Phase 6 — e2e, durcissement, packaging (robots.txt + X-Robots-Tag, e2e MCP HTTP ×6, e2e /c + unlock ×3, captures Playwright, CHANGELOG git-cliff, README refonte + badges) — 2026-06-25
-- [x] Phase 7 Lot 1 — Fondations i18n/thème (auto-découverte, ThemeProvider, anti-FOUC, mémoire) — 2026-06-25
-- [x] Phase 7 Lot 2 — Panneau Settings unifié (Select radix, language/theme toggles, MCP section, lazy fetch, mémoire) — 2026-06-25
-- [x] Phase 7 Lot 3 — Identité visuelle (Logo favicon SVG + topbar + login + unlock, titres de page dynamiques, largeur admin max-w-6xl, lien GitHub + bouton ? doc, inline GitHub SVG, mémoire) — 2026-06-26
+- [x] Phase 7 ✅ LIVRÉE (2026-06-26) — Lot 1: Fondations i18n/thème (auto-découverte, ThemeProvider, anti-FOUC, mémoire) ; Lot 2: Panneau Settings unifié (Select radix, language/theme toggles, MCP section, lazy fetch, mémoire) ; Lot 3: Identité visuelle (Logo favicon SVG + topbar + login + unlock, titres de page dynamiques, largeur admin max-w-6xl, lien GitHub + bouton ? doc, inline GitHub SVG, mémoire) ; Lot 4: Page d'erreur serving /c (3ᵉ entrée Vite, serve_error_page + fallback, logs 500, page générique, mémoire)

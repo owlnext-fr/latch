@@ -140,63 +140,35 @@ settings 401), 54 frontend. Clippy `--all-features` clean. Cargo-deny OK.
 **Critères de sortie atteints :** e2e vert en CI, image GHCR publiée, `deploy.sh` propre,
 repo présentable FOSS. `deploy.sh` testé sur box = responsabilité humaine (hors CI).
 
-## Phase 7 — Peaufinage graphique / web
+## Phase 7 ✅ LIVRÉE (2026-06-26) — Peaufinage graphique / web
 
 Polish visuel et confort, une fois le cœur fonctionnel en place. Indépendant des
-phases métier ; peut s'intercaler selon les priorités produit.
+phases métier ; peut s'intercaler selon les priorités produit. Livrée en 4 lots :
 
-- **Titres de page** : gestion dynamique du `<title>` par route admin (TanStack Router)
-  et sur la page de déverrouillage (ex. « {brand_name} — déverrouillage » / « latch — admin »).
-  Aujourd'hui les titres sont statiques (`index.html` = « latch — admin », `unlock.html` = « latch »).
-- **Logo** : générer un logo `latch` et l'appliquer — favicon (les deux entrées Vite ; le
-  `/vite.svg` placeholder a été retiré en Phase 4), en-tête admin (topbar), **page de login
-  admin**, et page de déverrouillage (au-dessus du `brand_name`). Le SVG est fourni
-  séparément (livraison humaine) ; jusque-là, placeholder substituable en un point.
-- **Menu Settings** : un menu de réglages regroupant **le choix de la locale** (FR/EN, déjà
-  géré par `react-i18next` + `LocaleSwitcher`) et **le choix du thème** (`system` / `dark` /
-  `light`). `next-themes` est déjà en dépendance mais aucun `ThemeProvider` n'est monté
-  (retiré au Plan 2) — à recâbler + persister. NB : la page unlock est en fond clair only
-  aujourd'hui (cf. BACKLOG « bordure OTP sans variante dark »).
-- **Sélecteur de langue (vrai)** : remplacer le `LocaleSwitcher` actuel (toggle FR/EN) par un
-  vrai sélecteur (`Select`) dans le side-panel, en prévision d'ajouter d'autres langues. Avec
-  **drapeau** par langue (format à trancher : emoji vs lib d'icônes SVG type `flag-icons`).
-  Fortement couplé à « i18n centralisé » ci-dessous : le sélecteur doit se peupler à partir des
-  locales découvertes (`locales/*.json`), pas d'une liste codée en dur.
-- **Chaque réglage est explicité** : un helper text sous chaque entrée du side-panel Settings
-  (locale, thème, et les infos MCP déjà présentes : `deploy_token` / `mcp_url` /
-  `public_base_url`). Même pattern que le helper text de `ProjectForm`.
-- **Settings en side-panel** : aujourd'hui le panneau Settings (`deploy_token` / `mcp_url` /
-  `public_base_url`, livré Phase 5) est une **route plein écran** `/admin/settings`. Le
-  transformer en **side-panel** (`<Sheet>`, cohérent avec la grammaire d'interaction admin
-  du contrat §7 — créer/éditer en side-panel) ouvert depuis l'icône Settings de la topbar,
-  plutôt qu'une navigation de route. À combiner avec le « Menu Settings » ci-dessus (locale +
-  thème + infos MCP dans le même panneau).
-- **Page d'erreur stylée pour le serving `/c/<slug>`** : aujourd'hui les branches d'erreur de
-  `controllers/serve.rs` (slug inconnu, projet sans version active) renvoient l'erreur Loco par
-  défaut (**JSON brut**, ex. `404 NotFound`) sur une surface **publique** vue par le client final.
-  Servir à la place une **page HTML stylée** (cohérente avec la page de déverrouillage, portant
-  éventuellement `brand_name`) pour chaque cas : projet introuvable, aucune version déployée,
-  voire erreur interne. Idéalement une 2ᵉ/3ᵉ vue réutilisant le bundle/thème de `unlock.html`
-  (ou un mini-template HTML). `no-store` comme le reste de la surface `/c`.
-- **i18n centralisé** : centraliser les catalogues de traduction pour qu'ajouter une locale
-  soit trivial — idéalement **détection automatique des fichiers JSON** de locale (`locales/*.json`)
-  plutôt que les imports statiques en dur actuels (`import en from './locales/en.json'`).
-  S'applique à l'i18n admin **et** au mini-catalogue de la page unlock (`src/unlock/i18n.ts`),
-  à harmoniser.
-- **Largeur bornée des pages admin** : aujourd'hui le contenu admin prend 100 % de la viewport.
-  Le borner à un conteneur centré (`mx-auto` + `max-w-*` Tailwind v4 — valeur exacte à trancher,
-  candidat `max-w-6xl`) pour une lecture confortable sur grand écran.
-- **Bouton GitHub sur la page de login** : un bouton/lien (logo GitHub) vers le repo
-  `github.com/owlnext-fr/latch` (« voir le projet »). Pas d'auth OAuth — pur lien sortant
-  (`target="_blank" rel="noopener noreferrer"`) sur une surface non authentifiée.
+- **Lot 1 — Fondations i18n/thème** : i18n centralisé (auto-découverte locales admin+unlock JSON, strip `_meta`),
+  `ThemeProvider` monté (`next-themes`, défaut `system`, anti-FOUC script `index.html` seulement), tests
+  parseLocales/theme/i18n complets, mémoire (CONVENTIONS, QUIRKS, INDEX, HANDOFF).
 
-**Sortie :** titres cohérents par page ; logo présent (favicon + topbar admin + login + unlock) ;
-menu settings fonctionnel **en side-panel** (locale + thème persistés, défaut thème = `system`, +
-infos MCP) avec **chaque réglage explicité** par un helper text ; **vrai sélecteur de langue**
-(drapeau, peuplé depuis les locales découvertes) ; serving `/c` rend des **pages d'erreur HTML
-stylées** (plus de JSON brut sur slug inconnu / sans version) ; ajouter une locale = déposer un
-JSON (ou une config minimale), sans toucher au code d'import ; **pages admin bornées** en largeur
-(conteneur centré) ; **lien GitHub** présent sur la page de login.
+- **Lot 2 — Panneau Settings unifié** : Settings side-panel (`<Sheet>` depuis topbar, plus route `/settings`
+  suppressible), Select radix (language + theme toggles, helper text), language-select auto-découverte
+  (drapeau `flag-icons` CSS), SonarCloud gate 80% couverture new-code.
+
+- **Lot 3 — Identité visuelle** : Logo favicon SVG (topbar, login, unlock, favicon réel), titres dynamiques
+  par route (TanStack Router `useDocumentTitle` hook), largeur admin `max-w-6xl` centré, lien GitHub
+  (bouton topbar + logo inline), mémoire complète (CONVENTIONS, QUIRKS, INDEX, HANDOFF).
+
+- **Lot 4 — Page d'erreur serving /c** : 3ᵉ entrée Vite `error.html` + `src/error/{main,error-page,i18n}.tsx`
+  + `locales/error/*.json`, `serve.rs::serve_error_page(status)` avec fallback texte inline, 5 branches
+  erreur (404 slug/version, 500 DB/storage/version manquante) → HTML + `no-store` + logs
+  `tracing::error!`, page générique zéro fuite, bundle isolation vérifiée, gate complète verte (cargo fmt/clippy/nextest +
+  pnpm lint/typecheck/vitest/build, couverture ≥ 80%), mémoire (CONVENTIONS, QUIRKS, BACKLOG, INDEX, ROADMAP, HANDOFF).
+
+**Sortie Phase 7** : titres cohérents par page ; logo présent (favicon + topbar admin + login + unlock) ;
+menu settings fonctionnel **en side-panel** (locale + thème persistés, défaut thème = `system`, + infos MCP)
+avec **chaque réglage explicité** par helper text ; **vrai sélecteur de langue** (drapeau, peuplé depuis
+locales découvertes) ; serving `/c` rend des **pages d'erreur HTML stylées** (plus de JSON brut sur slug inconnu /
+sans version) ; ajouter une locale = déposer un JSON, sans toucher au code d'import ; **pages admin bornées**
+en largeur (conteneur centré) ; **lien GitHub** présent sur la page de login.
 
 ## Phase 8 — Documentation publique (Fumadocs / GitHub Pages)
 

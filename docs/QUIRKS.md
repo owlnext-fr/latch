@@ -133,6 +133,12 @@ sed -i "s#$(pwd)/#/usr/src/#g" backend-lcov.info
 ```
 Cette commande réécrit `SF:/srv/owlnext/latch/` en `SF:/usr/src/` dans toutes les lignes `SF:` du fichier. CI n'a pas besoin de ce fix (les chemins correspondent). Cf. `docs/ENVIRONMENT.md §Scan local`.
 
+## fake_dist écrit unlock.html ET error.html (Phase 7 Lot 4)
+
+Les tests d'intégration `serve` posent un faux `dist/` via `fake_dist()` : il écrit MAINTENANT
+`unlock.html` ET `error.html` (marqueur `id="error-root"`). Un test dédié vérifie le fallback inline
+quand `error.html` manque. Toute réponse `/c` (page d'erreur comprise) reste `no-store`.
+
 ## Favicon servi via /assets (Phase 7 Lot 3)
 
 Le backend ne sert que `/assets` (mount ServeDir), pas la racine du dist. Un favicon à la racine

@@ -1040,3 +1040,12 @@ build: { rollupOptions: { input: { main: '…/index.html', unlock: '…/unlock.h
 - L'entrée dédiée n'importe **aucun** code admin (pas de router/Query/openapi-fetch) — bundle isolé.
 - i18n minimal propre à la page (`createInstance()`), pas le catalogue admin complet.
 - Tests Vitest avec `<InputOTP>` : mocker `document.elementFromPoint` dans `vitest.setup.ts` (cf. QUIRKS).
+
+## Page d'erreur serving /c (Phase 7 Lot 4)
+
+3ᵉ entrée Vite `error.html` (calquée sur unlock : `src/error/{main,error-page,i18n}.tsx` +
+`locales/error/*.json` auto-découverts). Servie par `serve.rs::serve_error_page(status)` qui lit
+`web::error_index()` (= `dist/error.html`) et renvoie HTML + `no-store` + status, avec un fallback
+texte inline si le fichier manque. Les branches `Err` terminales de `serve` deviennent des
+`Ok(serve_error_page(...))` (décision locale à l'adaptateur public ; le renderer Loco global reste
+JSON pour admin/MCP). Message **générique unique** (zéro injection, pas de leak d'existence de slug).
