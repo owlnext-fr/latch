@@ -70,6 +70,11 @@
 - [x] `PinField` React : lecture (masque `••••••`, œil révéler/masquer, CopyButton si pin), édition (Input 6 chiffres, disabled, onChange filtré) — Plan 2 T4 — 2026-06-25
 - [x] `LocaleSwitcher` React : boutons FR/EN, `i18n.changeLanguage`, `aria-pressed` sur langue active — Plan 2 T4 — 2026-06-25
 - [x] Tests Vitest : 10 tests verts (utils×2, PinField×5, CopyButton×2) ; typecheck + lint propres — Plan 2 T4 — 2026-06-25
+- [x] `hooks/use-projects.ts` : `useProjects`, `useProject`, 8 mutations (create/update/delete/setCode/clearCode/deploy/activateVersion/deleteVersion) avec invalidation Query + toasts sonner — Plan 2 T6 — 2026-06-25
+- [x] `components/topbar.tsx` : titre latch → /, LocaleSwitcher, logout — Plan 2 T6 — 2026-06-25
+- [x] `routes/list.tsx` : Table shadcn (nom bouton, URL+CopyButton, badge accès coloré, version active), état vide, ProjectForm stub — Plan 2 T6 — 2026-06-25
+- [x] `routes/list.test.tsx` : 6 tests MSW (hooks réels, PIN jamais rendu §9.2) — Plan 2 T6 — 2026-06-25
+- [x] `components/ui/{table,badge}.tsx` ajoutés (shadcn@latest) — Plan 2 T6 — 2026-06-25
 
 ## Infra (CI / Docker / déploiement)
 - [x] Dockerfile multi-stage (Trunk wasm → build Rust → distroless), image ~85 Mo, boot vérifié — Phase 0 — 2026-06-24

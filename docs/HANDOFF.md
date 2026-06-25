@@ -4,6 +4,32 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-25 — Migration React Plan 2 T6 : route Liste + hooks Query + Topbar (feat/admin-react)
+
+### Dernière chose faite
+- **`hooks/use-projects.ts`** : `useProjects()` + `useProject(id)` + 8 mutations (useCreateProject, useUpdateProject, useDeleteProject, useSetCode, useClearCode, useDeploy, useActivateVersion, useDeleteVersion). Chaque mutation invalide `['projects']` (+ `['project', id]`) et émet toast sonner sur succès/erreur.
+- **`components/topbar.tsx`** : titre `latch` (button → `/`), `<LocaleSwitcher>`, bouton logout (`useLogout` → navigate `/login`).
+- **`routes/list.tsx`** : Topbar + intro `t('list.intro')`. Table shadcn 4 colonnes : nom (`<button>` navigable clavier), URL publique + `CopyButton`, badge vert (PIN required) / orange (Open), version active (`v{id}` ou `—`). État vide avec bouton `t('list.create_first')`. `<ProjectForm>` stub monté hors table.
+- **`components/project-form.tsx`** : stub (retourne null, remplacé Task 7).
+- **`components/ui/{table,badge}.tsx`** : ajoutés via `pnpm dlx shadcn@latest add table badge -y`.
+- **`routes/list.test.tsx`** : 6 tests MSW (hooks réels, pas de mock) — projets affichés, badges, PIN jamais rendu (§9.2 vérifié), état vide, CopyButton par ligne, `—` pour version null.
+- **Résultat** : 18 tests verts, typecheck + lint + build propres. Commit `cfab5bb`.
+
+### Trucs en suspens
+- **Task 7** : `ProjectForm` complet (création/édition side-panel, RHF+zod, invalidation query).
+- **Task 8+** : `DetailPage`, `DeployPanel`, panels danger.
+
+### Prochaine chose à creuser
+- Task 7 : remplacer le stub `project-form.tsx` par le vrai composant Sheet + formulaire.
+
+### Notes pour future Claude
+- `ProjectListItem` n'a PAS de champ `pin` (invariant §9.2 structurel) — le test `list.test.tsx` vérifie que le mot "pin" n'apparaît pas dans le DOM.
+- La ligne du tableau utilise un `<button>` dans la cellule nom (pas un `onClick` sur `<TableRow>`) pour satisfaire `jsx-a11y/click-events-have-key-events` et `no-static-element-interactions`.
+- `stopPropagation` sur la cellule URL a été supprimé : le `<CopyButton>` est dans une cellule sans onClick parent.
+- `active_version_id` dans `ProjectListItem` est l'ID DB, pas le numéro de version `n` — afficher `v{id}` est une simplification acceptable en attendant que le DTO soit enrichi (BACKLOG si besoin).
+
+---
+
 ## 2026-06-25 — Migration React Plan 2 T4 : harness Vitest+MSW + PinField/CopyButton/LocaleSwitcher (feat/admin-react)
 
 ### Dernière chose faite
