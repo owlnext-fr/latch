@@ -95,8 +95,12 @@ async fn mcp_initialize_handshake() {
             value["result"]["protocolVersion"].as_str().is_some(),
             "protocolVersion absent de la réponse initialize"
         );
-        // rmcp 1.8 : serverInfo.name = "rmcp" (from_build_env sur la crate rmcp elle-même).
-        // On vérifie les instructions (notre texte) comme preuve de bon câblage.
+        // Le serveur doit s'annoncer sous le nom "latch" (pas le défaut "rmcp").
+        assert_eq!(
+            value["result"]["serverInfo"]["name"], "latch",
+            "serverInfo.name doit être latch"
+        );
+        // On vérifie aussi les instructions comme preuve de bon câblage.
         let instructions = value["result"]["instructions"].as_str().unwrap_or("");
         assert!(
             instructions.contains("latch"),

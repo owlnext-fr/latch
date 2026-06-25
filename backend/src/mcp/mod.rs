@@ -7,7 +7,7 @@ use std::sync::Arc;
 use loco_rs::app::AppContext;
 use rmcp::handler::server::tool::ToolRouter;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::model::{ErrorData, ServerCapabilities, ServerInfo};
+use rmcp::model::{ErrorData, Implementation, ServerCapabilities, ServerInfo};
 use rmcp::schemars;
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::tower::StreamableHttpServerConfig;
@@ -179,9 +179,10 @@ impl ServerHandler for LatchMcp {
     fn get_info(&self) -> ServerInfo {
         // `ServerInfo` (= `InitializeResult`) est `#[non_exhaustive]` (rmcp 1.8) :
         // construction interdite hors crate, on part du `Default` puis on règle
-        // capabilities + instructions via les setters/champs publics.
+        // capabilities, server_info et instructions via les setters/champs publics.
         let mut info = ServerInfo::default();
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info = info.with_server_info(Implementation::new("latch", env!("CARGO_PKG_VERSION")));
         info.with_instructions(
             "latch — déploiement de prototypes HTML. Outils : deploy_prototype, \
              list_projects. Chaque appel exige le deploy_token.",
