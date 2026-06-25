@@ -88,7 +88,8 @@ async fn logout(session: AdminSession) -> Result<Response> {
 
 pub fn routes() -> Routes {
     // Rate-limit sur le login uniquement (contrat §9.5 : charge-bearing).
-    // Limites : 2 req/s, burst de 5. SmartIpKeyExtractor lit X-Forwarded-For
+    // Limites : 1 jeton réapprovisionné / 2s (per_second(2) = période de 2s, pas
+    // 2 req/s), burst de 5. SmartIpKeyExtractor lit X-Forwarded-For
     // (posé par Caddy en façade) avant de tomber sur l'IP peer.
     let login_governor = {
         let config = Arc::new(

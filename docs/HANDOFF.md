@@ -15,7 +15,7 @@
   empreinte HMAC du PIN pour révocation par rotation) ; `controllers/serve.rs` (GET /c/{slug}
   arbre de décision 5 branches, POST /c/{slug}/unlock, GET /api/public/{slug}) ;
   `controllers/serve_ratelimit.rs` (deux governor layers via `ServiceBuilder`) ;
-  `frontend/src/unlock.tsx` + `unlock.html` (2ᵉ entrée Vite, page formulaire PIN).
+  `frontend/src/unlock/` (`main.tsx`/`unlock-page.tsx`/`i18n.ts`/`reload.ts`) + `unlock.html` (2ᵉ entrée Vite, page formulaire PIN).
 - Task 10 : `.env.example` corrigé (`UNLOCK_COOKIE_SECRET` ≥ 64 bytes, 5 knobs RL) ;
   `docs/ENVIRONMENT.md` / `QUIRKS.md` / `INDEX.md` / `ROADMAP.md` / `BACKLOG.md` mis à jour.
 - Vérification finale : `cargo nextest`, `cargo clippy`, `cargo deny`, `pnpm lint/typecheck/test/build` — tous verts.

@@ -105,7 +105,7 @@
 - [x] `services/unlock_cookie.rs` : `issue_token` / `verify_token` — cœur pur (sans axum/loco), empreinte HMAC du PIN, TTL — Phase 4 Task 1 — 2026-06-25
 - [x] `controllers/serve.rs` : handler `serve` (GET /c/{slug}) — arbre de décision (slug inconnu→404, pas de version→404, libre→HTML no-store, protégé sans cookie→unlock.html 200 no-store, protégé avec cookie valide→HTML no-store) ; handler `unlock` (POST /c/{slug}/unlock — vérif PIN, émission cookie signé, 204) ; handler `public_meta` (GET /api/public/{slug} — PublicMeta sans hash ni PIN) — Phase 4 Tasks 4-6 — 2026-06-25
 - [x] `controllers/serve_ratelimit.rs` : deux `GovernorLayer` in-memory (par-IP + slug-global) via `ServiceBuilder`, montés sur POST /c/{slug}/unlock — Phase 4 Task 7 — 2026-06-25
-- [x] `frontend/src/unlock.tsx` + `unlock.html` : page de déverrouillage standalone (2ᵉ entrée Vite, formulaire PIN, fetch POST /unlock, `brand_name`) — Phase 4 Task 8 — 2026-06-25
+- [x] `frontend/src/unlock/` (`main.tsx`, `unlock-page.tsx`, `i18n.ts`, `reload.ts`) + `unlock.html` : page de déverrouillage standalone (2ᵉ entrée Vite, formulaire PIN, fetch POST /unlock, `brand_name`) — Phase 4 Task 8 — 2026-06-25
 - [x] Config env unlock : `UNLOCK_COOKIE_SECRET` (≥ 64 B), `LATCH_UNLOCK_TTL_DAYS`, `LATCH_UNLOCK_RL_*` documentés dans `.env.example` + `docs/ENVIRONMENT.md` — Phase 4 Task 10 — 2026-06-25
 
 ## Phases closes
