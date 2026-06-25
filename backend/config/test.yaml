@@ -22,6 +22,9 @@ server:
   host: http://localhost
   # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
   middlewares:
+    # Aligné sur dev/prod : body limit configurable via LATCH_BODY_LIMIT, défaut 5 Mo.
+    limit_payload:
+      body_limit: '{{ get_env(name="LATCH_BODY_LIMIT", default="5mb") }}'
 
 # Initializers Configuration
 # initializers:

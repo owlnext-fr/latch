@@ -342,6 +342,47 @@ async fn deploy_creates_version_and_preview_serves_html() {
     drop(tmp);
 }
 
+/// Régression : un HTML > 2 Mo (l'ancien défaut Loco `limit_payload`) doit déployer.
+/// Le `body_limit` est désormais configurable (env LATCH_BODY_LIMIT, défaut 5 Mo) ;
+/// sans la config, ce deploy renverrait 413 (length limit exceeded). Cf. config/*.yaml.
+#[tokio::test]
+#[serial]
+async fn deploy_accepts_html_larger_than_2mb() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    // ~2,5 Mo : au-dessus de l'ancien défaut 2 Mo, sous le défaut 5 Mo de test.yaml.
+    let big_html = format!("<h1>big</h1>{}", "a".repeat(2_500_000));
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/api/login")
+            .json(&serde_json::json!({"user": "admin", "pass": "s3cret"}))
+            .await;
+        let created = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name": "Mon Projet", "code_enabled": false}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        let deployed = request
+            .post(&format!("/api/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html": big_html, "activate": true}))
+            .await;
+        assert_eq!(
+            deployed.status_code(),
+            200,
+            "un HTML > 2 Mo doit déployer (body_limit configuré à 5 Mo en test)"
+        );
+        assert_eq!(deployed.json::<serde_json::Value>()["n"], 1);
+    })
+    .await;
+    drop(tmp);
+}
+
 /// Bascule de version active via POST /versions/{n}/activate.
 /// Vérifie que le pointeur active_version_id est bien mis à jour.
 #[tokio::test]

@@ -13,6 +13,11 @@ server:
   # 0.0.0.0 : joignable depuis le réseau Docker / la façade Caddy.
   binding: 0.0.0.0
   host: https://latch.owlnext.fr
+  middlewares:
+    # Taille max du body (deploy d'un HTML mono-fichier). Configurable via l'env
+    # LATCH_BODY_LIMIT (ex. "10mb", "32mb", "disable"). Défaut 5 Mo.
+    limit_payload:
+      body_limit: '{{ get_env(name="LATCH_BODY_LIMIT", default="5mb") }}'
 
 database:
   # Volume monté : la base et les HTML des versions vivent sous /data.

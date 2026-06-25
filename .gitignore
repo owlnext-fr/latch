@@ -30,3 +30,6 @@ frontend/*.tsbuildinfo
 
 # Éditeur
 .vscode/
+
+# Fichier de test local (nom client réel) — ne jamais committer
+/prototype-local.html

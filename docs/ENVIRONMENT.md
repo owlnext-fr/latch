@@ -15,6 +15,7 @@
 - `DATABASE_URL` — URI SQLite. Dev (défaut) : `sqlite://latch_development.sqlite?mode=rwc`.
   Prod (image) : `sqlite:///data/latch.sqlite?mode=rwc` (volume monté). Modèle : `.env.example`.
 - `PORT` — port d'écoute backend (défaut `5150`).
+- `LATCH_BODY_LIMIT` — taille max du body des requêtes (le deploy envoie le HTML mono-fichier en JSON). Valeurs `byte_unit` (`5mb`, `10mb`, `32mb`) ou `disable`. **Défaut `5mb`** (l'ancien défaut Loco `limit_payload` était 2 Mo → 413 sur un gros proto). Configuré dans `backend/config/*.yaml` via `server.middlewares.limit_payload.body_limit`.
 
 ## Repo & exécution (cette instance)
 - **Path repo** : `/srv/owlnext/latch` · **branche par défaut** : `main` (commits directs / branches courtes).
