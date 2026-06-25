@@ -44,6 +44,21 @@ pub struct ProjectDetail {
     pub versions: Vec<VersionItem>,
 }
 
+/// Meta publique servie à la page de déverrouillage (`GET /api/public/{slug}`).
+/// **Sans PIN** (invariant §9.2 : structurellement absent) — `brand_name` est fait
+/// pour être affiché publiquement sur la page de code.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct PublicMeta {
+    pub brand_name: Option<String>,
+    pub code_enabled: bool,
+}
+
+/// Corps de `POST /c/{slug}/unlock`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct UnlockReq {
+    pub pin: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct CreateProjectReq {
     pub name: String,
@@ -196,6 +211,14 @@ pub fn to_detail(m: projects::Model, vers: Vec<versions::Model>) -> ProjectDetai
     }
 }
 
+/// Projet → meta publique (sans PIN, sans version).
+pub fn to_public_meta(m: &projects::Model) -> PublicMeta {
+    PublicMeta {
+        brand_name: m.brand_name.clone(),
+        code_enabled: m.code_enabled,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,5 +282,15 @@ mod tests {
             Some(Some("ACME".to_string())),
             "valeur = définir"
         );
+    }
+
+    #[test]
+    fn public_meta_never_serializes_pin() {
+        let json = serde_json::to_string(&to_public_meta(&sample_model())).unwrap();
+        assert!(
+            !json.contains("424242") && !json.contains("\"pin\""),
+            "PublicMeta ne doit jamais exposer le PIN (§9.2)"
+        );
+        assert!(json.contains("code_enabled"));
     }
 }
