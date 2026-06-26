@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import {
   Layers,
   Sparkles,
@@ -10,9 +11,37 @@ import {
 } from 'lucide-react';
 import { LatchLogo } from '@/components/logo';
 import { GithubIcon } from '@/components/github-icon';
+import { ClaudeChat } from '@/components/landing/claude-chat';
 import { gitConfig } from '@/lib/shared';
 
 const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
+
+const steps: { n: number; title: string; body: string; visual: ReactNode }[] = [
+  {
+    n: 1,
+    title: 'Create your project',
+    body: 'In the admin, spin up a project in a side-panel. You get a non-guessable slug and an optional 6-digit PIN — code protection is on by default.',
+    visual: (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/img/admin-list.png" alt="latch admin — project list" className="h-auto w-full" />
+    ),
+  },
+  {
+    n: 2,
+    title: 'Publish from Claude',
+    body: 'Connect the MCP endpoint once, then just ask. Claude deploys the prototype through the deploy_prototype tool and hands you back the live URL — versioned automatically.',
+    visual: <ClaudeChat />,
+  },
+  {
+    n: 3,
+    title: 'Share the link',
+    body: 'Send the client a single stable link. Protected projects show a styled unlock page; once the PIN is entered, the active version is served — always the latest.',
+    visual: (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/img/unlock.png" alt="latch unlock page" className="h-auto w-full" />
+    ),
+  },
+];
 
 const features = [
   {
@@ -76,64 +105,59 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Screenshots */}
-      <section className="mx-auto w-full max-w-5xl px-6 pb-16">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[
-            { src: '/img/admin-list.png', alt: 'latch admin — project list' },
-            { src: '/img/unlock.png', alt: 'latch unlock page' },
-          ].map((shot) => (
+      {/* 2. Journey — from prototype to shared link */}
+      <section className="mx-auto w-full max-w-5xl px-6 pb-20">
+        <div className="mb-12 text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            From prototype to shared link
+          </h2>
+          <p className="mt-3 text-fd-muted-foreground">Three steps, no glue code.</p>
+        </div>
+        <div className="flex flex-col gap-12 sm:gap-16">
+          {steps.map((step, i) => (
             <div
-              key={shot.src}
-              className="overflow-hidden rounded-xl border border-fd-border bg-fd-card shadow-sm"
+              key={step.n}
+              className="grid items-center gap-6 sm:grid-cols-2 sm:gap-10"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={shot.src} alt={shot.alt} className="h-auto w-full" />
+              {/* texte */}
+              <div className={i % 2 === 1 ? 'sm:order-2' : ''}>
+                <span className="inline-flex size-9 items-center justify-center rounded-full bg-fd-primary text-sm font-bold text-fd-primary-foreground">
+                  {step.n}
+                </span>
+                <h3 className="mt-4 text-xl font-semibold">{step.title}</h3>
+                <p className="mt-2 text-fd-muted-foreground">{step.body}</p>
+              </div>
+              {/* visuel */}
+              <div
+                className={`overflow-hidden rounded-xl border border-fd-border bg-fd-card shadow-sm ${
+                  i % 2 === 1 ? 'sm:order-1' : ''
+                }`}
+              >
+                {step.visual}
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       {/* 3. Features */}
-      <section className="mx-auto w-full max-w-5xl px-6 pb-20">
-        <div className="grid gap-px overflow-hidden rounded-xl border border-fd-border bg-fd-border sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <div key={f.title} className="bg-fd-card p-6">
-              <f.icon className="size-6 text-fd-primary" />
-              <h3 className="mt-4 font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm text-fd-muted-foreground">{f.body}</p>
-            </div>
-          ))}
+      <section className="border-t border-fd-border bg-fd-muted/30">
+        <div className="mx-auto w-full max-w-5xl px-6 py-20">
+          <div className="grid gap-px overflow-hidden rounded-xl border border-fd-border bg-fd-border sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => (
+              <div key={f.title} className="bg-fd-card p-6">
+                <f.icon className="size-6 text-fd-primary" />
+                <h3 className="mt-4 font-semibold">{f.title}</h3>
+                <p className="mt-2 text-sm text-fd-muted-foreground">{f.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* 4. Publish-from-Claude highlight */}
-      <section className="border-y border-fd-border bg-fd-muted/30">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-6 py-16 text-center">
-          <Sparkles className="size-8 text-fd-primary" />
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Ship prototypes straight from Claude
-          </h2>
-          <p className="max-w-2xl text-fd-muted-foreground">
-            Connect the MCP endpoint once, then deploy and list projects from your assistant. Two
-            tools, both guarded by a deploy token — no OAuth dance.
-          </p>
-          <pre className="w-full max-w-xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
-            <code>{`deploy_prototype(slug, html, deploy_token, activate=true)
-list_projects(deploy_token)`}</code>
-          </pre>
-          <Link
-            href="/docs/publish-from-claude/connect-mcp"
-            className="inline-flex items-center gap-1 text-sm font-medium text-fd-primary hover:underline"
-          >
-            Connect the MCP endpoint <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* 5. How it works teaser */}
+      {/* 4. Architecture teaser */}
       <section className="mx-auto w-full max-w-5xl px-6 py-16 text-center">
-        <h2 className="text-2xl font-bold tracking-tight">How it works</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Built in layers</h2>
         <p className="mx-auto mt-4 max-w-2xl text-fd-muted-foreground">
           A small Rust core holds all the business logic, HTTP-agnostic. Thin inbound adapters
           (web, MCP, client serving) translate requests into core calls and own every auth
@@ -147,7 +171,7 @@ list_projects(deploy_token)`}</code>
         </Link>
       </section>
 
-      {/* 6. Final CTA */}
+      {/* 5. Final CTA */}
       <section className="border-t border-fd-border">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-6 py-16 text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Get started in minutes</h2>
@@ -163,7 +187,7 @@ list_projects(deploy_token)`}</code>
         </div>
       </section>
 
-      {/* 7. Footer */}
+      {/* 6. Footer */}
       <footer className="border-t border-fd-border">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-fd-muted-foreground sm:flex-row">
           <span className="inline-flex items-center gap-2">
