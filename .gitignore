@@ -22,6 +22,9 @@ backend/data/
 # Secrets d'exécution
 .env
 .env.local
+# Copies locales du .env de la box (secrets prod) + vhost de la box — jamais commitées.
+.env.server
+nginx.conf
 
 # Couverture Rust (cargo-llvm-cov, produit localement et en CI — ne pas committer)
 backend-lcov.info

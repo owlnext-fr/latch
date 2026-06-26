@@ -182,15 +182,32 @@ pub async fn build_session_store(
 
     let key = axum_session::Key::from(secret.as_bytes());
 
+    // Noms de cookie de session.
+    //
+    // ⚠️ Bug axum_session 0.16.0 : `with_prefix_with_host(true)` ÉCRIT le cookie préfixé
+    // `__Host-` (via `NameType::get_name`) mais le RELIT sous le nom BRUT
+    // (`get_headers_and_key` lit `session_name`/`store_name` sans repasser par `get_name`).
+    // En prod, le serveur pose `__Host-latch_admin` mais cherche `latch_admin` → la session
+    // entrante n'est jamais retrouvée → session neuve à chaque requête → AdminAuth en 401.
+    // (Invisible en dev/test : `is_prod=false` → pas de préfixe → noms symétriques.)
+    //
+    // Contournement : on pose nous-mêmes le nom `__Host-…` et on laisse `prefix_with_host`
+    // à false → lecture et écriture utilisent le même nom. Le durcissement `__Host-` est
+    // préservé : le navigateur impose Secure + Path=/ + pas de Domain, qu'axum_session fournit
+    // déjà. Préfixe en PROD uniquement (un cookie `__Host-` sur HTTP serait rejeté). Cf. QUIRKS.
+    let (session_name, store_name) = if is_prod {
+        ("__Host-latch_admin", "__Host-store")
+    } else {
+        ("latch_admin", "store")
+    };
+
     let config = axum_session::SessionConfig::default()
         .with_table_name("sessions")
-        // Nom du cookie/header de session (confirmé : with_session_name, pas with_cookie_name).
-        .with_session_name("latch_admin")
+        .with_session_name(session_name)
+        .with_store_name(store_name)
         .with_http_only(true)
         .with_secure(is_prod)
         .with_cookie_same_site(axum_session::SameSite::Lax)
-        // `__Host-` exige Secure → prod uniquement.
-        .with_prefix_with_host(is_prod)
         .with_key(key);
 
     let store = axum_session::SessionStore::<SessionPool>::new(Some(session_pool), config)

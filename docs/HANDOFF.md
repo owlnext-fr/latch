@@ -4,6 +4,48 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-26 — Hotfix prod `v0.3.1` : session admin non restaurée derrière HTTPS (bug axum_session)
+
+### Dernière chose faite
+**Diagnostic + fix d'un bug bloquant en prod : impossible de se connecter à l'admin** (déploiement
+`https://latch.3.tools.owlnext.fr`). Symptôme : login OK puis retour à `/admin/login` **sans message
+d'erreur**. Diagnostic au curl : `POST /api/login` → **200** (cookie posé), puis `GET /api/projects`
+avec le cookie → **401**, et l'**UUID de session change à chaque requête** → le serveur crée une
+session neuve à chaque fois.
+
+**Cause (lue dans la source de la lib)** : bug `axum_session 0.16.0` (`src/headers.rs`). Avec
+`with_prefix_with_host(true)`, l'**écriture** préfixe `__Host-` (`NameType::get_name`) mais la
+**lecture** (`get_headers_and_key`) lit le champ brut `session_name` (= `latch_admin`) sans repasser
+par `get_name` → cherche `latch_admin`, ne trouve jamais `__Host-latch_admin`. Ne se déclenche qu'en
+prod (`is_prod=true`) ; invisible en dev/test (CI verte) car pas de préfixe.
+
+**Fix** (`backend/src/web/mod.rs::build_session_store`) : ne plus utiliser `with_prefix_with_host` ;
+poser nous-mêmes les noms `__Host-latch_admin` / `__Host-store` via `with_session_name`/`with_store_name`
+**en prod uniquement** (HTTP en dev rejetterait un cookie `__Host-`), `prefix_with_host=false` → noms
+symétriques lecture/écriture. Durcissement `__Host-` préservé (convention de nom policée par le navigateur :
+Secure + Path=/ + pas de Domain, déjà fournis). Gate : compile + fmt + clippy + tests web verts.
+
+### Trucs en suspens
+- **Release `v0.3.1` en cours** : branche `fix/admin-session-host-prefix` → merge `main` → tag `v0.3.1`
+  → CI build l'image (`0.3.1`/`latest`) → sur la box `./deploy.sh` (pull `latest`). **Re-tester ensuite**
+  les 2 curls (login 200 puis `/api/projects` 200 avec le cookie) **et** le login navigateur réel.
+- **`.env.server` + `nginx.conf`** (copies de la box, posées à la racine pour debug) : ajoutés au
+  `.gitignore` (le `.env.server` contient les **secrets prod réels** — ne jamais committer ; envisager
+  une rotation puisqu'ils ont transité par le working-tree).
+- Le bug de session ne pouvait PAS être attrapé par les tests existants (Test force `is_prod=false`).
+  Piste : test d'intégration « prod-like » (env custom + assert round-trip cookie) — non fait, à évaluer.
+
+### Prochaine chose à creuser
+- Après confirmation que l'admin se connecte en prod : reprendre la **vérif post-merge Phase 8** (Pages
+  live + basePath) puis la **Phase 9 (polish)**.
+
+### Notes pour future Claude
+- **Ne jamais réactiver `with_prefix_with_host`** tant qu'axum_session n'est pas patché en amont (la
+  lecture n'applique pas le préfixe). Le préfixe `__Host-` se pose via le **nom littéral** du cookie.
+- Pour ce genre de bug « marche en dev, casse en prod » : le différentiel est presque toujours
+  `is_prod` (cookie Secure + `__Host-`). Reproduire au curl (UUID de session qui change = session
+  jamais restaurée) avant de toucher au code.
+
 ## 2026-06-26 — Phase 8 (site doc Fumadocs) MERGÉE sur `main` (tag **v0.3.0**)
 
 ### Dernière chose faite

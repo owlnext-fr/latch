@@ -189,6 +189,14 @@
 - [x] Finitions : liens internes vérifiés (0 cassé), `README` + `links.ts` `DOCS_URL` → URL Pages, mémoire projet — Phase 8 T12 — 2026-06-26
 - [ ] **Post-merge** : 1ᵉʳ déploiement Pages vert + vérif basePath sur l'URL live (charger une page profonde, confirmer `_next/` chargé)
 
+## Correctifs post-déploiement (prod)
+
+- [x] **Fix session admin en prod** (`v0.3.1`) : bug `axum_session 0.16.0` — `with_prefix_with_host(true)`
+  écrit le cookie `__Host-latch_admin` mais le relit sous le nom brut `latch_admin` → session jamais
+  restaurée en prod (login 200 puis 401 silencieux sur routes protégées, rebond vers login). Fix dans
+  `web/mod.rs::build_session_store` : nom `__Host-…` posé manuellement en prod, sans `with_prefix_with_host`.
+  Durcissement `__Host-` préservé. Cf. `docs/QUIRKS.md`. — 2026-06-26
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24

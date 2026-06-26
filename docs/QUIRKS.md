@@ -263,6 +263,26 @@ c'est assumé.
 ## FK SQLite non enforced sans `PRAGMA foreign_keys=ON` (2026-06-24)
 SQLite **n'enforce pas** les contraintes `FOREIGN KEY` par défaut. Le `ON DELETE CASCADE` déclaré sur `versions.project_id → projects.id` est purement déclaratif et **best-effort** à l'exécution (fonctionne si la pragma est activée par la session, mais Loco/SeaORM ne l'active pas nécessairement). En pratique, la suppression d'un projet ne cascade pas automatiquement les versions en production sans activation explicite. À prendre en compte pour tout code de suppression de projet dans les adaptateurs (Phase 2).
 
+## axum_session 0.16.0 — `with_prefix_with_host(true)` CASSE la session en prod (2026-06-26)
+**Symptôme** : en **prod uniquement** (HTTPS, `is_prod=true`), le login renvoie **200** et pose le
+cookie, mais toute requête suivante vers une route protégée renvoie **401** → la SPA rebondit vers
+`/admin/login` **sans message d'erreur** (le login a réussi, c'est l'accès protégé qui 401). Au curl :
+l'UUID du cookie `__Host-latch_admin` **change à chaque requête** → le serveur crée une **session neuve**
+à chaque fois, il ne relit jamais la session entrante. Invisible en dev/test (CI verte) car `is_prod=false`.
+**Cause** : bug d'asymétrie écriture/lecture dans `axum_session 0.16.0` (`src/headers.rs`). Avec
+`with_prefix_with_host(true)`, le chemin d'**écriture** (`create_cookie` → `NameType::get_name`) préfixe
+bien `__Host-` (pose `__Host-latch_admin`), mais le chemin de **lecture** (`get_headers_and_key`) lit le
+champ **brut** `config.cookie_and_header.session_name` (= `latch_admin`) **sans** repasser par `get_name`
+→ il cherche `latch_admin`, ne trouve jamais `__Host-latch_admin`. (Le `session_mode` par défaut est
+`Persistent`, donc le cookie `__Host-store` supprimé à chaque réponse est un faux indice, sans rapport.)
+**Fix (contournement, `web/mod.rs::build_session_store`)** : ne **pas** utiliser `with_prefix_with_host` ;
+poser nous-mêmes le nom `__Host-latch_admin` / `__Host-store` via `with_session_name`/`with_store_name`
+**en prod uniquement** (sur HTTP en dev, un cookie `__Host-` serait rejeté par le navigateur), et laisser
+`prefix_with_host=false` → lecture et écriture utilisent le même nom. Le durcissement `__Host-` est
+préservé : c'est une convention de nom policée par le **navigateur** (exige Secure + `Path=/` + pas de
+`Domain`, déjà fournis par la config). **Ne jamais réactiver `with_prefix_with_host`** tant que la lib
+n'est pas patchée en amont.
+
 ## axum_session 0.16 — `with_session_name` (pas `with_cookie_name`) (2026-06-24)
 `SessionConfig` 0.16 expose `with_session_name` pour nommer le cookie/header de session. Le brief mentionnait `with_cookie_name` (qui n'existe pas). `SameSite` est réexporté par `axum_session` depuis le crate `cookie` (pas besoin d'importer `cookie` séparément). `Key::derive_from` n'existe pas en `cookie` 0.18 — utiliser `Key::from` (exige ≥ 64 bytes) ou `Key::generate`. La clé dev de secours dans `web/mod.rs` fait exactement 64 chars.
 
