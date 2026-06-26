@@ -124,7 +124,7 @@ describe('Topbar', () => {
       expect(screen.getByRole('img', { name: 'latch' })).toBeInTheDocument(),
     )
     const help = screen.getByRole('link', { name: 'Documentation' })
-    expect(help).toHaveAttribute('href', 'https://latch.owlnext.fr/docs')
+    expect(help).toHaveAttribute('href', 'https://owlnext-fr.github.io/latch/docs')
     expect(help).toHaveAttribute('target', '_blank')
   })
 })
