@@ -1,0 +1,12 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "quickstart",
+    "deploy",
+    "admin",
+    "publish-from-claude",
+    "how-it-works",
+    "troubleshooting"
+  ]
+}

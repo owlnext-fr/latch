@@ -1,13 +1,46 @@
 ---
-title: Hello World
-description: Your first document
+title: Introduction
+description: What latch is, its three surfaces, and where to start.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+`latch` is a small Rust app that serves single-file HTML prototypes behind a controlled
+host, with versioning and an optional access code per project. It runs as a **single
+[Loco](https://loco.rs) (axum) binary** with **SQLite bundled in** — no Redis, no workers,
+no external services.
 
-## What is Next?
+## The three surfaces
+
+A single binary exposes three surfaces, each with its own audience:
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Client serving — /c/<slug>" href="/docs/admin/access-codes">
+    Serves the active version of a prototype. Free projects are served directly; protected
+    ones show a styled unlock page (6-digit PIN) before the HTML. Everything is sent
+    `Cache-Control: no-store`.
+  </Card>
+  <Card title="Admin — /admin" href="/docs/admin/projects">
+    A React SPA behind a session cookie: projects, versions, manual deploy, active-version
+    switching, and access-code configuration.
+  </Card>
+  <Card title="MCP — /mcp" href="/docs/publish-from-claude/connect-mcp">
+    A Model Context Protocol endpoint that Claude calls to deploy. Two tools —
+    `deploy_prototype` and `list_projects` — both guarded by a deploy token.
+  </Card>
+</Cards>
+
+## Where to start
+
+<Cards>
+  <Card title="Quickstart" href="/docs/quickstart">
+    The golden path: deploy, create a project, connect Claude, publish, open the client link.
+  </Card>
+  <Card title="I'm an operator" href="/docs/deploy/docker-compose">
+    Run latch with Docker, a reverse proxy, and the right environment.
+  </Card>
+  <Card title="I'm a designer" href="/docs/admin/projects">
+    Drive the admin and publish prototypes straight from Claude.
+  </Card>
+  <Card title="I'm a contributor" href="/docs/how-it-works/architecture">
+    Understand the architecture, the security model, and how to build and test.
+  </Card>
 </Cards>
