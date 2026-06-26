@@ -1,6 +1,36 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v0.3.0] — 2026-06-26
+
+### Ajouts
+
+- Identité produit (logo currentColor, stone/oklch, nav)
+- Landing produit (hero, features, CTA) + page 404
+- Intro docs + ordre sidebar + nettoyage sample
+- Landing — parcours 3 étapes + conversation Claude simulée
+
+### Documentation
+
+- Spec site doc publique (Fumadocs/GitHub Pages)
+- Déploiement doc dans la CI principale (ci.yml)
+- Archive le brief d'origine du site doc public
+- Doc servie à la racine (domaine custom docs.latch.owlnext.fr)
+- Retour sous-chemin GH Pages (pas de domaine custom)
+- Plan d'implémentation site doc publique (12 tasks)
+- Section how-it-works (architecture, security, contributing)
+- Section deploy (docker, compose, reverse-proxy, config, releases…)
+- Section admin (projects, access-codes, versions, co-branding)
+- Publish-from-claude (connect, tools, why-token) + quickstart
+- Page troubleshooting (modes d'échec concrets)
+- Schéma flux Claude (composant themeable) + captures
+- Finitions — liens produit + mémoire projet
+- Clôture — Phase 8 LIVRÉE (v0.3.0) + Phase 9 (passe polish)
+
+### Interne
+
+- Scaffold Fumadocs + export statique basePath /latch
+- Build + déploiement Pages dans ci.yml (jobs docs + deploy-docs)
 ## [v0.2.0] — 2026-06-25
 
 ### Ajouts
@@ -38,6 +68,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Spec Lot 4 — page d'erreur stylée serving /c
 - Plan d'implémentation Lot 4 (page d'erreur serving /c)
 - Lot 4 livré — Phase 7 LIVRÉE (mémoire + ROADMAP)
+- Clôture Phase 7 (v0.2.0) — HANDOFF + QUIRKS + CHANGELOG
 
 ### Interne
 
