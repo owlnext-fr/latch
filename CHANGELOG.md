@@ -1,6 +1,15 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v0.3.1] — 2026-06-26
+
+### Corrections
+
+- Restaure la session admin en prod (cookie __Host-, bug axum_session 0.16)
+
+### Documentation
+
+- Note refonte .env.example (Phase 9)
 ## [v0.3.0] — 2026-06-26
 
 ### Ajouts
@@ -9,6 +18,10 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Landing produit (hero, features, CTA) + page 404
 - Intro docs + ordre sidebar + nettoyage sample
 - Landing — parcours 3 étapes + conversation Claude simulée
+
+### Corrections
+
+- Gate new-code — docs job --ignore-scripts + ternaires settings-sheet
 
 ### Documentation
 
@@ -26,11 +39,16 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Schéma flux Claude (composant themeable) + captures
 - Finitions — liens produit + mémoire projet
 - Clôture — Phase 8 LIVRÉE (v0.3.0) + Phase 9 (passe polish)
+- Régénère pour v0.3.0 (Phase 8 — site doc public)
 
 ### Interne
 
 - Scaffold Fumadocs + export statique basePath /latch
 - Build + déploiement Pages dans ci.yml (jobs docs + deploy-docs)
+
+### Tests
+
+- Aligne l'assertion DOCS_URL sur l'URL GH Pages
 ## [v0.2.0] — 2026-06-25
 
 ### Ajouts
