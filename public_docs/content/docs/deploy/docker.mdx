@@ -1,0 +1,54 @@
+---
+title: Docker
+description: Run latch from the public GHCR image with a single container.
+---
+
+The image is published on **GHCR, publicly** — no `docker login` to pull. It contains **no
+secrets**: everything is injected at runtime through the environment.
+
+## Pull
+
+```bash
+docker pull ghcr.io/owlnext-fr/latch:latest
+```
+
+## Run
+
+The runtime is **non-root** (uid `65532`), so the data directory must be owned by it before the
+first start:
+
+```bash
+mkdir -p data
+sudo chown -R 65532:65532 data
+
+docker run -d --name latch \
+  --restart unless-stopped \
+  -p 127.0.0.1:5150:5150 \
+  -v "$PWD/data:/data" \
+  --env-file .env \
+  ghcr.io/owlnext-fr/latch:latest
+```
+
+<Callout type="info">
+The port is bound to **loopback** (`127.0.0.1:5150`). A reverse proxy terminates TLS and forwards
+to it — see [Reverse proxy](/docs/deploy/reverse-proxy). The container migrates the database on
+boot, then starts.
+</Callout>
+
+## Required environment
+
+The boot **refuses to start** in production without these (fail-secure). Generate each secret with
+`openssl rand -hex 32`:
+
+| Variable | Role |
+| --- | --- |
+| `ADMIN_USER` | Admin account login (single account). |
+| `ADMIN_PASS` | Admin password (constant-time compare, not hashed). |
+| `DEPLOY_TOKEN` | Secret validated by every MCP tool. |
+| `LATCH_PUBLIC_BASE_URL` | Public root URL — source of `allowed_hosts` and of the URL returned by MCP. |
+| `SESSION_SECRET` | HMAC key for the admin session cookie (≥ 64 bytes). |
+| `UNLOCK_COOKIE_SECRET` | HMAC key for the client unlock cookie (≥ 64 bytes). |
+
+The full reference, including the optional tuning keys, is on
+[Configuration](/docs/deploy/configuration). For a real deployment, prefer
+[Docker Compose](/docs/deploy/docker-compose).

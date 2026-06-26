@@ -1,0 +1,103 @@
+---
+title: Reverse proxy
+description: Terminate TLS and forward to latch — Caddy, Nginx, Traefik, or Apache.
+---
+
+`latch` listens on loopback (`127.0.0.1:5150`) and expects a reverse proxy in front to terminate
+TLS. Two things are **load-bearing** in that proxy config:
+
+<Callout type="warn">
+1. **Forward the client IP** (`X-Forwarded-For` / `X-Real-IP`). The unlock and login rate-limits
+   key off it — without it, every request looks like it comes from the proxy and the limits
+   collapse to a single bucket.
+2. **Keep the `Host` header** matching `LATCH_PUBLIC_BASE_URL`. The MCP endpoint validates it
+   against `allowed_hosts`; a mismatched host is rejected.
+</Callout>
+
+`latch` already serves `robots.txt` (`Disallow: /`) and sets `X-Robots-Tag: noindex, nofollow`
+itself. The snippets below also set the header at the proxy as defense-in-depth — keep it or drop
+it, it's idempotent.
+
+<Tabs items={['Caddy', 'Nginx', 'Traefik', 'Apache']}>
+<Tab value="Caddy">
+Caddy gets automatic TLS and forwards `Host` + `X-Forwarded-*` out of the box.
+
+```text title="Caddyfile"
+latch.example.com {
+    reverse_proxy 127.0.0.1:5150
+    header X-Robots-Tag "noindex, nofollow"
+}
+```
+</Tab>
+
+<Tab value="Nginx">
+Bring your own certificate (e.g. from certbot). Note `proxy_set_header Host` and the forwarded
+IP headers.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name latch.example.com;
+
+    ssl_certificate     /etc/ssl/latch/fullchain.pem;
+    ssl_certificate_key /etc/ssl/latch/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5150;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+    }
+}
+```
+</Tab>
+
+<Tab value="Traefik">
+With the Docker provider, add labels to the `latch` service in `docker-compose.yml`. Traefik
+forwards `X-Forwarded-*` automatically.
+
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.latch.rule=Host(`latch.example.com`)"
+  - "traefik.http.routers.latch.entrypoints=websecure"
+  - "traefik.http.routers.latch.tls.certresolver=le"
+  - "traefik.http.services.latch.loadbalancer.server.port=5150"
+  - "traefik.http.middlewares.latch-noindex.headers.customresponseheaders.X-Robots-Tag=noindex, nofollow"
+  - "traefik.http.routers.latch.middlewares=latch-noindex"
+```
+
+<Callout type="info">
+With Traefik routing directly to the container, drop the `ports:` mapping from the compose
+service and put both on the same Docker network instead.
+</Callout>
+</Tab>
+
+<Tab value="Apache">
+Needs `mod_proxy`, `mod_proxy_http`, `mod_headers`, and `mod_ssl`. `ProxyPreserveHost On` keeps
+the `Host` header; `mod_proxy` sets `X-Forwarded-For` automatically.
+
+```apache
+<VirtualHost *:443>
+    ServerName latch.example.com
+
+    SSLEngine on
+    SSLCertificateFile    /etc/ssl/latch/fullchain.pem
+    SSLCertificateKeyFile /etc/ssl/latch/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyPass        / http://127.0.0.1:5150/
+    ProxyPassReverse / http://127.0.0.1:5150/
+
+    RequestHeader set X-Forwarded-Proto "https"
+    Header set X-Robots-Tag "noindex, nofollow"
+</VirtualHost>
+```
+</Tab>
+</Tabs>
+
+Whichever proxy you use, point `LATCH_PUBLIC_BASE_URL` at the public URL it serves (e.g.
+`https://latch.example.com`) so the MCP `allowed_hosts` and the URLs returned by
+`deploy_prototype` line up.

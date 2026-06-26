@@ -1,0 +1,51 @@
+---
+title: From source
+description: Build the backend and the admin SPA without Docker.
+---
+
+You can run `latch` without the image — build the Rust backend and the React admin SPA yourself.
+
+## Prerequisites
+
+- **Rust** (stable). SQLite is bundled via `libsqlite3-sys` (feature `bundled`) — no system
+  SQLite needed.
+- **Node 24** and **pnpm 9** (via corepack) for the frontend.
+
+## Build the admin SPA
+
+```bash
+cd frontend
+pnpm install
+pnpm build          # outputs to frontend/dist/
+```
+
+## Run the backend
+
+The backend serves the built SPA from `LATCH_SPA_DIST`. Loco reads its `./config` relative to the
+current directory, so start it **from `backend/`**:
+
+```bash
+cd backend
+LATCH_SPA_DIST=../frontend/dist cargo loco start
+```
+
+The database is migrated automatically on boot. With the defaults, the app listens on
+`http://localhost:5150`.
+
+<Callout type="info">
+The admin SPA is a **React + Vite** app built with `pnpm build` — there is no WebAssembly or
+Trunk step.
+</Callout>
+
+## Environment
+
+For a local run, the minimum is an admin account and the public base URL:
+
+```bash
+ADMIN_USER=admin
+ADMIN_PASS=secret
+LATCH_PUBLIC_BASE_URL=http://localhost:5150
+```
+
+In development, the cookie secrets fall back to deterministic dev keys. In production they are
+**required** — see [Configuration](/docs/deploy/configuration).

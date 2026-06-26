@@ -1,0 +1,73 @@
+---
+title: Docker Compose
+description: The recommended setup — image, data volume, and a .env file.
+---
+
+Compose is the recommended way to run `latch`: it pins the image, mounts the data volume, and
+loads the environment from a `.env` file.
+
+## `docker-compose.yml`
+
+```yaml
+services:
+  latch:
+    # Pin a version via .env (LATCH_IMAGE_TAG). Default `latest` = last release.
+    image: ghcr.io/owlnext-fr/latch:${LATCH_IMAGE_TAG:-latest}
+    container_name: latch
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # The SQLite database AND the version HTML live together under /data.
+      - ./data:/data
+    ports:
+      # Loopback only: a reverse proxy forwards to this port.
+      - "127.0.0.1:5150:5150"
+```
+
+## `.env`
+
+Copy the example and fill it in. The required keys are listed on
+[Configuration](/docs/deploy/configuration); generate each secret with `openssl rand -hex 32`.
+
+```bash
+cp .env.example .env
+$EDITOR .env
+```
+
+## Bring it up
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+<Callout type="warn">
+The runtime is non-root (uid `65532`). The bind-mounted `./data` must be writable by it, or
+SQLite and the version files will fail to write. Fix it once:
+
+```bash
+sudo chown -R 65532:65532 ./data
+```
+
+The provided `deploy.sh` does this for you (see below).
+</Callout>
+
+## `deploy.sh`
+
+A small script handles the data ownership, pulls, restarts, and prunes old images:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p data
+sudo chown -R 65532:65532 data   # runtime is non-root (uid 65532)
+
+docker compose pull              # public GHCR image
+docker compose up -d             # restart with .env
+docker image prune -f            # clean old images
+```
+
+Put a reverse proxy in front for TLS — see [Reverse proxy](/docs/deploy/reverse-proxy). For
+backups and upgrades, see [Backup & upgrade](/docs/deploy/backup-upgrade).

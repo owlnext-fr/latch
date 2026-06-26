@@ -1,0 +1,56 @@
+---
+title: Configuration
+description: The full environment reference — required secrets and tuning knobs.
+---
+
+`latch` is configured entirely through the environment. There are two groups: secrets that are
+**required in production** (the boot refuses to start without them — fail-secure), and **tuning**
+knobs with sane defaults.
+
+Generate every secret with `openssl rand -hex 32`.
+
+## Required in production
+
+The boot refuses to start outside development/test if any of these is missing.
+
+| Variable | Role |
+| --- | --- |
+| `ADMIN_USER` | Admin account login (single account). |
+| `ADMIN_PASS` | Admin password — compared in constant time, **not hashed**. |
+| `DEPLOY_TOKEN` | Secret validated by **every** MCP tool (`deploy_prototype`, `list_projects`). |
+| `LATCH_PUBLIC_BASE_URL` | Public root URL (e.g. `https://latch.example.com`). Source of MCP `allowed_hosts` and of the URL returned by `deploy_prototype`. Trailing slash is normalized. |
+| `SESSION_SECRET` | HMAC key for the admin session cookie. **≥ 64 bytes** (panics below). |
+| `UNLOCK_COOKIE_SECRET` | HMAC key for the client unlock cookie. **≥ 64 bytes**. |
+
+<Callout type="info">
+In development the cookie secrets fall back to deterministic dev keys, so a local run only needs
+`ADMIN_USER`, `ADMIN_PASS`, and `LATCH_PUBLIC_BASE_URL`.
+</Callout>
+
+## Unlock & rate-limit
+
+| Variable | Default | Role |
+| --- | --- | --- |
+| `LATCH_UNLOCK_TTL_DAYS` | `30` | Lifetime of the unlock cookie, in days. |
+| `LATCH_UNLOCK_RL_IP_BURST` | `5` | Per-IP burst allowance on `/unlock`. |
+| `LATCH_UNLOCK_RL_IP_PER_SECOND` | `1` | Per-IP refill rate (requests/second). |
+| `LATCH_UNLOCK_RL_SLUG_BURST` | `20` | Global per-slug burst allowance. |
+| `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` | `3` | Global per-slug refill period, in seconds. |
+
+The rate-limit counters are in-memory and reset on reboot.
+
+## Storage, runtime & deployment
+
+| Variable | Default | Role |
+| --- | --- | --- |
+| `LATCH_STORAGE_ROOT` | `./data` (dev), `/data` (image) | Root where version HTML files are stored. |
+| `LATCH_SPA_DIST` | `../frontend/dist` (dev), `/app/frontend/dist` (image) | Built admin SPA assets. |
+| `DATABASE_URL` | `sqlite:///data/latch.sqlite?mode=rwc` (image) | SQLite URI. |
+| `PORT` | `5150` | Listen port. |
+| `LATCH_BODY_LIMIT` | `5mb` | Max request body — a deploy sends the single-file HTML as JSON. Accepts `5mb`, `10mb`, `32mb`, or `disable`. |
+| `LATCH_IMAGE_TAG` | `latest` | GHCR image tag to deploy (Compose). Pin a version in production. |
+
+<Callout type="warn">
+A prototype larger than `LATCH_BODY_LIMIT` is rejected with **HTTP 413**. Raise the limit if your
+single-file HTML is bigger than the default 5 MB — see [Troubleshooting](/docs/troubleshooting).
+</Callout>

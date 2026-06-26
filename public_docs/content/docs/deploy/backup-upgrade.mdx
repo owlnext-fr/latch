@@ -1,0 +1,40 @@
+---
+title: Backup & upgrade
+description: One volume to back up, and a one-command upgrade.
+---
+
+## Backup — it's one directory
+
+The SQLite database **and** every version's HTML file live together under the data volume
+(`/data` in the container, `./data` on the host). That single directory is your entire state.
+
+```bash
+# Stop for a consistent copy, or use SQLite online backup if you can't.
+docker compose stop latch
+tar czf latch-backup-$(date +%F).tar.gz data/
+docker compose start latch
+```
+
+Restoring is the reverse: stop, replace `data/`, start. Keep the ownership at uid `65532`
+(`sudo chown -R 65532:65532 data`).
+
+## Upgrade
+
+The image migrates the database on boot, so an upgrade is just a pull and a restart:
+
+```bash
+./deploy.sh
+# or manually:
+docker compose pull
+docker compose up -d
+```
+
+<Callout type="info">
+Pin `LATCH_IMAGE_TAG` to a specific version in production (e.g. `1.2.3`) for reproducible
+deployments. See [Releases](/docs/deploy/releases) for the tag scheme and rollback.
+</Callout>
+
+<Callout type="warn">
+Take a backup **before** upgrading. Migrations run forward automatically on boot; rolling the
+image back to an older version does not roll the schema back.
+</Callout>

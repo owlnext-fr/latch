@@ -1,0 +1,12 @@
+{
+  "title": "Deploy",
+  "pages": [
+    "docker",
+    "docker-compose",
+    "reverse-proxy",
+    "from-source",
+    "configuration",
+    "backup-upgrade",
+    "releases"
+  ]
+}

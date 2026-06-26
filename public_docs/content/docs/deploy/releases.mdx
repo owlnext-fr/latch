@@ -1,0 +1,50 @@
+---
+title: Releases
+description: Image tags on GHCR, pinning a version, and rolling back.
+---
+
+Images are published to **GHCR, publicly** at `ghcr.io/owlnext-fr/latch`. CI builds and pushes on
+every release tag and on `main`.
+
+## Tag scheme
+
+| Trigger | Tags produced |
+| --- | --- |
+| Release `vX.Y.Z` | `X.Y.Z`, `X.Y`, `latest`, `sha-<short>` |
+| Push to `main` | `main`, `sha-<short>` |
+
+- `latest` points at the most recent **release**, not at `main`.
+- `X.Y.Z` is immutable — pin it in production.
+- `main` is the latest integrated state, useful for staging.
+
+## Pin a version
+
+Set `LATCH_IMAGE_TAG` in `.env`:
+
+```bash
+LATCH_IMAGE_TAG=1.2.3
+```
+
+Then `./deploy.sh` (or `docker compose pull && docker compose up -d`).
+
+## Roll back
+
+Rolling back is just re-pinning an older tag and redeploying:
+
+```bash
+# in .env
+LATCH_IMAGE_TAG=1.2.2
+```
+
+```bash
+./deploy.sh
+```
+
+<Callout type="warn">
+Database migrations run **forward** on boot and are not rolled back by reverting the image. If a
+release included a migration, restore your data backup as well — see
+[Backup & upgrade](/docs/deploy/backup-upgrade).
+</Callout>
+
+The version history is in the project's
+[CHANGELOG](https://github.com/owlnext-fr/latch/blob/main/CHANGELOG.md).
