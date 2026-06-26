@@ -1,0 +1,59 @@
+---
+title: Security model
+description: Two cookies, load-bearing rate-limits, fail-secure secrets, and hard invariants.
+---
+
+`latch` is meant to *hide* prototypes, but the real gating is authentication: an admin session,
+the MCP `deploy_token`, and an optional per-project code. Crawlers are kept out with
+`robots.txt` (`Disallow: /`) and an `X-Robots-Tag: noindex, nofollow` header, but those are
+hints — the security comes from the layers below.
+
+## Hard invariants
+
+These are non-negotiable and covered by tests that break the build if violated:
+
+<Callout type="warn">
+1. **No response ever returns a hash** — not on the web, not over MCP. Guaranteed structurally:
+   no admin DTO carries a hash field.
+2. **The cleartext PIN only appears on a project's detail view** — never in a list, never over
+   MCP. The list type simply has no `pin` field.
+3. **The `deploy_token` is validated on every MCP tool**, reads included.
+4. **Auth lives in the adapter, never in the core.** A service assumes its caller is authorized;
+   an architecture test fails the build if `axum` or `loco_rs` is imported under `src/services/`.
+</Callout>
+
+## Two cookies
+
+- **Admin session** — a same-origin session cookie (signed with `SESSION_SECRET`), `HttpOnly`
+  always, `Secure` + `__Host-` prefix in production, `SameSite=Lax`. Not the Loco users/JWT
+  system — a single account compared in constant time against `ADMIN_USER` / `ADMIN_PASS`.
+  Logout destroys the session server-side.
+- **Unlock cookie** — issued after a correct PIN on `/c/<slug>/unlock`. Signed (HMAC over the
+  slug + an imprint of the current PIN), `HttpOnly` + `Secure` + `SameSite=Lax`, scoped to
+  `Path=/c/<slug>`. No server-side state. **Rotating the project's PIN revokes every cookie.**
+
+## Load-bearing rate-limits
+
+A 6-digit PIN is 10⁶ combinations — brute-forceable in seconds without a guard. So the rate-limit
+on `/c/<slug>/unlock` is **load-bearing**, not cosmetic: a per-IP+slug backoff plus a global
+per-slug ceiling (via `tower_governor`). The admin login is rate-limited the same way.
+`SmartIpKeyExtractor` reads `X-Forwarded-For` / `X-Real-IP`, so a reverse proxy must forward
+them (see [Reverse proxy](/docs/deploy/reverse-proxy)).
+
+<Callout type="info">
+The governor counters are **in-memory** and reset on reboot — an accepted trade-off for v1.
+</Callout>
+
+## CSRF & host validation
+
+- Every **mutating** admin endpoint checks the `Origin` header (same-origin) via a middleware
+  that returns `403` cross-origin — on top of `SameSite`.
+- The MCP transport validates the `Host` header against `allowed_hosts`, derived from
+  `LATCH_PUBLIC_BASE_URL`. This closes a DNS-rebinding vector (CVE-class issue in older `rmcp`);
+  `rmcp` is pinned to a floor of `1.4`.
+
+## Fail-secure secrets
+
+In production the boot **refuses to start** if a required secret is missing — `ADMIN_USER`,
+`ADMIN_PASS`, `DEPLOY_TOKEN`, `LATCH_PUBLIC_BASE_URL`, `SESSION_SECRET`, `UNLOCK_COOKIE_SECRET`.
+There is no insecure fallback outside development. See [Configuration](/docs/deploy/configuration).

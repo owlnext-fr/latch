@@ -1,0 +1,71 @@
+---
+title: Architecture
+description: A layered, lightly-hexagonal design on top of a Loco skeleton.
+---
+
+`latch` runs as a single [Loco](https://loco.rs) (axum) binary. Loco is MVC by default, but
+`latch` doesn't follow that naively: two entry points (the admin API and the MCP tool) run the
+**same** business operation — both deploy and list. So a **service layer** sits between
+controllers and models. The result is a layered, lightly-hexagonal design.
+
+## The layers
+
+<Cards>
+  <Card title="The core — src/services/">
+    HTTP-agnostic. The only layer that holds business logic. It knows nothing about requests,
+    cookies, tokens, or axum. Returns a plain `CoreError`.
+  </Card>
+  <Card title="Inbound adapters (thin)">
+    Translate a request into a service call: web controllers, MCP tools, client serving. They
+    carry every auth decision.
+  </Card>
+  <Card title="Outbound adapters">
+    SeaORM (projects, versions, the active-version pointer) and a pluggable `Storage` trait for
+    the HTML files.
+  </Card>
+</Cards>
+
+<Callout type="info">
+The rule that holds it together: **the core assumes its caller is already authorized.** Every
+auth decision is made *before* entering a service — session on the admin, `deploy_token` in the
+MCP tool, unlock code in the client serving. A service like `deploy()` never sees a transport
+secret. That's what makes the adapters interchangeable over one core, and the core testable
+without HTTP.
+</Callout>
+
+## Errors
+
+The core returns a `CoreError` (via `thiserror`), with no axum or Loco types. Each adapter maps
+it: web → HTTP status + JSON; MCP → a tool error. Loco keeps its own `Error` for its plumbing;
+the core ignores it.
+
+## Data model
+
+Two tables hold the domain, plus a session store:
+
+- **`projects`** — `id`, unique `slug` (readable base + random suffix), `name`,
+  `code_enabled` (true by default), `pin` (6 digits, recoverable so the admin can copy it),
+  `brand_name` (optional), `active_version_id` (nullable until the first deploy).
+- **`versions`** — `id`, `project_id`, `n` (per-project incrementing number), `html_path`
+  (relative path in the storage volume), `created_at`.
+- **`sessions`** — the admin session store.
+
+## `deploy()` — an imposed order
+
+Deploys are ordered to never leave a project pointing at a half-written file:
+
+<Steps>
+<Step>
+**Write the HTML first** — a temporary name, then an atomic rename into place, through the
+`Storage` trait.
+</Step>
+<Step>
+**Then the transaction** — insert the `versions` row and, if `activate`, flip
+`active_version_id`.
+</Step>
+</Steps>
+
+If the database fails after the write, you get an orphan file (harmless, collectable). The
+reverse order would point an active version at a missing file — the worst state for a client.
+
+The admin's manual deploy and the MCP `deploy_prototype` tool call the **same** `deploy()`.

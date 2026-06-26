@@ -1,0 +1,77 @@
+---
+title: Contributing
+description: Repo layout, building each layer, the test pyramid, and the coverage gate.
+---
+
+`latch` is a two-member Cargo workspace plus a React frontend. Backend and frontend are built and
+tested independently; CI ties them together.
+
+## Repo layout
+
+```text
+latch/
+  backend/        # Loco (axum) app — the core lives here as modules, not a separate crate
+    src/
+      controllers/  # inbound "web" adapter (auth, admin API, client serving)
+      mcp/          # inbound "MCP" adapter (deploy_prototype, list_projects)
+      services/     # THE CORE — HTTP-agnostic business logic
+      dto/          # admin DTOs
+      models/       # SeaORM entities
+    migration/      # SeaORM migrations
+  frontend/       # React + Vite + pnpm admin SPA
+  public_docs/    # this documentation site (Fumadocs)
+```
+
+## Building
+
+<Tabs items={['Backend', 'Frontend']}>
+<Tab value="Backend">
+```bash
+# from backend/ (Loco reads ./config relative to the CWD)
+cargo loco start
+
+# from the repo root
+cargo fmt --all
+cargo clippy --all-targets --all-features -- -D warnings
+cargo nextest run
+cargo deny check          # licenses + advisories
+```
+</Tab>
+<Tab value="Frontend">
+```bash
+# from frontend/
+pnpm install
+pnpm dev                  # Vite HMR
+pnpm lint
+pnpm typecheck
+pnpm test                 # Vitest + Testing Library + MSW
+pnpm exec playwright test # real-browser e2e
+```
+</Tab>
+</Tabs>
+
+## The test pyramid
+
+Coverage is layered, and each layer is a release gate:
+
+- **Unit (core)** — slug generation, PIN generation and constant-time checks, the active-version
+  flip, `deploy_token` validation.
+- **Integration (backend)** — every JSON endpoint end-to-end against a test SQLite: `401` without
+  a session, the transactional deploy + pointer flip, version switching, the `/c/<slug>` code
+  gate. Plus the security-invariant tests (no hash in any response, no PIN in any list).
+- **MCP** — the `deploy_token` gate on *every* tool, and that `deploy_prototype` creates a version.
+- **Frontend** — Vitest + Testing Library (jsdom) + MSW mocking the API routes.
+- **E2E** — Playwright against a real browser and a running stack.
+
+## The coverage gate
+
+<Callout type="warn">
+The SonarCloud gate `new_coverage ≥ 80%` on **new or changed** lines is **blocking** in CI — no
+image is published if it fails. Tests must be substantial: cover branches, error cases, and the
+invariants, not just the happy path.
+</Callout>
+
+## Commits
+
+Conventional commits with a gitmoji prefix — `✨ feat:`, `🐛 fix:`, `🧱 chore:`, `📝 docs:`,
+`♻️ refactor:`. The conventional prefix feeds the changelog; the gitmoji gives the at-a-glance read.
