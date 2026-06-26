@@ -3,6 +3,26 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Site doc (public_docs/, Fumadocs) — pièges Phase 8 (2026-06-26)
+
+- **Scaffold `create-fumadocs-app` interactif malgré les flags** : un prompt « Use `/src` directory? »
+  reste non couvert par un flag. `</dev/null` ne valide PAS le défaut (EOF → exit sans rien créer).
+  Le piloter via un **PTY** : `python3 -c "import pty; pty.spawn([...])"` en alimentant des `\r`.
+  Template à viser : **`+next+fuma-docs-mdx+static`** (`--search orama --pm pnpm --no-git --install`) →
+  câble déjà l'export statique ET la recherche statique. (Il génère un layout **`src/`**.)
+- **basePath sous-chemin GitHub Pages** (repo projet → site sous `/latch`) : dans `next.config.mjs`,
+  `basePath` + `assetPrefix` (= `/latch`) **explicites** + **`public/.nojekyll`** (sinon Jekyll mange
+  `_next/` → 404 d'assets). Liens internes **root-relative** (`/docs/...`) → **jamais** `/latch` en dur.
+- **Images sous basePath** : un `<img src="/img/x.png">` brut **casse** (404 sous `/latch`). Les
+  référencer via **import statique** → URL `/latch/_next/static/media/...` préfixée : MDX `![](/img/x.png)`
+  (fumadocs-mdx les transforme en import) ; TSX `import img from '...'; <img src={img.src}>`. Corollaire :
+  fumadocs-mdx **résout `![](/img/x.png)` comme un module** → le fichier **doit exister au build**.
+- **Recherche statique** (export) : `app/api/search/route.ts` = `export const revalidate = false; export const { staticGET: GET } = createFromSource(source)` + client `oramaStaticClient` (posé par le template `+static`).
+- **MDX = JSX** : `{…}` = expression JS, `<mot>` = balise → en prose/frontmatter, `{brand name}` et
+  `<slug>` **cassent le build**. Les mettre en backticks (inline code) les protège.
+- **Shiki** : pas de grammaire `caddy` → bloc Caddyfile en ` ```text ` (sinon `Language 'caddy' not found`).
+- **lucide-react sans `Github`** (déjà connu côté frontend) → composant `GithubIcon` maison inline.
+
 ## Storage dev = `backend/data`, pas `/data` racine — gitignore (2026-06-26)
 `LATCH_STORAGE_ROOT` défaut `"data"` (relatif au CWD). En dev on lance `cargo loco start` **depuis `backend/`** → le storage des HTML de versions vit dans `backend/data`. Or `.gitignore` n'avait que `/data` (ancré racine = volume Docker prod) → `backend/data` n'était PAS ignoré (risque de commit accidentel des protos déployés). **Fix** : ajouter `backend/data/` à `.gitignore`. Prod (image) = volume monté `/data` (toujours couvert par `/data`).
 

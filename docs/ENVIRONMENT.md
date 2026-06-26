@@ -138,3 +138,19 @@ Wiring déduit de la doc rmcp + architecture Phase 5 (non encore validé en prod
 3. Tester avec `list_projects(deploy_token=<valeur>)`.
 
 > _(Procédure UI exacte côté Claude web à documenter au moment du branchement réel — dépend de la formule OWLNEXT.)_
+
+## Site de documentation publique (`public_docs/`, Phase 8)
+
+- **App** : `public_docs/` — **Fumadocs** (Next.js + MDX), **isolée** du workspace Rust et de
+  `frontend/` (son propre `package.json` + lockfile). Node 24 (`.nvmrc`), **pnpm 9.15.9**.
+- **URL publique** : **`https://owlnext-fr.github.io/latch`** (GitHub Pages, sous-chemin projet ;
+  **pas** de domaine custom). `basePath`/`assetPrefix` = `/latch` (env `DOCS_BASE_PATH`, défaut `/latch`).
+- **Build/dev** (depuis `public_docs/`) : `pnpm dev` (→ `http://localhost:3000/latch/`),
+  `pnpm build` (export statique → `public_docs/out/`), `pnpm lint`, `pnpm types:check`.
+- **Déploiement** : porté par **`ci.yml`** (pas de workflow séparé). Job **`docs`** = build à chaque
+  push/PR (+ `upload-pages-artifact` sur `out/`). Job **`deploy-docs`** = `deploy-pages`, **`main`
+  only**, `permissions: pages/id-token`, `environment: github-pages`, `concurrency: pages`.
+- **Pré-requis (déjà fait)** : Settings repo → Pages = « GitHub Actions ». **Pas** de DNS/domaine custom.
+- **Lien depuis le produit** : `frontend/src/lib/links.ts` `DOCS_URL` = `https://owlnext-fr.github.io/latch/docs`.
+- **Captures** : `public_docs/public/img/{admin-list,unlock}.png` (réutilisées de `docs/assets/`, Phase 6).
+- **Contenu** : EN, **uniquement** sous `public_docs/content/docs/` — jamais le `docs/` interne.

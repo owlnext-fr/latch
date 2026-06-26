@@ -4,6 +4,30 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-26 — Phase 8 (site doc Fumadocs) IMPLÉMENTÉE sur `feat/phase-8-public-docs`
+
+### Dernière chose faite
+**Phase 8 — site de documentation publique — implémentée de bout en bout sur la branche `feat/phase-8-public-docs`** (spec + plan committés sur `main` avant la branche ; code sur la branche, 14 commits). Build statique vert (66 pages).
+
+- **App** : `public_docs/` (Fumadocs 16 / Next 16 / React 19, template `+next+fuma-docs-mdx+static`, layout `src/`). Export statique, **basePath `/latch`** + `assetPrefix` + `public/.nojekyll` (sous-chemin GitHub Pages, **pas de domaine custom**).
+- **Landing** : hero + **parcours 3 étapes** (étape 2 = **conversation Claude simulée en CSS**, `ClaudeChat`) + features + CTA + footer. Identité produit (preset `shadcn.css`, tokens stone/oklch, logo inline `currentColor`, Inter). Captures réutilisées de Phase 6 (`docs/assets/*.png` → `public/img/`).
+- **Docs EN** (sourcées du contrat/BOOTSTRAP, jamais le `docs/` interne) : how-it-works, deploy (reverse-proxy 4 serveurs + config 17 clés), admin, publish-from-claude (2 tools), quickstart, troubleshooting. Recherche statique Orama.
+- **CI** : jobs **`docs`** (build push/PR) + **`deploy-docs`** (Pages, `main` only) ajoutés à `ci.yml` (pas de workflow séparé). Pages = GitHub Actions **déjà activé**.
+- **Liens produit** : `README` + `frontend/src/lib/links.ts` `DOCS_URL` → `https://owlnext-fr.github.io/latch/docs`.
+
+### Trucs en suspens
+- **Pas encore mergé** sur `main`. Le **déploiement Pages se déclenche au merge** (job `deploy-docs`). À faire au merge : vérifier le pipeline vert + **charger une page profonde live et confirmer que `_next/` se charge** (piège basePath).
+- **Serveurs dev laissés tournés** : site doc Fumadocs sur `:3000` (`/latch/`), app latch backend `:5150` + frontend Vite `:5173` (`/admin/`, login `admin`/`secret`).
+- e2e/visual : la landing référence les vraies captures Phase 6 ; si l'UI admin change, régénérer via le harnais Playwright (`CAPTURE=1`) et recopier dans `public/img/`.
+
+### Prochaine chose à creuser
+- **Merge `feat/phase-8-public-docs` → `main`** (fast-forward/PR au choix), surveiller `deploy-docs`, vérifier le site live, puis cocher la ligne « Post-merge » de `docs/INDEX.md`.
+
+### Notes pour future Claude
+- **public_docs = app isolée** : son `package.json`/lockfile, **hors** workspace Rust et **hors** `frontend/`. Node 24, pnpm 9.15.9. `pnpm dev` → `http://localhost:3000/latch/`.
+- **Pièges Fumadocs/basePath** consignés dans QUIRKS (scaffold via PTY, images en import statique, `.nojekyll`, MDX = JSX, Shiki `caddy`→`text`, recherche statique).
+- **Bascule domaine custom plus tard** = poser `DOCS_BASE_PATH=''` + CNAME (env-driven, zéro code à toucher).
+
 ## 2026-06-26 — Phase 7 MERGÉE sur `main` (tag **v0.2.0**) + logo adaptatif + flow MCP validé en vrai
 
 ### Dernière chose faite

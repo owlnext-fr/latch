@@ -10,7 +10,7 @@ contrôlé, avec versioning et code d'accès optionnel par projet. Trois surface
 sur un seul binaire [Loco](https://loco.rs) : serving client, admin, et un
 endpoint MCP que Claude appelle pour déployer.
 
-> 📚 Documentation détaillée (quickstart approfondi, guides) : https://latch.owlnext.fr/docs *(à venir — Phase 8, Fumadocs)*
+> 📚 Documentation détaillée (quickstart approfondi, guides) : https://owlnext-fr.github.io/latch *(Fumadocs — Phase 8)*
 
 ## Captures
 
@@ -72,7 +72,7 @@ cd frontend && pnpm install && pnpm dev   # React/Vite HMR (port 5173)
 3. Tester avec `list_projects(deploy_token=<valeur>)`, puis déployer via
    `deploy_prototype(slug, html, deploy_token)`.
 
-→ doc détaillée *(à venir — Phase 8)*.
+→ [doc détaillée : Connect the MCP endpoint](https://owlnext-fr.github.io/latch/docs/publish-from-claude/connect-mcp).
 
 ## Architecture
 

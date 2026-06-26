@@ -175,6 +175,20 @@
 - [x] Gate finale : cargo fmt/clippy/nextest + pnpm lint/typecheck/vitest/build, couverture error-page ≥ 80%, bundle isolation OK (no admin code), `dist/error.html` présent — Phase 7 Lot 4 T3 — 2026-06-26
 - [x] Mémoire projet : CONVENTIONS (page d'erreur pattern), QUIRKS (fake_dist + error.html), BACKLOG (mark Phase 4 item RÉSOLU), INDEX (Lot 4), ROADMAP (Phase 7 ✅ LIVRÉE 2026-06-26 + 4 lots), HANDOFF (entrée datée) — Phase 7 Lot 4 T3 — 2026-06-26
 
+## Phase 8 — Documentation publique (Fumadocs / GitHub Pages)
+
+> Implémentée sur `feat/phase-8-public-docs`. Déploiement Pages au merge sur `main` (job CI `deploy-docs`).
+
+- [x] Scaffold **Fumadocs** (Next 16 + MDX, template `+next+fuma-docs-mdx+static`) dans `public_docs/`, export statique, `basePath '/latch'` + `assetPrefix` + `public/.nojekyll` — Phase 8 T1 — 2026-06-26
+- [x] Identité produit : preset `shadcn.css` + tokens stone/oklch (clair/sombre), logo inline `currentColor`, nav, Inter — Phase 8 T2 — 2026-06-26
+- [x] Landing produit (hero, parcours 3 étapes avec **conversation Claude simulée** CSS, features, CTA, footer) + page 404 — Phase 8 T3 — 2026-06-26
+- [x] Shell docs + **recherche statique Orama** (`staticGET` + `oramaStaticClient`) + intro + ordre sidebar — Phase 8 T4 — 2026-06-26
+- [x] CI : jobs `docs` (build push/PR) + `deploy-docs` (Pages, main only) dans `ci.yml`, SHA-pinned — Phase 8 T5 — 2026-06-26
+- [x] Contenu EN (sourcé du contrat/BOOTSTRAP, jamais le `docs/` interne) : `how-it-works/` (architecture, security-model, contributing), `deploy/` (docker, compose, **reverse-proxy Caddy/Nginx/Traefik/Apache**, from-source, **configuration 17 clés**, backup-upgrade, releases), `admin/` (projects, access-codes, versions, co-branding), `publish-from-claude/` (connect-mcp, **tools-reference 2 tools**, why-token-not-oauth), `quickstart`, `troubleshooting` — Phase 8 T6-T10 — 2026-06-26
+- [x] Schéma flux Claude (composant `ClaudeFlow` themeable) + captures réutilisées (Phase 6) — Phase 8 T11 — 2026-06-26
+- [x] Finitions : liens internes vérifiés (0 cassé), `README` + `links.ts` `DOCS_URL` → URL Pages, mémoire projet — Phase 8 T12 — 2026-06-26
+- [ ] **Post-merge** : 1ᵉʳ déploiement Pages vert + vérif basePath sur l'URL live (charger une page profonde, confirmer `_next/` chargé)
+
 ## Phases closes
 - [x] Phase 0 — scaffold & squelette CI/Docker — 2026-06-24
 - [x] Phase 1 — cœur + modèle + migrations — 2026-06-24

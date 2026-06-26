@@ -170,18 +170,21 @@ locales découvertes) ; serving `/c` rend des **pages d'erreur HTML stylées** (
 sans version) ; ajouter une locale = déposer un JSON, sans toucher au code d'import ; **pages admin bornées**
 en largeur (conteneur centré) ; **lien GitHub** présent sur la page de login.
 
-## Phase 8 — Documentation publique (Fumadocs / GitHub Pages)
+## Phase 8 ✅ IMPLÉMENTÉE (2026-06-26, branche `feat/phase-8-public-docs`) — Documentation publique
 
-> Stub — contenu TBD. Référencé depuis le README (lien TBD).
+> Spec : `docs/superpowers/specs/2026-06-26-phase-8-public-docs-design.md`
+> Plan : `docs/superpowers/plans/2026-06-26-phase-8-public-docs.md`
+> **Déploiement Pages au merge sur `main`** (job CI `deploy-docs`). Reste : 1ᵉʳ déploiement live + vérif basePath.
 
-Landing marketing + documentation détaillée hébergées sur **GitHub Pages** (ou équivalent),
-construites avec **Fumadocs** (framework MDX adapté aux projets React).
+Landing marketing + documentation détaillée, **Fumadocs** (Next + MDX) en export statique sur
+**GitHub Pages** (sous-chemin `owlnext-fr.github.io/latch`, `basePath '/latch'`, pas de domaine custom).
 
-Périmètre pressenti :
-- **Landing** : présentation du projet, captures, quickstart en ligne, lien GHCR.
-- **Documentation technique** : guide d'installation, référence des variables d'env,
-  guide de connexion MCP, sécurité (robots/X-Robots-Tag, rate-limit, fail-secure secrets).
-- **Déploiement** : workflow GitHub Actions `pages` déclenché sur push `main` ou tag.
-- **Lien** : le README renvoie vers la doc publiée (URL à renseigner quand disponible).
+Livré :
+- **Landing** : hero, parcours 3 étapes (avec conversation Claude simulée CSS), grille de features, CTA `docker pull`, footer ; identité produit (logo, stone/oklch, clair/sombre).
+- **Documentation EN** (sourcée du contrat/BOOTSTRAP) : `how-it-works/`, `deploy/` (dont reverse-proxy Caddy/Nginx/Traefik/Apache + configuration 17 clés), `admin/`, `publish-from-claude/` (2 tools), `quickstart`, `troubleshooting`. Recherche statique Orama.
+- **Déploiement** : jobs `docs` + `deploy-docs` **dans `ci.yml`** (pas de workflow séparé), Pages = GitHub Actions.
+- **Lien** : README + `frontend/src/lib/links.ts` `DOCS_URL` → `https://owlnext-fr.github.io/latch`.
 
-**Sortie :** site docs accessible publiquement, pipeline CI docs vert, lien dans le README.
+**Sortie (atteinte hors déploiement live)** : build statique vert (66 pages), basePath OK en local
+(assets `/latch/_next`), 0 lien interne cassé, contenu EN sous `public_docs/content/` uniquement.
+**Reste au merge** : pipeline `deploy-docs` vert + site accessible à l'URL Pages.
