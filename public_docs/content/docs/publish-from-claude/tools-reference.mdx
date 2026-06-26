@@ -1,0 +1,65 @@
+---
+title: Tools reference
+description: The two MCP tools — deploy_prototype and list_projects.
+---
+
+`latch` exposes exactly two MCP tools. Both validate the `deploy_token` **first**, before any
+database access. Neither ever returns a hash or a PIN.
+
+## `deploy_prototype`
+
+Deploys a single-file HTML prototype as a new version of an existing project.
+
+```text
+deploy_prototype(slug, html, deploy_token, activate?)
+```
+
+| Argument | Notes |
+| --- | --- |
+| `slug` | Must reference an **existing** project — there is no auto-creation. An unknown slug is an error. |
+| `html` | The single-file HTML prototype. |
+| `deploy_token` | Validated first, in constant time. |
+| `activate` | Optional, defaults to **`true`** — the new version becomes active immediately. |
+
+On success it returns:
+
+```json
+{
+  "url": "https://latch.example.com/c/my-project-k7Qp2maZ",
+  "version": 2,
+  "code_protected": true
+}
+```
+
+The `url` is built from `LATCH_PUBLIC_BASE_URL`. **No PIN, no hash** is ever included.
+
+## `list_projects`
+
+Lists the projects so you can pick a slug to deploy to.
+
+```text
+list_projects(deploy_token)
+```
+
+It returns an **object envelope** (not a bare array):
+
+```json
+{
+  "projects": [
+    {
+      "slug": "my-project-k7Qp2maZ",
+      "name": "My project",
+      "code_protected": true,
+      "active_version": 2
+    }
+  ]
+}
+```
+
+Each entry is a summary — `slug`, `name`, `code_protected`, `active_version`. **No PIN, no hash,
+no database id.**
+
+<Callout type="info">
+Configuring access codes, switching the active version, and deleting are **admin-only** — they are
+intentionally never exposed over MCP. See the [admin guide](/docs/admin/projects).
+</Callout>

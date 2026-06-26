@@ -1,0 +1,68 @@
+---
+title: Quickstart
+description: From a running instance to a prototype published from Claude.
+---
+
+This is the golden path: stand up `latch`, create a project, connect Claude, publish a prototype,
+and open the client link.
+
+<Steps>
+<Step>
+### Run latch
+
+With Docker Compose and a filled-in `.env` (see [Configuration](/docs/deploy/configuration)):
+
+```bash
+cp .env.example .env   # fill in the required secrets
+docker compose up -d
+```
+
+Put a reverse proxy in front for TLS — see [Reverse proxy](/docs/deploy/reverse-proxy).
+</Step>
+
+<Step>
+### Sign in to the admin
+
+Open `/admin` and sign in with your `ADMIN_USER` / `ADMIN_PASS`.
+</Step>
+
+<Step>
+### Create a project
+
+Click **New project**, give it a name, and keep the access code on (a 6-digit PIN is generated for
+you). You get a non-guessable slug like `my-project-k7Qp2maZ`. See
+[Projects](/docs/admin/projects).
+</Step>
+
+<Step>
+### Connect Claude
+
+In the admin **Settings** panel, copy `mcp_url` and `deploy_token`, then add the `mcp_url` as an
+MCP connector in Claude. See [Connect the MCP endpoint](/docs/publish-from-claude/connect-mcp).
+</Step>
+
+<Step>
+### Publish from Claude
+
+Ask Claude to publish your prototype to that slug. It calls `deploy_prototype` with your
+`deploy_token` and hands back the live URL and version number:
+
+```json
+{ "url": "https://latch.example.com/c/my-project-k7Qp2maZ", "version": 1, "code_protected": true }
+```
+
+See the [tools reference](/docs/publish-from-claude/tools-reference).
+</Step>
+
+<Step>
+### Open the client link
+
+Visit the returned URL. A protected project shows the styled unlock page; enter the PIN and the
+active version is served — always the latest. See [Access codes](/docs/admin/access-codes).
+</Step>
+</Steps>
+
+<Callout type="info">
+The same deploy runs whether you upload from the admin or publish from Claude — it's one code path.
+You can ship new versions any time and flip the active one from the admin.
+</Callout>

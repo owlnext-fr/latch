@@ -1,0 +1,41 @@
+---
+title: Connect the MCP endpoint
+description: Wire Claude to latch through the Model Context Protocol.
+---
+
+`latch` exposes a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`.
+Claude calls it to deploy prototypes. There is no OAuth and no auth header — authentication lives
+in a `deploy_token` argument passed to each tool.
+
+## Get your connection details
+
+In the admin, open **Settings**. It shows:
+
+- **`mcp_url`** — your endpoint, `LATCH_PUBLIC_BASE_URL` + `/mcp` (e.g.
+  `https://latch.example.com/mcp`).
+- **`deploy_token`** — the secret every tool requires (masked, with a copy button).
+
+## Add the connector in Claude
+
+In Claude's MCP connector settings, add the `mcp_url`. That's the only thing to configure — no
+OAuth flow, no header.
+
+<Steps>
+<Step>
+Copy `mcp_url` and `deploy_token` from the admin **Settings** panel.
+</Step>
+<Step>
+In Claude, add a new MCP connector and paste the `mcp_url`.
+</Step>
+<Step>
+Test the connection by calling `list_projects` with your `deploy_token`.
+</Step>
+</Steps>
+
+<Callout type="info">
+The exact connector UI depends on your Claude plan. The transport is **Streamable HTTP**; the
+endpoint validates the `Host` header against `allowed_hosts` derived from `LATCH_PUBLIC_BASE_URL`,
+so make sure that variable matches the public URL.
+</Callout>
+
+Next: the [tools reference](/docs/publish-from-claude/tools-reference).

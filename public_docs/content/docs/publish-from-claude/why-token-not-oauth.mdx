@@ -1,0 +1,33 @@
+---
+title: Why a token, not OAuth
+description: The Model 1 auth choice, and what a future Model 2 would look like.
+---
+
+`latch` authenticates MCP calls with a **`deploy_token` passed as a tool argument** — not OAuth.
+This is deliberate. It's the simplest thing that's secure enough for the job.
+
+## Model 1 — token in the argument
+
+The `/mcp` endpoint requires **nothing at the HTTP level**: Claude connects without an OAuth flow.
+Instead, every tool validates a `deploy_token` against the `DEPLOY_TOKEN` secret, in constant
+time, as its very first step — reads included. A tool that doesn't validate the token would be
+public, so gating `list_projects` too keeps the project list from leaking.
+
+Why it's enough here:
+
+- The token is a single, rotatable secret you control, shown only to an authenticated admin in the
+  Settings panel.
+- The transport still validates the `Host` header against `allowed_hosts` (derived from
+  `LATCH_PUBLIC_BASE_URL`), closing the DNS-rebinding vector.
+- The blast radius is small: the token can only deploy and list, never configure codes or delete.
+
+## Model 2 — real OAuth (future)
+
+A fuller OAuth 2.1 flow — `401` + `WWW-Authenticate`, protected-resource metadata,
+authorization-code + PKCE + consent — is the officially-supported path for some clients. It's a
+separate piece of work and can be added without touching the rest. For v1, Model 1 is the choice.
+
+<Callout type="info">
+Treat the `deploy_token` like any deploy secret: rotate it if it leaks (change `DEPLOY_TOKEN` and
+restart), and never commit it.
+</Callout>
