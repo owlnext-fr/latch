@@ -4,10 +4,10 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
-## 2026-06-26 — Phase 8 (site doc Fumadocs) IMPLÉMENTÉE sur `feat/phase-8-public-docs`
+## 2026-06-26 — Phase 8 (site doc Fumadocs) MERGÉE sur `main` (tag **v0.3.0**)
 
 ### Dernière chose faite
-**Phase 8 — site de documentation publique — implémentée de bout en bout sur la branche `feat/phase-8-public-docs`** (spec + plan committés sur `main` avant la branche ; code sur la branche, 14 commits). Build statique vert (66 pages).
+**Phase 8 — site de documentation publique — implémentée, mergée sur `main` (fast-forward), taggée `v0.3.0` et poussée.** CHANGELOG régénéré (git-cliff `--tag v0.3.0`). Build statique vert (66 pages). Le merge déclenche le job CI **`deploy-docs`** (1ᵉʳ déploiement Pages).
 
 - **App** : `public_docs/` (Fumadocs 16 / Next 16 / React 19, template `+next+fuma-docs-mdx+static`, layout `src/`). Export statique, **basePath `/latch`** + `assetPrefix` + `public/.nojekyll` (sous-chemin GitHub Pages, **pas de domaine custom**).
 - **Landing** : hero + **parcours 3 étapes** (étape 2 = **conversation Claude simulée en CSS**, `ClaudeChat`) + features + CTA + footer. Identité produit (preset `shadcn.css`, tokens stone/oklch, logo inline `currentColor`, Inter). Captures réutilisées de Phase 6 (`docs/assets/*.png` → `public/img/`).
@@ -16,12 +16,12 @@
 - **Liens produit** : `README` + `frontend/src/lib/links.ts` `DOCS_URL` → `https://owlnext-fr.github.io/latch/docs`.
 
 ### Trucs en suspens
-- **Pas encore mergé** sur `main`. Le **déploiement Pages se déclenche au merge** (job `deploy-docs`). À faire au merge : vérifier le pipeline vert + **charger une page profonde live et confirmer que `_next/` se charge** (piège basePath).
+- **Surveiller la CI sur `main`** : 1ᵉʳ run post-merge avec les jobs `docs` + `deploy-docs`. Vérifier le déploiement Pages vert puis **charger une page profonde live et confirmer que `_next/` se charge** (piège basePath) → cocher la ligne « post-merge » de `docs/INDEX.md`.
 - **Serveurs dev laissés tournés** : site doc Fumadocs sur `:3000` (`/latch/`), app latch backend `:5150` + frontend Vite `:5173` (`/admin/`, login `admin`/`secret`).
 - e2e/visual : la landing référence les vraies captures Phase 6 ; si l'UI admin change, régénérer via le harnais Playwright (`CAPTURE=1`) et recopier dans `public/img/`.
 
 ### Prochaine chose à creuser
-- **Merge `feat/phase-8-public-docs` → `main`** (fast-forward/PR au choix), surveiller `deploy-docs`, vérifier le site live, puis cocher la ligne « Post-merge » de `docs/INDEX.md`.
+- **Phase 9 — passe de polish** (cf. ROADMAP) : (1) **sélecteur de langue du login** en ancien modèle (`LocaleSwitcher` boutons FR/EN dans `frontend/src/routes/login.tsx`) → migrer vers `LanguageSelect` (Select + drapeaux, Phase 7 Lot 2) ; (2) **corrections de pages de doc** (à préciser à la relecture) ; (3) **zoom des images** docs (Fumadocs `ImageZoom`) + landing (lightbox sur les captures du parcours).
 
 ### Notes pour future Claude
 - **public_docs = app isolée** : son `package.json`/lockfile, **hors** workspace Rust et **hors** `frontend/`. Node 24, pnpm 9.15.9. `pnpm dev` → `http://localhost:3000/latch/`.

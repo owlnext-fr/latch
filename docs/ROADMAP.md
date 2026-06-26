@@ -170,7 +170,7 @@ locales découvertes) ; serving `/c` rend des **pages d'erreur HTML stylées** (
 sans version) ; ajouter une locale = déposer un JSON, sans toucher au code d'import ; **pages admin bornées**
 en largeur (conteneur centré) ; **lien GitHub** présent sur la page de login.
 
-## Phase 8 ✅ IMPLÉMENTÉE (2026-06-26, branche `feat/phase-8-public-docs`) — Documentation publique
+## Phase 8 ✅ LIVRÉE (2026-06-26, tag **v0.3.0**) — Documentation publique
 
 > Spec : `docs/superpowers/specs/2026-06-26-phase-8-public-docs-design.md`
 > Plan : `docs/superpowers/plans/2026-06-26-phase-8-public-docs.md`
@@ -185,6 +185,23 @@ Livré :
 - **Déploiement** : jobs `docs` + `deploy-docs` **dans `ci.yml`** (pas de workflow séparé), Pages = GitHub Actions.
 - **Lien** : README + `frontend/src/lib/links.ts` `DOCS_URL` → `https://owlnext-fr.github.io/latch`.
 
-**Sortie (atteinte hors déploiement live)** : build statique vert (66 pages), basePath OK en local
-(assets `/latch/_next`), 0 lien interne cassé, contenu EN sous `public_docs/content/` uniquement.
-**Reste au merge** : pipeline `deploy-docs` vert + site accessible à l'URL Pages.
+**Sortie** : build statique vert (66 pages), basePath OK (assets `/latch/_next`), 0 lien interne
+cassé, contenu EN sous `public_docs/content/` uniquement. **Reste (post-merge)** : confirmer le
+pipeline `deploy-docs` vert + le site accessible à l'URL Pages (charger une page profonde, vérifier `_next/`).
+
+## Phase 9 — Passe de polish (doc + admin) [À FAIRE]
+
+> Identifiée en clôture de Phase 8 (2026-06-26). Petite passe transverse, non bloquante.
+
+- **Sélecteur de langue du login en ancien modèle** : la page `/admin/login`
+  (`frontend/src/routes/login.tsx`) utilise encore l'ancien `LocaleSwitcher` (boutons FR/EN) au lieu
+  du nouveau `LanguageSelect` (Select + drapeaux, locales auto-découvertes) introduit en Phase 7 Lot 2.
+  → aligner le login sur le modèle unifié.
+- **Corrections de pages de doc** : relire/corriger certaines pages du site `public_docs/` (contenu à
+  préciser à la relecture).
+- **Zoom des images (docs + landing)** : permettre d'agrandir les captures — côté docs via le composant
+  Fumadocs `ImageZoom` (déjà dispo) sur les images MDX ; côté landing, un lightbox/zoom sur les captures
+  du parcours.
+
+**Sortie** : login aligné sur le sélecteur de langue unifié ; pages de doc corrigées ; images
+agrandissables sur docs et landing.
