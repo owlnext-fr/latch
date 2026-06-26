@@ -1,0 +1,37 @@
+---
+title: Projects
+description: Create and manage projects from the admin.
+---
+
+The admin lives at `/admin` behind a session cookie. Sign in with the `ADMIN_USER` /
+`ADMIN_PASS` credentials, and you land on the project list.
+
+![The latch admin project list](/img/admin-list.png)
+
+## Create a project
+
+Click **New project** to open a side-panel. You set:
+
+- **Name** (required) — what the project is called in the admin.
+- **Slug** — a readable base derived from the name plus a random 8-character suffix (for example
+  `my-project-k7Qp2maZ`). It's shown **read-only** — the random suffix keeps the public URL
+  practically non-guessable.
+- **Access code** — on by default, with an auto-generated 6-digit PIN. See
+  [Access codes](/docs/admin/access-codes).
+- **Brand name** — optional, shown on the unlock page. See
+  [Co-branding](/docs/admin/co-branding).
+
+<Callout type="info">
+The slug's base is read-only in this version. The public link is `/<base-url>/c/<slug>`.
+</Callout>
+
+## The detail view
+
+Clicking a project opens its detail page, which is **read-only** — every edit happens in a
+dedicated side-panel. From here you:
+
+- copy the public URL (and reveal/copy the PIN if the project is protected),
+- **Edit** the project (name, code, brand name),
+- **Deploy** a new version,
+- **Delete** the project (a danger side-panel with a typed confirmation),
+- manage versions — see [Versions](/docs/admin/versions).

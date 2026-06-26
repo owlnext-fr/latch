@@ -1,0 +1,34 @@
+---
+title: Versions
+description: Deploy, preview, switch the active version, and delete.
+---
+
+A project is a series of **versions**. One of them is the **active** version — the one served at
+`/c/<slug>`. Versions are numbered per project (`v1`, `v2`, …).
+
+## Deploy a new version
+
+From the detail view, **Deploy** opens a side-panel. Upload a single-file HTML prototype and
+choose whether to **activate immediately**. The same operation runs whether you deploy here or
+[from Claude](/docs/publish-from-claude/connect-mcp) — it's the one `deploy()` path.
+
+<Callout type="info">
+The HTML is written to storage **first**, then the version row and the active-version pointer are
+updated in a transaction. A client never sees a pointer aimed at a half-written file.
+</Callout>
+
+## Per-version actions
+
+Each row in the version list offers:
+
+- **Activate** — flip the active pointer to this version (a transactional update). The client link
+  immediately serves it.
+- **Preview** — open the raw HTML through an admin-only, `no-store` route (behind your session) —
+  handy to check a version without making it active.
+- **Delete** — remove a version through a danger side-panel. Deleting the **active** version is
+  refused (HTTP 400); activate another one first.
+
+## First deploy
+
+Before the first deploy a project has no active version, so `/c/<slug>` returns a 404 page. The
+detail view surfaces the deploy panel front-and-center until you ship `v1`.

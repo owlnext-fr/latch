@@ -13,6 +13,8 @@ import { LatchLogo } from '@/components/logo';
 import { GithubIcon } from '@/components/github-icon';
 import { ClaudeChat } from '@/components/landing/claude-chat';
 import { gitConfig } from '@/lib/shared';
+import adminListImg from '../../../public/img/admin-list.png';
+import unlockImg from '../../../public/img/unlock.png';
 
 const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
@@ -23,7 +25,7 @@ const steps: { n: number; title: string; body: string; visual: ReactNode }[] = [
     body: 'In the admin, spin up a project in a side-panel. You get a non-guessable slug and an optional 6-digit PIN — code protection is on by default.',
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/img/admin-list.png" alt="latch admin — project list" className="h-auto w-full" />
+      <img src={adminListImg.src} alt="latch admin — project list" className="h-auto w-full" />
     ),
   },
   {
@@ -38,7 +40,7 @@ const steps: { n: number; title: string; body: string; visual: ReactNode }[] = [
     body: 'Send the client a single stable link. Protected projects show a styled unlock page; once the PIN is entered, the active version is served — always the latest.',
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/img/unlock.png" alt="latch unlock page" className="h-auto w-full" />
+      <img src={unlockImg.src} alt="latch unlock page" className="h-auto w-full" />
     ),
   },
 ];

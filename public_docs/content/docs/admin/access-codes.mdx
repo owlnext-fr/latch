@@ -1,0 +1,34 @@
+---
+title: Access codes
+description: The optional per-project PIN and the two states of the client link.
+---
+
+Every project can be protected by a **6-digit PIN**. Code protection is **on by default** when
+you create a project, and the PIN is auto-generated (you can regenerate or edit it).
+
+## The two states of `/c/<slug>`
+
+The client link behaves differently depending on protection and the visitor's cookie:
+
+- **No code** → the active version is served directly.
+- **Code + valid unlock cookie** → the active version is served.
+- **Code + no cookie** → a styled **unlock page** (HTTP 200, not a browser auth popup) asking for
+  the PIN.
+
+![The latch unlock page](/img/unlock.png)
+
+Entering the correct PIN sets a signed, project-scoped cookie and serves the prototype. Every
+response on this surface is `Cache-Control: no-store`, so the client's link always shows the
+latest active version.
+
+## Rotating the PIN revokes access
+
+The unlock cookie is signed over an imprint of the **current** PIN. Changing a project's PIN
+therefore invalidates every cookie already handed out — a clean way to revoke access.
+
+<Callout type="warn">
+The PIN is recoverable (stored so the admin can copy it) and shown **only** on a project's detail
+view — never in a list, never over MCP. It is a low-friction gate for a non-technical client, not
+a high-security secret; the rate-limit on `/unlock` is what makes a 6-digit code safe. See the
+[security model](/docs/how-it-works/security-model).
+</Callout>
