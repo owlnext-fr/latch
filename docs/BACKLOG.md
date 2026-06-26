@@ -3,6 +3,24 @@
 > Idées et durcissements écartés *consciemment* de la v1, gardés pour ne pas les
 > redécouvrir. Rien ici n'est un manque : ce sont des choix de périmètre.
 
+## Retravailler `.env.example` (Phase 9 polish – 2026-06-26)
+Le `.env.example` actuel mérite une passe de cohérence/pédagogie avant distribution. Points relevés :
+- **Placeholders hétérogènes** : `change-me`, `change-me-long-random`, `change-me-64-bytes-min-random-…`
+  → uniformiser et expliciter la commande de génération **sur chaque** ligne secret (`openssl rand -hex 32`,
+  qui produit 64 caractères = 64 octets, pile la contrainte `Key::from()` ≥ 64 octets).
+- **`SESSION_SECRET=` vide** alors que `DEPLOY_TOKEN`/`UNLOCK_COOKIE_SECRET` ont un placeholder : incohérent
+  (soit tous vides, soit tous avec placeholder explicite « à régénérer »).
+- **`ADMIN_PASS=change-me`** : rappeler qu'il peut être généré (`openssl rand -base64 24`) et qu'il est
+  comparé à temps constant (non hashé).
+- **Dev vs prod mélangés** : `LATCH_STORAGE_ROOT=./data`, `DATABASE_URL=sqlite:///data/...` (chemin prod),
+  `LATCH_SPA_DIST=` (vide) cohabitent → clarifier quelles valeurs sont des **défauts prod (image)** vs
+  **à ajuster en dev**, ou scinder les blocs « requis prod » / « défauts sains optionnels ».
+- **Regrouper en tête les 6 variables OBLIGATOIRES en prod** (fail-secure : `ADMIN_USER`, `ADMIN_PASS`,
+  `DEPLOY_TOKEN`, `LATCH_PUBLIC_BASE_URL`, `SESSION_SECRET`, `UNLOCK_COOKIE_SECRET`) puis les optionnelles à
+  défaut sain — aligné sur le tableau du README §Quickstart.
+- Vérifier la cohérence avec `docs/ENVIRONMENT.md` (source de vérité des clés) à la fin de la passe.
+Non bloquant : le fichier fonctionne ; c'est de la finition de packaging (rattachable à la Phase 9).
+
 ## git-cliff en CI (release automatisée) (Phase 6 – 2026-06-25)
 `CHANGELOG.md` est aujourd'hui généré manuellement (`git cliff --output CHANGELOG.md`). Pour
 automatiser la génération à chaque release, ajouter un job CI déclenché sur un push de tag `v*`

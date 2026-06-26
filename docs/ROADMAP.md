@@ -202,6 +202,9 @@ pipeline `deploy-docs` vert + le site accessible à l'URL Pages (charger une pag
 - **Zoom des images (docs + landing)** : permettre d'agrandir les captures — côté docs via le composant
   Fumadocs `ImageZoom` (déjà dispo) sur les images MDX ; côté landing, un lightbox/zoom sur les captures
   du parcours.
+- **Retravailler `.env.example`** : passe de cohérence/pédagogie avant distribution (placeholders uniformes,
+  commande de génération par secret, séparation requis-prod / défauts optionnels, dev vs prod). Détail et
+  points relevés : `docs/BACKLOG.md`.
 
 **Sortie** : login aligné sur le sélecteur de langue unifié ; pages de doc corrigées ; images
-agrandissables sur docs et landing.
+agrandissables sur docs et landing ; `.env.example` propre et homogène.
