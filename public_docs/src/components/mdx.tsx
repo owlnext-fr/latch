@@ -5,6 +5,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 import { TypeTable } from 'fumadocs-ui/components/type-table';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import type { MDXComponents } from 'mdx/types';
+import { ClaudeFlow } from '@/components/claude-flow';
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
@@ -17,6 +18,7 @@ export function getMDXComponents(components?: MDXComponents) {
     TypeTable,
     Accordion,
     Accordions,
+    ClaudeFlow,
     ...components,
   } satisfies MDXComponents;
 }
