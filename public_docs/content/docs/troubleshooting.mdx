@@ -1,0 +1,69 @@
+---
+title: Troubleshooting
+description: Concrete failure modes and how to fix them.
+---
+
+Common things that go wrong, and what they mean.
+
+<Accordions>
+<Accordion title="The container refuses to start (fail-secure boot)">
+**Symptom** — the app exits immediately on boot in production, complaining about a missing secret.
+
+**Cause** — a required secret is absent. `latch` is fail-secure: outside development it refuses to
+start without `ADMIN_USER`, `ADMIN_PASS`, `DEPLOY_TOKEN`, `LATCH_PUBLIC_BASE_URL`, `SESSION_SECRET`,
+and `UNLOCK_COOKIE_SECRET`. The HMAC keys must be **≥ 64 bytes**.
+
+**Fix** — set every required variable in `.env` (generate secrets with `openssl rand -hex 32`).
+See [Configuration](/docs/deploy/configuration).
+</Accordion>
+
+<Accordion title="Deploy fails with HTTP 413">
+**Symptom** — deploying a prototype (from the admin or from Claude) returns `413 Payload Too Large`.
+
+**Cause** — the single-file HTML is bigger than `LATCH_BODY_LIMIT` (default `5mb`). The deploy
+sends the HTML as a JSON body.
+
+**Fix** — raise the limit, e.g. `LATCH_BODY_LIMIT=10mb` (or `disable` to remove it), and restart.
+</Accordion>
+
+<Accordion title="MCP calls are rejected with a host error">
+**Symptom** — Claude can reach `/mcp` but every call is rejected, or the handshake fails on the
+host check.
+
+**Cause** — the `Host` header doesn't match `allowed_hosts`, which is derived from
+`LATCH_PUBLIC_BASE_URL`. Either the variable is wrong, or the reverse proxy rewrites the host.
+
+**Fix** — set `LATCH_PUBLIC_BASE_URL` to the exact public URL, and make the proxy preserve the
+`Host` header. See [Reverse proxy](/docs/deploy/reverse-proxy).
+</Accordion>
+
+<Accordion title="Unlock attempts get rate-limited too aggressively">
+**Symptom** — legitimate clients are briefly blocked from the unlock page.
+
+**Cause** — the `/unlock` rate-limit keys off the client IP via `X-Forwarded-For` / `X-Real-IP`.
+If the reverse proxy doesn't forward them, every visitor shares one bucket and trips the limit.
+
+**Fix** — forward the client-IP headers from the proxy (see
+[Reverse proxy](/docs/deploy/reverse-proxy)). The counters are in-memory and reset on restart; the
+limits are tunable via the `LATCH_UNLOCK_RL_*` variables.
+</Accordion>
+
+<Accordion title="The client link returns a 404 page">
+**Symptom** — opening a project's client link shows the styled 404 page.
+
+**Cause** — either the slug doesn't exist, or the project has **no active version yet** (nothing
+has been deployed). The 404 is intentionally generic — it doesn't reveal whether the slug exists.
+
+**Fix** — deploy a version and make sure one is active. See [Versions](/docs/admin/versions).
+</Accordion>
+
+<Accordion title="Clients have to re-enter the PIN after I changed it">
+**Symptom** — after you rotate a project's PIN, previously-unlocked clients are asked for it again.
+
+**Cause** — this is by design. The unlock cookie is signed over an imprint of the **current** PIN,
+so rotating the PIN revokes every cookie already issued.
+
+**Fix** — none needed; share the new PIN. This is how you revoke access. See
+[Access codes](/docs/admin/access-codes).
+</Accordion>
+</Accordions>
