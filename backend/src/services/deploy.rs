@@ -15,6 +15,9 @@ use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::storage::Storage;
 
+/// Longueur maximale des notes de version (caractères). Au-delà → Validation.
+pub const MAX_RELEASE_NOTES_LEN: usize = 10_000;
+
 pub struct DeployService {
     db: DatabaseConnection,
     storage: Arc<dyn Storage>,
@@ -32,7 +35,17 @@ impl DeployService {
         project_id: i32,
         html: &str,
         activate: bool,
+        release_notes: Option<&str>,
     ) -> Result<versions::Model, CoreError> {
+        // 0. Validation des notes (barrière de fond : le rendu reste restreint côté client).
+        if let Some(notes) = release_notes {
+            if notes.chars().count() > MAX_RELEASE_NOTES_LEN {
+                return Err(CoreError::Validation(format!(
+                    "release_notes trop longues (max {MAX_RELEASE_NOTES_LEN} caractères)"
+                )));
+            }
+        }
+
         // 1. n = max(n)+1 pour ce projet (hors transaction ; UNIQUE(project_id,n)
         //    est le backstop si deux deploys concurrents calculaient le même n).
         let last = versions::Entity::find()
@@ -53,6 +66,7 @@ impl DeployService {
             project_id: Set(project_id),
             n: Set(n),
             html_path: Set(html_path),
+            release_notes: Set(release_notes.map(str::to_string)),
             ..Default::default()
         }
         .insert(&txn)
@@ -111,7 +125,7 @@ mod tests {
         let p = make_project(&db).await;
 
         let svc = DeployService::new(db.clone(), storage(&dir));
-        let v = svc.deploy(p.id, "<h1>hi</h1>", true).await.unwrap();
+        let v = svc.deploy(p.id, "<h1>hi</h1>", true, None).await.unwrap();
 
         assert_eq!(v.n, 1);
         assert_eq!(v.project_id, p.id);
@@ -134,8 +148,8 @@ mod tests {
         let p = make_project(&db).await;
         let svc = DeployService::new(db.clone(), storage(&dir));
 
-        let v1 = svc.deploy(p.id, "a", true).await.unwrap();
-        let v2 = svc.deploy(p.id, "b", true).await.unwrap();
+        let v1 = svc.deploy(p.id, "a", true, None).await.unwrap();
+        let v2 = svc.deploy(p.id, "b", true, None).await.unwrap();
         assert_eq!(v1.n, 1);
         assert_eq!(v2.n, 2);
     }
@@ -147,7 +161,7 @@ mod tests {
         let p = make_project(&db).await;
         let svc = DeployService::new(db.clone(), storage(&dir));
 
-        let v = svc.deploy(p.id, "x", false).await.unwrap();
+        let v = svc.deploy(p.id, "x", false, None).await.unwrap();
         let p = projects::Entity::find_by_id(p.id)
             .one(&db)
             .await
@@ -155,5 +169,31 @@ mod tests {
             .unwrap();
         assert!(p.active_version_id.is_none());
         assert_eq!(v.n, 1);
+    }
+
+    #[tokio::test]
+    async fn deploy_persists_release_notes() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db).await;
+        let svc = DeployService::new(db.clone(), storage(&dir));
+
+        let v = svc
+            .deploy(p.id, "<h1>hi</h1>", true, Some("# Salut\n\n- a\n- b"))
+            .await
+            .unwrap();
+        assert_eq!(v.release_notes.as_deref(), Some("# Salut\n\n- a\n- b"));
+    }
+
+    #[tokio::test]
+    async fn deploy_rejects_too_long_release_notes() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db).await;
+        let svc = DeployService::new(db.clone(), storage(&dir));
+
+        let long = "x".repeat(super::MAX_RELEASE_NOTES_LEN + 1);
+        let err = svc.deploy(p.id, "x", true, Some(&long)).await.unwrap_err();
+        assert!(matches!(err, CoreError::Validation(_)));
     }
 }

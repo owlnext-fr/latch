@@ -134,7 +134,7 @@ impl LatchMcp {
         let activate = args.activate.unwrap_or(true);
         let deploy = DeployService::new(self.db.clone(), self.storage.clone());
         let version = deploy
-            .deploy(project.id, &args.html, activate)
+            .deploy(project.id, &args.html, activate, None)
             .await
             .map_err(map_core_err)?;
 

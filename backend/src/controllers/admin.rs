@@ -261,7 +261,7 @@ async fn deploy(
     let storage = crate::web::storage_from_ctx(&ctx);
     let svc = DeployService::new(ctx.db.clone(), storage);
     let version = svc
-        .deploy(id, &body.html, body.activate)
+        .deploy(id, &body.html, body.activate, None)
         .await
         .map_err(into_response)?;
     format::json(crate::dto::DeployResponse {
