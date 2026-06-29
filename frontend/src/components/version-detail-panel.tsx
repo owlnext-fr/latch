@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { CircleCheck } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -37,6 +38,7 @@ export function VersionDetailPanel({
             {t('version_detail.title', { n: version.n })}
             {version.is_active && (
               <Badge className="bg-green-600 text-white hover:bg-green-600">
+                <CircleCheck />
                 {t('common.active')}
               </Badge>
             )}

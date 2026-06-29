@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Eye } from 'lucide-react'
+import { Eye, Lock, LockOpen } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { ProjectForm } from '@/components/project-form'
@@ -82,10 +82,12 @@ export function ListPage() {
               <TableCell>
                 {project.code_enabled ? (
                   <Badge className="bg-green-600 text-white hover:bg-green-600">
+                    <Lock />
                     {t('list.badge_code_on')}
                   </Badge>
                 ) : (
                   <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+                    <LockOpen />
                     {t('list.badge_free')}
                   </Badge>
                 )}

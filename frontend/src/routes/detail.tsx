@@ -2,7 +2,15 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Zap, FileText, Power, Eye, PanelRight, Trash2 } from 'lucide-react'
+import {
+  Zap,
+  FileText,
+  Power,
+  Eye,
+  PanelRight,
+  Trash2,
+  CircleCheck,
+} from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { PinField } from '@/components/pin-field'
@@ -207,6 +215,7 @@ export function DetailPage() {
                         <div className="flex items-center gap-2">
                           {v.is_active && (
                             <Badge className="bg-green-600 text-white hover:bg-green-600">
+                              <CircleCheck />
                               {t('common.active')}
                             </Badge>
                           )}
