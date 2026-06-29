@@ -66,10 +66,10 @@ export function NotesEditor({
       {tab === 'write' ? (
         <EditorContent
           editor={editor}
-          className="prose prose-sm max-w-none rounded-md border border-input px-3 py-2 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none"
+          className="rounded-md border border-input px-3 py-2 text-sm [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:space-y-2 [&_.ProseMirror]:outline-none [&_.ProseMirror_blockquote]:text-muted-foreground [&_.ProseMirror_blockquote]:border-l-2 [&_.ProseMirror_blockquote]:pl-3 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_h1]:text-lg [&_.ProseMirror_h1]:font-semibold [&_.ProseMirror_h2]:text-base [&_.ProseMirror_h2]:font-semibold [&_.ProseMirror_h3]:text-sm [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5"
         />
       ) : (
-        <div className="prose prose-sm max-w-none rounded-md border border-input px-3 py-2">
+        <div className="rounded-md border border-input px-3 py-2">
           <MarkdownView source={value} />
         </div>
       )}

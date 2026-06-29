@@ -58,7 +58,7 @@ export function ShellPage() {
         <div className="bg-background/60 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-background w-full max-w-lg rounded-xl border p-6 shadow-xl">
             <h2 className="mb-3 text-lg font-semibold">{t('shell.notes_title')}</h2>
-            <div className="prose prose-sm max-h-[60vh] max-w-none overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto">
               <MarkdownView source={notes.notes_md} />
             </div>
             <div className="mt-5 flex justify-end">
