@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Zap, FileText } from 'lucide-react'
+import { Zap, FileText, Power, Eye, PanelRight, Trash2 } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { PinField } from '@/components/pin-field'
@@ -220,13 +220,14 @@ export function DetailPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          {/* Activate button (hidden if already active) */}
+                          {/* Activate (icon, hidden if already active) */}
                           {!v.is_active && (
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               aria-label={t('detail.activate_aria')}
+                              title={t('detail.activate_aria')}
                               loading={
                                 activateVersion.isPending &&
                                 activateVersion.variables?.n === v.n
@@ -235,43 +236,51 @@ export function DetailPage() {
                                 activateVersion.mutate({ id, n: v.n })
                               }
                             >
-                              {t('detail.activate_aria')}
+                              <Power />
                             </Button>
                           )}
 
-                          {/* Detail button */}
+                          {/* Detail (icon) — opens the read-only version panel */}
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
                             aria-label={t('detail.detail_aria')}
+                            title={t('detail.detail_aria')}
                             onClick={() => setDetailVersion(v)}
                           >
-                            {t('detail.detail_aria')}
+                            <PanelRight />
                           </Button>
 
-                          {/* Preview link */}
-                          <a
-                            href={previewUrl(id, v.n)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          {/* Preview (icon link, new tab) */}
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon-sm"
                             aria-label={t('detail.preview_aria')}
-                            className="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            title={t('detail.preview_aria')}
                           >
-                            {t('detail.preview_aria')}
-                          </a>
+                            <a
+                              href={previewUrl(id, v.n)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Eye />
+                            </a>
+                          </Button>
 
-                          {/* Delete button (hidden if active) */}
+                          {/* Delete (icon, hidden if active) */}
                           {!v.is_active && (
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               aria-label={t('detail.delete_aria')}
+                              title={t('detail.delete_aria')}
                               className="text-destructive hover:text-destructive"
                               onClick={() => setDeleteVersion(v)}
                             >
-                              {t('detail.delete_aria')}
+                              <Trash2 />
                             </Button>
                           )}
                         </div>

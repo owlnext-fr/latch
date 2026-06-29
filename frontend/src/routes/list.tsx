@@ -106,24 +106,32 @@ export function ListPage() {
               </TableCell>
               <TableCell className="text-right">
                 {project.active_version_n == null ? (
-                  <span
-                    className="text-muted-foreground/40 inline-flex h-8 w-8 items-center justify-center"
-                    title={t('list.preview_aria')}
-                    aria-hidden="true"
-                  >
-                    <Eye className="size-4" />
-                  </span>
-                ) : (
-                  <a
-                    href={previewUrl(project.id, project.active_version_n)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled
                     aria-label={t('list.preview_aria')}
                     title={t('list.preview_aria')}
-                    className="text-muted-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-8 w-8 items-center justify-center rounded-md"
                   >
-                    <Eye className="size-4" />
-                  </a>
+                    <Eye />
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t('list.preview_aria')}
+                    title={t('list.preview_aria')}
+                  >
+                    <a
+                      href={previewUrl(project.id, project.active_version_n)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Eye />
+                    </a>
+                  </Button>
                 )}
               </TableCell>
             </TableRow>
