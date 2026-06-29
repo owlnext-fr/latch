@@ -1,3 +1,4 @@
+import '@/types'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -31,7 +32,7 @@ export function NotesEditor({
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      onChange((editor.storage as unknown as Record<string, { getMarkdown(): string }>).markdown.getMarkdown())
+      onChange(editor.storage.markdown.getMarkdown())
     },
   })
 
