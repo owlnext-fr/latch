@@ -134,5 +134,9 @@
   "title.login": "Sign in — latch admin",
   "title.detail": "{{name}} — latch admin",
   "login.github": "View on GitHub",
-  "topbar.help": "Documentation"
+  "topbar.help": "Documentation",
+  "version_detail.title": "Version v{{n}}",
+  "version_detail.date_label": "Deployed on",
+  "version_detail.notes_label": "Release notes",
+  "version_detail.no_notes": "No release notes for this version."
 }
