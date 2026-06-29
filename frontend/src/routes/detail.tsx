@@ -211,10 +211,14 @@ export function DetailPage() {
                             </Badge>
                           )}
                           {v.release_notes ? (
-                            <FileText
-                              className="text-muted-foreground size-4"
-                              aria-label={t('detail.has_notes')}
-                            />
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground"
+                              title={t('detail.has_notes')}
+                            >
+                              <FileText />
+                              {t('detail.notes_badge')}
+                            </Badge>
                           ) : null}
                         </div>
                       </TableCell>
