@@ -133,6 +133,7 @@ test('overlay de notes : visible puis mémorisé après dismiss', async ({
   await expect(page.getByTestId('notes-dismiss')).toBeVisible({ timeout: 8000 })
 
   // Le contenu Markdown rendu doit contenir les éléments des notes.
+  await expect(page.getByText('Nouveautés')).toBeVisible()
   await expect(page.getByText('point A')).toBeVisible()
 
   // Le proto reste accessible dans l'iframe.
@@ -143,11 +144,10 @@ test('overlay de notes : visible puis mémorisé après dismiss', async ({
   await expect(page.getByTestId('notes-dismiss')).toHaveCount(0)
 
   // Reload → l'overlay NE réapparaît PAS (mémorisé dans localStorage `latch:seen:<slug>`).
+  // Synchro déterministe : on attend que l'iframe charge /raw (preuve que le shell est
+  // monté et que localStorage a été consulté), puis on asserte l'absence de l'overlay.
   await page.reload()
-  // Laisser le temps au fetch /notes de revenir (s'il revient), puis asserter l'absence.
-  await page.waitForTimeout(2000)
-  await expect(page.getByTestId('notes-dismiss')).toHaveCount(0)
-
-  // Le proto est toujours accessible dans l'iframe après le reload.
+  await page.waitForResponse((r) => r.url().includes('/raw') && r.status() === 200)
   await expect(page.frameLocator('iframe').getByText('Demo proto')).toBeVisible()
+  await expect(page.getByTestId('notes-dismiss')).toHaveCount(0)
 })
