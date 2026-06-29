@@ -1066,13 +1066,16 @@ const ALLOWED_ELEMENTS = [
   'blockquote',
 ]
 
-export function MarkdownView({ content }: { content: string }) {
+// frontend/src/lib/markdown.tsx — prop publique : `source`
+export function MarkdownView({ source }: { source: string }) {
   return (
     <ReactMarkdown
       skipHtml          // drop les balises HTML brutes dans le markdown
       allowedElements={ALLOWED_ELEMENTS}  // allow-list stricte — liens/images/code bloqués
+      unwrapDisallowed  // garde le texte des éléments retirés (ex. libellé d'un lien)
+      // components={...} dans l'impl réelle pour styler titres/listes/citation (Tailwind)
     >
-      {content}
+      {source}
     </ReactMarkdown>
   )
 }
@@ -1111,24 +1114,29 @@ Pattern pour afficher les détails d'une version (read-only, pas de formulaire) 
 
 ```tsx
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { MarkdownView } from '@/components/markdown-view'
+import { Badge } from '@/components/ui/badge'
+import { MarkdownView } from '@/lib/markdown'
 
 <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
   <SheetContent>
     <SheetHeader>
-      <SheetTitle>{t('version.detail_title', { n: version.n })}</SheetTitle>
+      <SheetTitle className="flex items-center gap-2">
+        {t('version_detail.title', { n: version.n })}
+        {version.is_active && <Badge>{t('common.active')}</Badge>}
+      </SheetTitle>
     </SheetHeader>
-    <dl className="grid gap-2 text-sm">
-      <div><dt>{t('version.number')}</dt><dd>v{version.n}</dd></div>
-      <div><dt>{t('version.deployed_at')}</dt><dd>{formatDate(version.created_at)}</dd></div>
-      <div><dt>{t('version.status')}</dt><dd>{version.is_active ? t('version.active') : '—'}</dd></div>
-    </dl>
-    {version.release_notes && (
-      <section>
-        <h3>{t('version.release_notes')}</h3>
-        <MarkdownView content={version.release_notes} />
-      </section>
-    )}
+    <div className="flex flex-col gap-4 p-4">
+      <div>
+        <p className="text-muted-foreground text-xs">{t('version_detail.date_label')}</p>
+        <p className="text-sm">{formatDate(version.created_at)}</p>
+      </div>
+      <div>
+        <p className="text-muted-foreground text-xs">{t('version_detail.notes_label')}</p>
+        {version.release_notes
+          ? <MarkdownView source={version.release_notes} />
+          : <p className="text-muted-foreground text-sm">{t('version_detail.no_notes')}</p>}
+      </div>
+    </div>
   </SheetContent>
 </Sheet>
 ```
