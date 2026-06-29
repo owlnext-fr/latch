@@ -31,7 +31,7 @@ export function NotesEditor({
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      onChange(editor.storage.markdown.getMarkdown())
+      onChange((editor.storage as unknown as Record<string, { getMarkdown(): string }>).markdown.getMarkdown())
     },
   })
 
