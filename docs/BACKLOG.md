@@ -21,6 +21,14 @@ Le `.env.example` actuel mérite une passe de cohérence/pédagogie avant distri
 - Vérifier la cohérence avec `docs/ENVIRONMENT.md` (source de vérité des clés) à la fin de la passe.
 Non bloquant : le fichier fonctionne ; c'est de la finition de packaging (rattachable à la Phase 9).
 
+## `deploy-docs` (GitHub Pages) doit dépendre du push de l'image docker (2026-06-26)
+Aujourd'hui dans `ci.yml`, le job **`deploy-docs`** (publication GitHub Pages) et le job **`docker`**
+(build + push GHCR) sont indépendants : la doc peut se publier alors que l'image n'a pas (ou pas encore)
+été poussée. Souhaité : **ne publier la doc que si l'image docker a bien été push** — ajouter le job
+docker dans le `needs:` de `deploy-docs` (ou chaîner via un job de garde). Ainsi un échec de build/push
+d'image empêche la mise en ligne d'une doc qui annoncerait une version non disponible au pull.
+À traiter au prochain passage sur `ci.yml`. _(Noté pendant le hotfix v0.3.1.)_
+
 ## git-cliff en CI (release automatisée) (Phase 6 – 2026-06-25)
 `CHANGELOG.md` est aujourd'hui généré manuellement (`git cliff --output CHANGELOG.md`). Pour
 automatiser la génération à chaque release, ajouter un job CI déclenché sur un push de tag `v*`

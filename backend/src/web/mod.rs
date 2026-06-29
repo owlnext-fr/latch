@@ -150,6 +150,27 @@ pub fn unlock_key(ctx: &AppContext) -> Result<axum_extra::extract::cookie::Key> 
     ))
 }
 
+/// Noms `(session, store)` des cookies de session selon l'environnement.
+///
+/// ⚠️ Bug `axum_session 0.16.0` : `with_prefix_with_host(true)` ÉCRIT le cookie préfixé
+/// `__Host-` (via `NameType::get_name`) mais le RELIT sous le nom BRUT
+/// (`get_headers_and_key` lit `session_name`/`store_name` sans repasser par `get_name`).
+/// En prod, le serveur poserait `__Host-latch_admin` mais chercherait `latch_admin` → la
+/// session entrante n'est jamais retrouvée → session neuve à chaque requête → AdminAuth en 401.
+/// (Invisible en dev/test : `is_prod=false` → pas de préfixe → noms symétriques.)
+///
+/// Contournement : on pose nous-mêmes le nom `__Host-…` et on laisse `prefix_with_host` à
+/// false → lecture et écriture utilisent le même nom. Le durcissement `__Host-` est préservé :
+/// le navigateur impose Secure + Path=/ + pas de Domain, qu'axum_session fournit déjà. Préfixe
+/// en PROD uniquement (un cookie `__Host-` sur HTTP serait rejeté). Cf. `docs/QUIRKS.md`.
+pub(crate) fn session_cookie_names(is_prod: bool) -> (&'static str, &'static str) {
+    if is_prod {
+        ("__Host-latch_admin", "__Host-store")
+    } else {
+        ("latch_admin", "store")
+    }
+}
+
 /// Construit le `SessionStore` : pool SQLite dérivé de la connexion Loco, table
 /// `sessions` (déjà migrée), cookie signé + flags adaptés à l'environnement.
 ///
@@ -182,24 +203,7 @@ pub async fn build_session_store(
 
     let key = axum_session::Key::from(secret.as_bytes());
 
-    // Noms de cookie de session.
-    //
-    // ⚠️ Bug axum_session 0.16.0 : `with_prefix_with_host(true)` ÉCRIT le cookie préfixé
-    // `__Host-` (via `NameType::get_name`) mais le RELIT sous le nom BRUT
-    // (`get_headers_and_key` lit `session_name`/`store_name` sans repasser par `get_name`).
-    // En prod, le serveur pose `__Host-latch_admin` mais cherche `latch_admin` → la session
-    // entrante n'est jamais retrouvée → session neuve à chaque requête → AdminAuth en 401.
-    // (Invisible en dev/test : `is_prod=false` → pas de préfixe → noms symétriques.)
-    //
-    // Contournement : on pose nous-mêmes le nom `__Host-…` et on laisse `prefix_with_host`
-    // à false → lecture et écriture utilisent le même nom. Le durcissement `__Host-` est
-    // préservé : le navigateur impose Secure + Path=/ + pas de Domain, qu'axum_session fournit
-    // déjà. Préfixe en PROD uniquement (un cookie `__Host-` sur HTTP serait rejeté). Cf. QUIRKS.
-    let (session_name, store_name) = if is_prod {
-        ("__Host-latch_admin", "__Host-store")
-    } else {
-        ("latch_admin", "store")
-    };
+    let (session_name, store_name) = session_cookie_names(is_prod);
 
     let config = axum_session::SessionConfig::default()
         .with_table_name("sessions")
@@ -219,7 +223,24 @@ pub async fn build_session_store(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    use super::{host_authority, resolve_cookie_secret, resolve_required};
+    use super::{host_authority, resolve_cookie_secret, resolve_required, session_cookie_names};
+
+    // Garde anti-régression du contournement du bug axum_session 0.16.0 (cf. QUIRKS) :
+    // en prod, le préfixe `__Host-` doit être posé DANS le nom (et jamais via
+    // `with_prefix_with_host`, dont la lecture ne re-préfixe pas → session perdue).
+    #[test]
+    fn session_cookie_names_prod_carry_host_prefix() {
+        assert_eq!(
+            session_cookie_names(true),
+            ("__Host-latch_admin", "__Host-store")
+        );
+    }
+
+    // En dev/test (HTTP), noms bruts : un cookie `__Host-` serait rejeté par le navigateur.
+    #[test]
+    fn session_cookie_names_dev_are_bare() {
+        assert_eq!(session_cookie_names(false), ("latch_admin", "store"));
+    }
 
     const DEV_FALLBACK: &str =
         "dev-only-insecure-unlock-cookie-secret-please-override-in-production!!";
