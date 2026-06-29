@@ -26,7 +26,8 @@ au serving.
 | Édition des notes | **Saisie au déploiement uniquement** (admin upload ou MCP). Pas d'édition après coup. |
 | Éditeur admin | **WYSIWYG léger** (Tiptap, restreint gras/italique/listes) **+ onglet Aperçu**. |
 | Tracking « vu » | **`localStorage`** côté navigateur (cosmétique, pas de cookie signé). |
-| Rendu markdown | `react-markdown` **restreint** (pas de `a`/`img`, `skipHtml`) — barrière XSS unique, partagée overlay client + aperçu admin. |
+| Rendu markdown | `react-markdown` **restreint** au périmètre partagé (pas de `a`/`img`, `skipHtml`) — barrière XSS unique, partagée overlay client + aperçu admin. |
+| Périmètre markdown | **Identique éditeur et rendu** : titres, gras, italique, listes (puces + numérotées), citation, paragraphes. Rien d'autre. |
 | Stockage | **Markdown brut** en colonne `release_notes TEXT NULL`. |
 
 ## Compromis assumés
@@ -193,9 +194,12 @@ sur le même moule que `unlock.html`. La couche serving devient :
 
 ### Rendu markdown (barrière XSS)
 
-- `react-markdown` configuré **restreint** — autorisés : paragraphes,
-  `strong`/`em`, listes `ul`/`ol`/`li`, titres, `code` inline, `blockquote` ;
-  **interdits** : `a`, `img`, et **HTML brut** (`skipHtml: true`).
+- `react-markdown` configuré **restreint** au **périmètre markdown partagé** —
+  autorisés : paragraphes, titres (`h1`…`h6`), `strong`/`em`, listes
+  `ul`/`ol`/`li`, `blockquote` ; **interdits** : `a`, `img`, `code`, et **HTML
+  brut** (`skipHtml: true`). Ce périmètre est **identique** à ce que produit
+  l'éditeur admin (§6) : ni l'admin ni le MCP ne peuvent faire apparaître autre
+  chose au rendu.
 - **Même configuration de rendu** réutilisée par l'overlay client *et* l'aperçu
   admin (§6) → fidélité garantie et barrière unique. À extraire dans un composant
   partagé (ex. `src/lib/markdown.tsx` ou équivalent réutilisable par les deux
@@ -207,9 +211,11 @@ sur le même moule que `unlock.html`. La couche serving devient :
 
 - `frontend/src/components/deploy-panel.tsx` : ajouter un champ notes sous le
   choix du fichier, en **WYSIWYG léger** :
-  - **Tiptap** (`@tiptap/react`, `@tiptap/starter-kit`) avec schéma **restreint**
-    à gras, italique, listes (puces + numérotées). Pas de liens, images, titres
-    lourds si hors périmètre — s'aligner sur « typo, listes, emphase ».
+  - **Tiptap** (`@tiptap/react`, `@tiptap/starter-kit`) avec schéma **restreint
+    au périmètre markdown partagé** : titres, gras, italique, listes (puces +
+    numérotées), citation. **Désactiver** explicitement tout le reste du
+    StarterKit hors périmètre (liens, images, blocs de code, code inline, etc.)
+    pour que l'éditeur ne puisse produire que ce que le rendu accepte.
   - **Sérialisation en markdown** (extension markdown Tiptap) → la valeur envoyée
     dans `DeployReq.notes` est du `.md`, cohérent avec le MCP.
   - **Onglet Aperçu** : rend la valeur courante via le **même** `react-markdown`
@@ -246,8 +252,11 @@ sur le même moule que `unlock.html`. La couche serving devient :
 - **MCP** : `deploy_prototype(release_notes=…)` persiste les notes ; token gate
   inchangé.
 - **Frontend Vitest** :
-  - Tiptap → markdown : seuls gras/italique/listes produisent du markdown ; pas
-    de liens/images.
+  - Tiptap → markdown : le périmètre partagé (titres, gras, italique, listes,
+    citation) produit le markdown attendu ; rien hors périmètre (pas de
+    liens/images/code) n'est produisible.
+  - Rendu == éditeur : un markdown contenant un lien/une image/du code est rendu
+    **sans** ces éléments (cohérence du périmètre des deux côtés).
   - Rendu restreint : un texte de notes contenant `<script>…</script>`,
     `[x](javascript:…)`, `![](x onerror=…)` est rendu **inerte** (pas de balise
     active, pas de `href` javascript).
