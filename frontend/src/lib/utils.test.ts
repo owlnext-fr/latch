@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { humanSize, publicUrl } from './utils'
+import { humanSize, publicUrl, previewUrl } from './utils'
 
 describe('humanSize', () => {
   it('formats bytes/KB/MB', () => {
@@ -12,5 +12,11 @@ describe('humanSize', () => {
 describe('publicUrl', () => {
   it('builds /c/<slug> on current origin', () => {
     expect(publicUrl('mon-projet-k7Qp2maZ')).toContain('/c/mon-projet-k7Qp2maZ')
+  })
+})
+
+describe('previewUrl', () => {
+  it('builds the admin preview route for a project version', () => {
+    expect(previewUrl(7, 3)).toBe('/api/projects/7/versions/3/preview')
   })
 })

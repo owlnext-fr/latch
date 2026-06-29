@@ -15,3 +15,8 @@ export function humanSize(bytes: number): string {
 export function publicUrl(slug: string): string {
   return `${globalThis.location.origin}/c/${slug}`
 }
+
+/** Route admin de prévisualisation d'une version (HTML brut, no-store, derrière la session). */
+export function previewUrl(projectId: number, n: number): string {
+  return `/api/projects/${projectId}/versions/${n}/preview`
+}

@@ -28,14 +28,10 @@ import {
 } from '@/components/ui/table'
 import { useProject, useActivateVersion } from '@/hooks/use-projects'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { publicUrl } from '@/lib/utils'
+import { publicUrl, previewUrl } from '@/lib/utils'
 import type { components } from '@/api/schema'
 
 type VersionItem = components['schemas']['VersionItem']
-
-function previewUrl(projectId: number, n: number): string {
-  return `/api/projects/${projectId}/versions/${n}/preview`
-}
 
 export function DetailPage() {
   const { t } = useTranslation()
