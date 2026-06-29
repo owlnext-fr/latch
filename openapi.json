@@ -668,6 +668,12 @@
           },
           "html": {
             "type": "string"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -901,6 +907,12 @@
           "n": {
             "type": "integer",
             "format": "int32"
+          },
+          "release_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

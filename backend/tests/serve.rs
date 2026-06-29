@@ -27,7 +27,8 @@ async fn make_project(
     .expect("insert project")
 }
 
-/// Prépare un faux `dist/` avec un unlock.html + error.html reconnaissables + pointe LATCH_SPA_DIST.
+/// Prépare un faux `dist/` avec un unlock.html + error.html + shell.html reconnaissables,
+/// et pointe LATCH_SPA_DIST.
 fn fake_dist() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(
@@ -40,6 +41,11 @@ fn fake_dist() -> tempfile::TempDir {
         "<!doctype html><title>latch</title><div id=\"error-root\">latch-error</div>",
     )
     .expect("write error.html");
+    std::fs::write(
+        dir.path().join("shell.html"),
+        "<!doctype html><title>latch</title><div id=\"shell-root\">latch-shell</div>",
+    )
+    .expect("write shell.html");
     std::env::set_var("LATCH_SPA_DIST", dir.path());
     dir
 }
@@ -60,6 +66,34 @@ async fn deploy_active(
         project_id: Set(project.id),
         n: Set(1),
         html_path: Set(html_path),
+        ..Default::default()
+    }
+    .insert(db)
+    .await
+    .expect("insert version");
+    let mut p: projects::ActiveModel = project.clone().into();
+    p.active_version_id = Set(Some(v.id));
+    p.update(db).await.expect("activate");
+    storage
+}
+
+/// Comme `deploy_active` mais avec release_notes renseignées.
+async fn deploy_active_with_notes(
+    db: &sea_orm::DatabaseConnection,
+    project: &projects::Model,
+    html: &str,
+    notes: &str,
+) -> tempfile::TempDir {
+    let storage = tempfile::tempdir().expect("storage tempdir");
+    std::env::set_var("LATCH_STORAGE_ROOT", storage.path());
+    let html_path = format!("{}/1.html", project.id);
+    std::fs::create_dir_all(storage.path().join(project.id.to_string())).unwrap();
+    std::fs::write(storage.path().join(&html_path), html).unwrap();
+    let v = versions::ActiveModel {
+        project_id: Set(project.id),
+        n: Set(1),
+        html_path: Set(html_path),
+        release_notes: Set(Some(notes.to_string())),
         ..Default::default()
     }
     .insert(db)
@@ -100,6 +134,8 @@ async fn public_meta_unknown_slug_is_404() {
     .await;
 }
 
+// --- Tests adaptés : /c/<slug> sert maintenant le shell, le HTML brut est sur /raw ---
+
 #[tokio::test]
 #[serial]
 async fn open_project_serves_active_html_no_store() {
@@ -107,13 +143,20 @@ async fn open_project_serves_active_html_no_store() {
     request::<App, _, _>(|request, ctx| async move {
         let p = make_project(&ctx.db, "libre-aaaaaaaa", false, None, None).await;
         let _storage = deploy_active(&ctx.db, &p, "<h1>PROTO-LIBRE</h1>").await;
-        let res = request.get("/c/libre-aaaaaaaa").await;
+
+        // /c/<slug>/raw → HTML brut du proto + no-store + frame-ancestors 'self'.
+        let res = request.get("/c/libre-aaaaaaaa/raw").await;
         res.assert_status_ok();
         assert!(res.text().contains("PROTO-LIBRE"));
         assert_eq!(
             res.headers().get("cache-control").unwrap(),
             "no-store",
             "tout /c doit être no-store (§6)"
+        );
+        assert_eq!(
+            res.headers().get("content-security-policy").unwrap(),
+            "frame-ancestors 'self'",
+            "/raw doit porter frame-ancestors 'self' (CSP iframe)"
         );
     })
     .await;
@@ -215,8 +258,8 @@ async fn unlock_good_pin_sets_cookie_then_serves_proto() {
             "cookie posé"
         );
 
-        // save_cookies(true) renvoie le cookie → le GET sert maintenant le proto.
-        let served = request.get("/c/prot-cccccccc").await;
+        // save_cookies(true) renvoie le cookie → le GET /raw sert maintenant le proto brut.
+        let served = request.get("/c/prot-cccccccc/raw").await;
         served.assert_status_ok();
         assert!(served.text().contains("SECRET-OK"));
     })
@@ -280,13 +323,13 @@ async fn rotating_pin_invalidates_cookie() {
         let p = make_project(&ctx.db, "prot-dddddddd", true, Some("123456"), None).await;
         let _storage = deploy_active(&ctx.db, &p, "<h1>SECRET-ROT</h1>").await;
 
-        // Déverrouille → cookie valide → proto servi.
+        // Déverrouille → cookie valide → proto servi sur /raw.
         request
             .post("/c/prot-dddddddd/unlock")
             .json(&serde_json::json!({ "pin": "123456" }))
             .await;
         assert!(request
-            .get("/c/prot-dddddddd")
+            .get("/c/prot-dddddddd/raw")
             .await
             .text()
             .contains("SECRET-ROT"));
@@ -296,6 +339,7 @@ async fn rotating_pin_invalidates_cookie() {
             .set_code(p.id, "654321")
             .await
             .unwrap();
+        // Le shell /c/<slug> doit maintenant afficher la page de déverrouillage.
         let after = request.get("/c/prot-dddddddd").await;
         after.assert_status_ok();
         assert!(
@@ -303,6 +347,91 @@ async fn rotating_pin_invalidates_cookie() {
             "rotation → re-déverrouillage exigé (§6)"
         );
         assert!(!after.text().contains("SECRET-ROT"));
+    })
+    .await;
+}
+
+// --- Nouveaux tests ---
+
+#[tokio::test]
+#[serial]
+async fn serve_serves_shell_for_active_project() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "libre-bbbbbbbb", false, None, None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>PROTO-SHELL</h1>").await;
+
+        // /c/<slug> → shell page, body contient latch-shell, no-store.
+        let res = request.get("/c/libre-bbbbbbbb").await;
+        res.assert_status_ok();
+        assert!(
+            res.text().contains("latch-shell"),
+            "le shell doit être servi sur /c/<slug>"
+        );
+        assert_eq!(
+            res.headers().get("cache-control").unwrap(),
+            "no-store",
+            "shell doit être no-store (§6)"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn notes_returns_release_notes_for_active_version() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "libre-cccccccc", false, None, None).await;
+        let _storage = deploy_active_with_notes(&ctx.db, &p, "<h1>PROTO</h1>", "# Hello").await;
+
+        let res = request.get("/c/libre-cccccccc/notes").await;
+        res.assert_status_ok();
+        let body = res.text();
+        // JSON contient n=1 et les notes
+        assert!(
+            body.contains("\"n\":1") || body.contains("\"n\": 1"),
+            "n=1 attendu"
+        );
+        assert!(body.contains("Hello"), "notes_md attendu");
+        assert_eq!(
+            res.headers().get("cache-control").unwrap(),
+            "no-store",
+            "notes doit être no-store"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn notes_returns_204_when_no_notes() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "libre-dddddddd", false, None, None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>PROTO</h1>").await;
+
+        let res = request.get("/c/libre-dddddddd/notes").await;
+        assert_eq!(res.status_code(), 204, "sans notes → 204 No Content");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn notes_forbidden_when_locked() {
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-ffffffff", true, Some("123456"), None).await;
+        let _storage = deploy_active_with_notes(&ctx.db, &p, "<h1>SECRET</h1>", "# Private").await;
+
+        // Sans cookie → /notes → 403
+        let res = request.get("/c/prot-ffffffff/notes").await;
+        assert_eq!(res.status_code(), 403, "notes doit être 403 sans cookie");
+
+        // Sans cookie → /raw → 403 (défense en profondeur)
+        let res_raw = request.get("/c/prot-ffffffff/raw").await;
+        assert_eq!(res_raw.status_code(), 403, "/raw doit être 403 sans cookie");
     })
     .await;
 }

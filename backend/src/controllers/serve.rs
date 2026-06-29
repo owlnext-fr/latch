@@ -17,6 +17,7 @@ use crate::controllers::serve_ratelimit::{IpSlugKeyExtractor, SlugKeyExtractor};
 
 use crate::controllers::error::into_response;
 use crate::dto::UnlockReq;
+use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::projects::ProjectsService;
 use crate::services::unlock_cookie::{issue_token, verify_token};
@@ -32,6 +33,26 @@ fn html_response(html: String) -> Response {
             (
                 CONTENT_TYPE,
                 HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+        ],
+        html,
+    )
+        .into_response()
+}
+
+/// Réponse HTML du proto pour l'iframe : `no-store` + `frame-ancestors 'self'`
+/// (seul le shell latch peut l'encadrer).
+fn raw_html_response(html: String) -> Response {
+    (
+        [
+            (CACHE_CONTROL, HeaderValue::from_static("no-store")),
+            (
+                CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+            (
+                axum::http::header::CONTENT_SECURITY_POLICY,
+                HeaderValue::from_static("frame-ancestors 'self'"),
             ),
         ],
         html,
@@ -71,6 +92,50 @@ async fn unlock_page_response() -> Result<Response> {
     Ok(html_response(html))
 }
 
+/// Rend la page-coquille (`shell.html` buildé), HTTP 200, `no-store`.
+async fn shell_page_response() -> Result<Response> {
+    let path = crate::web::shell_index();
+    let html = tokio::fs::read_to_string(&path).await.map_err(|e| {
+        loco_rs::Error::Message(format!("shell.html introuvable ({}): {e}", path.display()))
+    })?;
+    Ok(html_response(html))
+}
+
+/// `true` si l'accès au proto est autorisé : projet libre, ou cookie unlock valide.
+fn unlock_ok(
+    ctx: &AppContext,
+    headers: &HeaderMap,
+    slug: &str,
+    project: &projects::Model,
+) -> Result<bool> {
+    if !project.code_enabled {
+        return Ok(true);
+    }
+    let pin = project.pin.clone().unwrap_or_default();
+    let key = crate::web::unlock_key(ctx)?;
+    let jar = SignedCookieJar::from_headers(headers, key);
+    let now = chrono::Utc::now().timestamp();
+    let secret = crate::web::unlock_secret(ctx)?;
+    Ok(match jar.get(UNLOCK_COOKIE_NAME) {
+        Some(c) => verify_token(secret.as_bytes(), slug, &pin, c.value(), now),
+        None => false,
+    })
+}
+
+/// Charge la version active d'un projet, ou `None` si pas de pointeur / version absente.
+async fn load_active_version(
+    ctx: &AppContext,
+    project: &projects::Model,
+) -> Result<Option<versions::Model>> {
+    let Some(active_id) = project.active_version_id else {
+        return Ok(None);
+    };
+    versions::Entity::find_by_id(active_id)
+        .one(&ctx.db)
+        .await
+        .map_err(|e| loco_rs::Error::Message(format!("version lookup: {e}")))
+}
+
 /// GET /api/public/{slug} — meta publique pour la page de déverrouillage.
 /// Renvoie `brand_name` + `code_enabled`, jamais le PIN (DTO sans champ pin).
 #[utoipa::path(
@@ -91,7 +156,8 @@ pub(crate) async fn public_meta(
     format::json(crate::dto::to_public_meta(&project))
 }
 
-/// GET /c/{slug} — décision serveur (cf. spec §2 / contrat §6).
+/// GET /c/{slug} — sert la page-coquille (shell) si le projet est accessible.
+/// Le gate unlock vit ici : projets protégés sans cookie valide → page de déverrouillage.
 #[debug_handler]
 pub(crate) async fn serve(
     State(ctx): State<AppContext>,
@@ -99,7 +165,6 @@ pub(crate) async fn serve(
     headers: HeaderMap,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    // Slug inconnu → page d'erreur 404 ; erreur DB → 500 (loggée).
     let project = match svc.get_by_slug(&slug).await {
         Ok(p) => p,
         Err(CoreError::NotFound) => return Ok(serve_error_page(StatusCode::NOT_FOUND).await),
@@ -109,49 +174,89 @@ pub(crate) async fn serve(
         }
     };
 
-    // Pas de version active → rien à servir → page d'erreur 404.
-    let Some(active_id) = project.active_version_id else {
+    // Pas de version active → page d'erreur 404 (comportement inchangé).
+    if project.active_version_id.is_none() {
         return Ok(serve_error_page(StatusCode::NOT_FOUND).await);
-    };
-
-    // Projet protégé sans cookie valide → page de déverrouillage (avant de lire le HTML).
-    if project.code_enabled {
-        let pin = project.pin.clone().unwrap_or_default();
-        let key = crate::web::unlock_key(&ctx)?;
-        let jar = SignedCookieJar::from_headers(&headers, key);
-        let now = chrono::Utc::now().timestamp();
-        let secret = crate::web::unlock_secret(&ctx)?;
-        let ok = match jar.get(UNLOCK_COOKIE_NAME) {
-            Some(c) => verify_token(secret.as_bytes(), &slug, &pin, c.value(), now),
-            None => false,
-        };
-        if !ok {
-            return unlock_page_response().await;
-        }
     }
 
-    // Libre, ou protégé + cookie valide → servir le HTML de la version active.
-    use crate::models::_entities::versions;
-    let version = match versions::Entity::find_by_id(active_id).one(&ctx.db).await {
-        Ok(Some(v)) => v,
-        Ok(None) => {
-            tracing::error!(version = active_id, slug = %slug, "serve: active version row missing");
-            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
-        }
+    // Projet protégé sans cookie valide → page de déverrouillage (top-level, hors iframe).
+    if !unlock_ok(&ctx, &headers, &slug, &project)? {
+        return unlock_page_response().await;
+    }
+
+    // Sinon → servir le shell (qui charge /raw en iframe et gère l'overlay de notes).
+    shell_page_response().await
+}
+
+/// GET /c/{slug}/raw — HTML brut du proto (cible de l'iframe du shell). Mêmes gates.
+#[debug_handler]
+pub(crate) async fn raw(
+    State(ctx): State<AppContext>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    let project = match svc.get_by_slug(&slug).await {
+        Ok(p) => p,
+        Err(CoreError::NotFound) => return Ok(serve_error_page(StatusCode::NOT_FOUND).await),
         Err(e) => {
-            tracing::error!(error = %e, slug = %slug, "serve: version lookup failed");
+            tracing::error!(error = %e, slug = %slug, "raw: get_by_slug failed");
             return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
         }
+    };
+    if !unlock_ok(&ctx, &headers, &slug, &project)? {
+        // Defense-in-depth : ne jamais servir le HTML d'un proto verrouillé.
+        return Ok(serve_error_page(StatusCode::FORBIDDEN).await);
+    }
+    let Some(version) = load_active_version(&ctx, &project).await? else {
+        return Ok(serve_error_page(StatusCode::NOT_FOUND).await);
     };
     let storage = crate::web::storage_from_ctx(&ctx);
-    let html = match storage.read(&version.html_path).await {
-        Ok(h) => h,
+    match storage.read(&version.html_path).await {
+        Ok(html) => Ok(raw_html_response(html)),
         Err(e) => {
-            tracing::error!(error = %e, slug = %slug, "serve: storage read failed");
-            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
+            tracing::error!(error = %e, slug = %slug, "raw: storage read failed");
+            Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await)
+        }
+    }
+}
+
+/// GET /c/{slug}/notes — notes de la version active (ou 204). Gardé par l'unlock.
+#[debug_handler]
+pub(crate) async fn notes(
+    State(ctx): State<AppContext>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    let project = match svc.get_by_slug(&slug).await {
+        Ok(p) => p,
+        Err(CoreError::NotFound) => return Ok(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "notes: get_by_slug failed");
+            return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
         }
     };
-    Ok(html_response(html))
+    if !unlock_ok(&ctx, &headers, &slug, &project)? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+    let Some(version) = load_active_version(&ctx, &project).await? else {
+        return Ok(StatusCode::NO_CONTENT.into_response());
+    };
+    match version.release_notes {
+        Some(md) if !md.is_empty() => {
+            let body = crate::dto::ReleaseNotes {
+                n: version.n,
+                notes_md: md,
+            };
+            Ok((
+                [(CACHE_CONTROL, HeaderValue::from_static("no-store"))],
+                axum::Json(body),
+            )
+                .into_response())
+        }
+        _ => Ok(StatusCode::NO_CONTENT.into_response()),
+    }
 }
 
 /// Durée de vie du cookie unlock (jours). Configurable via `LATCH_UNLOCK_TTL_DAYS`.
@@ -256,5 +361,7 @@ pub fn routes() -> Routes {
     Routes::new()
         .add("/api/public/{slug}", get(public_meta))
         .add("/c/{slug}", get(serve))
+        .add("/c/{slug}/raw", get(raw))
+        .add("/c/{slug}/notes", get(notes))
         .add("/c/{slug}/unlock", post(unlock).layer(unlock_layers))
 }

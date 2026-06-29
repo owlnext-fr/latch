@@ -328,9 +328,6 @@ mod tests {
             created_at: chrono::Utc::now().into(),
         };
         let detail = to_detail(sample_model(), vec![v]);
-        assert_eq!(
-            detail.versions[0].release_notes.as_deref(),
-            Some("# Notes")
-        );
+        assert_eq!(detail.versions[0].release_notes.as_deref(), Some("# Notes"));
     }
 }
