@@ -29,6 +29,7 @@ pub struct VersionItem {
     pub n: i32,
     pub created_at: String,
     pub is_active: bool,
+    pub release_notes: Option<String>,
 }
 
 /// Détail — expose le PIN (copiable en admin uniquement, invariant §9.2).
@@ -51,6 +52,14 @@ pub struct ProjectDetail {
 pub struct PublicMeta {
     pub brand_name: Option<String>,
     pub code_enabled: bool,
+}
+
+/// Réponse de `GET /c/{slug}/notes` — notes de la version active, rendues côté client.
+/// `notes_md` est du markdown brut ; le rendu restreint (sans HTML/lien/image) vit côté shell.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct ReleaseNotes {
+    pub n: i32,
+    pub notes_md: String,
 }
 
 /// Corps de `POST /c/{slug}/unlock`.
@@ -136,6 +145,8 @@ pub struct DeployReq {
     pub html: String,
     #[serde(default)]
     pub activate: bool,
+    #[serde(default)]
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -207,6 +218,7 @@ pub fn to_detail(m: projects::Model, vers: Vec<versions::Model>) -> ProjectDetai
             n: v.n,
             created_at: v.created_at.to_rfc3339(),
             is_active: Some(v.id) == active,
+            release_notes: v.release_notes,
         })
         .collect();
     ProjectDetail {
@@ -303,5 +315,22 @@ mod tests {
             "PublicMeta ne doit jamais exposer le PIN (§9.2)"
         );
         assert!(json.contains("code_enabled"));
+    }
+
+    #[test]
+    fn version_item_carries_release_notes() {
+        let v = versions::Model {
+            id: 1,
+            project_id: 1,
+            n: 1,
+            html_path: "1/1.html".to_string(),
+            release_notes: Some("# Notes".to_string()),
+            created_at: chrono::Utc::now().into(),
+        };
+        let detail = to_detail(sample_model(), vec![v]);
+        assert_eq!(
+            detail.versions[0].release_notes.as_deref(),
+            Some("# Notes")
+        );
     }
 }
