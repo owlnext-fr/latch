@@ -189,6 +189,16 @@
 - [x] Finitions : liens internes vérifiés (0 cassé), `README` + `links.ts` `DOCS_URL` → URL Pages, mémoire projet — Phase 8 T12 — 2026-06-26
 - [ ] **Post-merge** : 1ᵉʳ déploiement Pages vert + vérif basePath sur l'URL live (charger une page profonde, confirmer `_next/` chargé)
 
+## Phase 9 — Notes de version (feat/release-notes)
+
+- [x] **Modèle** : colonne `versions.release_notes` (TEXT NULL, max 10 000 chars `chars()`) — migration SeaORM — 2026-06-29
+- [x] **Backend** : `deploy()` accepte `release_notes` optionnel ; validation 400/`invalid_params` MCP au-delà de 10 000 ; `GET /c/<slug>/notes` (JSON `{ n, notes_md }` ou 204, gardé unlock, no-store) ; `GET /c/<slug>/raw` (HTML brut cible iframe, `frame-ancestors 'self'`, no-store, gardé unlock) ; `GET /c/<slug>` sert désormais un shell + `<iframe src=/c/<slug>/raw>` — 2026-06-29
+- [x] **MCP** : `deploy_prototype` + argument optionnel `release_notes` (markdown léger, max 10 000) — 2026-06-29
+- [x] **Admin** : panneau déploiement avec éditeur Tiptap (WYSIWYG léger) + onglet Aperçu ; indicateur 📝 sur les lignes de version ; composant `MarkdownView` restreint partagé (admin aperçu + overlay visiteur) — 2026-06-29
+- [x] **Shell visiteur** : bundle Vite isolé (`src/shell/`) avec sa propre instance i18n (`src/shell/i18n.ts` + `locales/shell/`) ; overlay notes au premier passage (localStorage `latch:seen:<slug>` = dernier `n` vu) ; dismiss mémorisé — 2026-06-29
+- Spec : `docs/superpowers/specs/2026-06-29-release-notes-design.md`
+- Plan : `docs/superpowers/plans/2026-06-29-release-notes.md`
+
 ## Correctifs post-déploiement (prod)
 
 - [x] **Fix session admin en prod** (`v0.3.1`) : bug `axum_session 0.16.0` — `with_prefix_with_host(true)`

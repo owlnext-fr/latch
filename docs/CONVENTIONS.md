@@ -1049,3 +1049,84 @@ build: { rollupOptions: { input: { main: '…/index.html', unlock: '…/unlock.h
 texte inline si le fichier manque. Les branches `Err` terminales de `serve` deviennent des
 `Ok(serve_error_page(...))` (décision locale à l'adaptateur public ; le renderer Loco global reste
 JSON pour admin/MCP). Message **générique unique** (zéro injection, pas de leak d'existence de slug).
+
+## Composant `MarkdownView` restreint — Phase 9
+
+Composant React partagé entre l'aperçu admin (panneau de déploiement) et l'overlay visiteur
+(shell). Repose sur `react-markdown` avec deux gardes obligatoires :
+
+```tsx
+// frontend/src/components/markdown-view.tsx
+import ReactMarkdown from 'react-markdown'
+
+const ALLOWED_ELEMENTS = [
+  'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'strong', 'em',
+  'ul', 'ol', 'li',
+  'blockquote',
+]
+
+export function MarkdownView({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      skipHtml          // drop les balises HTML brutes dans le markdown
+      allowedElements={ALLOWED_ELEMENTS}  // allow-list stricte — liens/images/code bloqués
+    >
+      {content}
+    </ReactMarkdown>
+  )
+}
+```
+
+**Règles :**
+- `skipHtml` + `allowedElements` sont **tous les deux obligatoires**. L'un sans l'autre ne suffit pas.
+- La liste `ALLOWED_ELEMENTS` est la **source de vérité** du périmètre markdown documenté dans le
+  contrat (§3) et dans Fumadocs. Si elle change, mettre à jour les deux docs.
+- Le composant est partagé : toute modification affecte à la fois l'aperçu admin et l'overlay
+  visiteur — ce que l'admin voit = ce que le visiteur voit.
+- Ne jamais rendre les notes côté serveur. Le champ `notes_md` reçu de `/c/<slug>/notes` est passé
+  directement à `MarkdownView`, sans traitement intermédiaire.
+
+## Mini-SPA Vite isolée (moule shell) — Phase 9
+
+Le **shell visiteur** (`src/shell/`) suit le même moule que `unlock` et `error` : entrée Vite
+dédiée, bundle isolé, instance i18n propre. Moule à reproduire pour toute future page publique.
+
+```
+frontend/src/shell/
+  main.tsx          # point d'entrée Vite (monte ShellApp dans <div id="root">)
+  shell-app.tsx     # composant racine : charge le proto en iframe, gère l'overlay notes
+  i18n.ts           # createInstance() propre — glob locales/shell/**
+  locales/shell/
+    en.json
+    fr.json
+```
+
+```ts
+// src/shell/i18n.ts (même pattern que src/unlock/i18n.ts)
+import i18next from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import type { LocaleInfo } from '@/i18n/available-locales'
+
+const resources = Object.fromEntries(
+  Object.entries(import.meta.glob('../locales/shell/*.json', { eager: true }))
+    .map(([path, mod]) => {
+      const lang = path.replace('../locales/shell/', '').replace('.json', '')
+      return [lang, { translation: (mod as Record<string, unknown>) }]
+    })
+)
+
+const i18n = i18next.createInstance()
+i18n.use(initReactI18next).init({
+  lng: localStorage.getItem('latch.locale') ?? navigator.language.split('-')[0] ?? 'en',
+  fallbackLng: 'en',
+  resources,
+})
+export default i18n
+```
+
+**Règles :**
+- `createInstance()` — ne pas réutiliser l'instance admin globale (isolation bundle).
+- N'importer **aucun** code admin (pas de router/Query/openapi-fetch).
+- La clé `localStorage['latch:seen:<slug>']` vaut le dernier numéro de version `n` vu (entier ou
+  chaîne). Comparer avec `String(n)` pour être robuste aux deux types.

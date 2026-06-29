@@ -17,6 +17,48 @@ The HTML is written to storage **first**, then the version row and the active-ve
 updated in a transaction. A client never sees a pointer aimed at a half-written file.
 </Callout>
 
+## Release notes
+
+Each version can carry optional **release notes** — a short Markdown text displayed to the
+visitor as an overlay the first time they open the prototype after a new version is published.
+
+### Entering notes when deploying
+
+The deploy side-panel includes a lightweight WYSIWYG editor (Tiptap) for composing release
+notes. A **Preview** tab renders the notes exactly as visitors will see them, so you can check
+formatting before deploying.
+
+**Supported Markdown:**
+
+| Element | Syntax |
+| --- | --- |
+| Heading | `## Heading` |
+| Bold | `**bold**` |
+| Italic | `*italic*` |
+| Unordered list | `- item` |
+| Ordered list | `1. item` |
+| Blockquote | `> note` |
+
+**Not rendered:** links, images, code blocks, and raw HTML are intentionally ignored — the
+renderer uses a restricted allow-list to block XSS vectors. Write plain descriptive text.
+
+<Callout type="info">
+Notes are capped at **10 000 characters**. Longer content is rejected with a validation error
+before the deploy is saved.
+</Callout>
+
+### Version indicator
+
+Rows in the version list show a 📝 indicator when a version has release notes attached, so
+you can tell at a glance which versions carried a message to visitors.
+
+## How visitors see release notes
+
+When a visitor opens `/c/<slug>` for a new version (one they haven't seen yet), the shell
+displays an overlay with the release notes rendered in Markdown. Dismissing the overlay stores
+the current version number in `localStorage` — the overlay will not appear again for the same
+version.
+
 ## Per-version actions
 
 Each row in the version list offers:

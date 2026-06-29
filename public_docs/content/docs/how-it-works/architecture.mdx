@@ -47,7 +47,8 @@ Two tables hold the domain, plus a session store:
   `code_enabled` (true by default), `pin` (6 digits, recoverable so the admin can copy it),
   `brand_name` (optional), `active_version_id` (nullable until the first deploy).
 - **`versions`** — `id`, `project_id`, `n` (per-project incrementing number), `html_path`
-  (relative path in the storage volume), `created_at`.
+  (relative path in the storage volume), `release_notes` (optional Markdown text, max 10 000
+  chars, stored raw — never rendered server-side), `created_at`.
 - **`sessions`** — the admin session store.
 
 ## `deploy()` — an imposed order
@@ -60,8 +61,8 @@ Deploys are ordered to never leave a project pointing at a half-written file:
 `Storage` trait.
 </Step>
 <Step>
-**Then the transaction** — insert the `versions` row and, if `activate`, flip
-`active_version_id`.
+**Then the transaction** — insert the `versions` row (with optional `release_notes`) and, if
+`activate`, flip `active_version_id`.
 </Step>
 </Steps>
 
@@ -69,3 +70,34 @@ If the database fails after the write, you get an orphan file (harmless, collect
 reverse order would point an active version at a missing file — the worst state for a client.
 
 The admin's manual deploy and the MCP `deploy_prototype` tool call the **same** `deploy()`.
+
+## Client serving — shell + iframe
+
+`GET /c/<slug>` always serves a **shell page** that loads the prototype inside an `<iframe
+src="/c/<slug>/raw">`. This two-layer structure lets the shell overlay release notes on top of
+the prototype without touching the prototype's HTML.
+
+### Endpoints under `/c/<slug>`
+
+| Endpoint | Purpose | Auth |
+| --- | --- | --- |
+| `GET /c/<slug>` | Shell page (or unlock page if protected) | Unlock cookie if code-protected |
+| `POST /c/<slug>/unlock` | Verify PIN, issue signed unlock cookie | Public (rate-limited) |
+| `GET /c/<slug>/raw` | Prototype HTML (iframe target) | Same unlock gate; `frame-ancestors 'self'`, `no-store` |
+| `GET /c/<slug>/notes` | `{ n, notes_md }` or `204` (no notes) | Same unlock gate; `no-store` |
+
+The `/raw` and `/notes` endpoints carry the same gate as the shell: a code-protected prototype
+that hasn't been unlocked returns `403` — release notes are not leaked before authentication.
+
+### Release notes overlay
+
+After gaining access the shell fetches `/c/<slug>/notes`. If the response contains `notes_md`
+and `localStorage['latch:seen:<slug>']` doesn't match the current version number `n`, the shell
+renders the notes in a full-screen overlay using the restricted Markdown renderer (see
+[Security model](/docs/how-it-works/security-model#markdown-rendering)). Dismissing the overlay
+updates `localStorage` — the overlay won't reappear for the same version.
+
+<Callout type="warn">
+All prototypes now run inside an iframe. Code in the prototype that relies on `window.top`,
+fullscreen APIs, or behaviours that differ in an embedded context may need adjustment.
+</Callout>

@@ -88,6 +88,7 @@ latch/                 # workspace
 - `project_id` (FK → `projects.id`)
 - `n` (numéro de version, incrémental par projet)
 - `html_path` (chemin relatif dans le volume, géré par `Storage`)
+- `release_notes` (TEXT, nullable) — notes de version en markdown léger, stockées **brutes** (jamais converties en HTML côté serveur). Longueur max **10 000 caractères** (comptage `chars()`). Au-delà : erreur 400 `invalid_params` (admin et MCP). Périmètre autorisé au rendu : paragraphes, titres, gras, italique, listes (puces + numérotées), citation. **Interdits au rendu** : liens, images, code, HTML brut (rendu `react-markdown` restreint : `skipHtml + allowedElements`).
 - `created_at`
 
 **`sessions`** — store de session admin (via `axum-session`).
@@ -172,9 +173,12 @@ latch/                 # workspace
 
 ### 5.1 Réponses des tools
 
-**`deploy_prototype(slug, html, deploy_token, activate?)`**
+**`deploy_prototype(slug, html, deploy_token, activate?, release_notes?)`**
 - `slug` doit **préexister** en base : aucune auto-création. Slug inconnu → erreur.
 - `activate` : défaut **`true`** (la version déployée devient immédiatement active).
+- `release_notes` : optionnel. Markdown léger (max 10 000 caractères). Au-delà : erreur
+  `invalid_params`. Les liens, images, code et HTML brut sont ignorés **au rendu** côté
+  client (jamais filtrés au stockage — c'est une barrière de rendu, pas d'entrée).
 - Token validé EN PREMIER (`secure_compare`) — avant toute lecture en base.
 - Réponse (succès) : `DeployResult { url: "<LATCH_PUBLIC_BASE_URL>/c/<slug>", version: <n>, code_protected: <bool> }`.
   Le champ `url` utilise `LATCH_PUBLIC_BASE_URL` comme source de vérité.
@@ -188,32 +192,69 @@ latch/                 # workspace
 - Chaque entrée : `ProjectSummary { slug, name, code_protected, active_version: Option<i32> }`.
   **Jamais de hash, jamais de PIN, jamais de `id` DB.**
 
-## 6. Surface `/c/<slug>` — deux états, page de déverrouillage stylée
+## 6. Surface `/c/<slug>` — shell + iframe, unlock, notes de version
 
 Pas de Basic Auth (le popup gris du navigateur casse l'expérience d'un livrable
-client soigné). À la place, deux états sur la même URL :
+client soigné). La surface `/c/<slug>` est désormais architecturée en **shell + iframe** :
 
-- projet **sans code** → sert la version active.
-- projet **avec code** + **cookie de déverrouillage valide** → sert la version active.
+### 6.1 Structure shell / iframe
+
+`GET /c/<slug>` sert **toujours** une **page-coquille** (shell HTML), qui charge le
+prototype réel dans un `<iframe src="/c/<slug>/raw">`. Cela permet d'injecter
+l'overlay de notes de version sans modifier l'HTML du proto.
+
+**Nouveaux endpoints de la surface `/c` :**
+
+- **`GET /c/<slug>/raw`** : HTML brut du prototype actif (cible de l'iframe).
+  En-têtes : `Cache-Control: no-store` + `Content-Security-Policy: frame-ancestors 'self'`
+  (empêche l'embarquement du proto dans un contexte tiers). Gardé par le même gate
+  d'unlock que le shell : projet protégé sans cookie valide → `403`.
+
+- **`GET /c/<slug>/notes`** : JSON `{ n: <numéro_version>, notes_md: "<markdown>" }` si
+  la version active a des notes, ou `204` si aucune note. `Cache-Control: no-store`.
+  **Gardé par le même gate unlock** (403 si proto protégé non déverrouillé) → pas de
+  fuite des notes avant authentification.
+
+**Arbre de décision (shell) :**
+
+- projet **sans code** → sert le shell (200).
+- projet **avec code** + **cookie de déverrouillage valide** → sert le shell (200).
 - projet **avec code** + **pas de cookie** → rend la **page de déverrouillage**
-  (HTTP **200**, pas 401 — plus accueillant pour un formulaire), portant `brand_name`
-  si présent (« Prototype préparé pour {brand_name} »).
+  (HTTP **200**, pas 401), portant `brand_name` si présent.
 - `POST /c/<slug>/unlock` : vérifie le code (`services::projects::verify_code`,
   comparaison à temps constant), pose le **cookie signé**, redirige vers le GET.
 
-**Cookie de déverrouillage** : signé HMAC (slug + expiration), `HttpOnly` + `Secure`
-+ `SameSite=Lax`, `Path=/c/<slug>`. Sans état serveur (pas de table qui gonfle à
-chaque visite client). **Révocation = rotation du code du projet** (invalide les
-cookies émis). La *vérification* vit dans le cœur ; rendu, pose du cookie et
-rate-limit dans l'adaptateur `serve.rs`.
+**Compromis assumé** : tous les prototypes tournent désormais en iframe. Impacts
+potentiels : `window.top` (accessible depuis le proto = le shell), fullscreen API,
+et toute API qui se comporte différemment en contexte iframe. À mentionner dans la
+documentation publique.
+
+### 6.2 Cookie de déverrouillage
+
+Signé HMAC (slug + expiration), `HttpOnly` + `Secure` + `SameSite=Lax`,
+`Path=/c/<slug>`. Sans état serveur. **Révocation = rotation du code du projet**
+(invalide les cookies émis). La *vérification* vit dans le cœur ; rendu, pose du
+cookie et rate-limit dans l'adaptateur `serve.rs`.
 
 **Slug** : base lisible dérivée du nom + suffixe aléatoire de **8 chars base62**
 (ex. `mon-projet-k7Qp2maZ`, ≈ 47 bits — quasi non-énumérable, cf. QUIRKS).
 Présentable dans un mail, et noindex par-dessus.
 
-Toutes les réponses de cette surface (page de déverrouillage **et** HTML actif) sont
-en **`Cache-Control: no-store`** : le client garde un lien stable qui montre toujours
-la dernière version active.
+Toutes les réponses de cette surface sont en **`Cache-Control: no-store`** : le
+client garde un lien stable qui montre toujours la dernière version active.
+
+### 6.3 Overlay de notes de version (côté visiteur)
+
+Le shell consomme `GET /c/<slug>/notes` après avoir obtenu l'accès (unlock ou libre).
+Si la réponse contient des notes (`notes_md`) et que `localStorage['latch:seen:<slug>']`
+est différent du numéro de version `n` courant, le shell affiche un **overlay** par-
+dessus l'iframe avec les notes rendues en markdown restreint. Au dismiss, la clé
+`latch:seen:<slug>` est mise à jour avec `n` → l'overlay ne réapparaît plus pour
+cette version.
+
+**Rendu markdown** : composant `MarkdownView` restreint (`react-markdown` avec
+`skipHtml + allowedElements`) — même périmètre que l'aperçu admin (§7). Jamais de
+HTML serveur pour les notes.
 
 ## 7. Admin — rails par page (contenu + comportement, pas layout)
 

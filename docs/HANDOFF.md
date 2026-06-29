@@ -4,6 +4,48 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-29 — Phase 9 : notes de version livrées (feat/release-notes)
+
+### Dernière chose faite
+Feature **notes de version** implémentée et documentée sur la branche `feat/release-notes`.
+
+**Ce qui est livré :**
+- Colonne `versions.release_notes` (TEXT NULL, max 10 000 chars). Markdown brut stocké, jamais rendu serveur.
+- Validation 400 / `invalid_params` MCP au-delà de 10 000 caractères (comptage `chars()`).
+- Nouvel argument `release_notes` optionnel sur `deploy_prototype` (MCP).
+- Panneau de déploiement admin : éditeur Tiptap (WYSIWYG léger) + onglet Aperçu ; indicateur 📝 sur les lignes de version.
+- `MarkdownView` restreint (`react-markdown` + `skipHtml + allowedElements`) partagé entre aperçu admin et overlay visiteur. Périmètre : paragraphes, titres, gras, italique, listes, citation. Interdits : liens, images, code, HTML brut.
+- `GET /c/<slug>` sert désormais un **shell** (iframe vers `/c/<slug>/raw`).
+- `GET /c/<slug>/raw` : HTML brut, `frame-ancestors 'self'` + `no-store`, gardé par l'unlock.
+- `GET /c/<slug>/notes` : `{ n, notes_md }` ou 204, `no-store`, gardé par l'unlock.
+- Overlay visiteur : affiché au premier passage sur une nouvelle version, mémorisé via `localStorage['latch:seen:<slug>']` = dernier `n` vu.
+- Shell = bundle Vite isolé (`src/shell/`) avec sa propre instance i18n (`src/shell/i18n.ts` + `locales/shell/`).
+
+**Documentation mise à jour :**
+- `docs/contrat-deploy.md` (§3 versions.release_notes, §5.1 deploy_prototype, §6 refondu shell+iframe+notes)
+- `public_docs/content/docs/admin/versions.mdx` (section release notes : éditeur, aperçu, périmètre, indicateur 📝, overlay visiteur)
+- `public_docs/content/docs/publish-from-claude/tools-reference.mdx` (release_notes dans signature + tableau deploy_prototype)
+- `public_docs/content/docs/how-it-works/architecture.mdx` (shell+iframe, endpoints /raw+/notes, overlay, avertissement iframe)
+- `public_docs/content/docs/how-it-works/security-model.mdx` (section Markdown rendering : allow-list, rendu client-only, gate /notes, CSP frame-ancestors)
+- `docs/INDEX.md`, `docs/HANDOFF.md`, `docs/QUIRKS.md`, `docs/CONVENTIONS.md`
+
+### Trucs en suspens
+- Tests : les tests backend (migration, service deploy avec release_notes, endpoint /raw + /notes, invariants) et frontend (MarkdownView, overlay shell, éditeur Tiptap, indicateur 📝) sont à la charge du code livré sur la branche — la présente tâche est documentation uniquement.
+- CI : vérifier que la gate SonarCloud `new_coverage ≥ 80%` passe après l'implémentation.
+- Merge : `feat/release-notes` → `main` quand tests verts.
+
+### Prochaine chose à creuser
+- Vérifier le rendu de l'overlay sur mobile (plein écran, dismiss accessible).
+- Envisager une limite de longueur côté éditeur Tiptap (feedback en temps réel au lieu d'une erreur serveur).
+- Post-merge : régénérer le CHANGELOG (`git-cliff --tag vX.Y.Z`).
+
+### Notes pour future Claude
+- **Tous les protos tournent désormais en iframe** : `window.top` accessible depuis le proto = shell, fullscreen API réduite, postMessage scope différent. Cf. QUIRKS.
+- **`release_notes` est stocké brut** (markdown) ; le rendu se fait UNIQUEMENT côté client. Ne jamais rendre les notes en HTML serveur.
+- **`MarkdownView` restreint** = composant partagé entre admin (aperçu) et shell (overlay). Ce que l'admin voit = ce que le visiteur voit.
+- **Le shell est une mini-SPA Vite isolée** (même moule que `unlock` et `error`) — sa propre instance i18n, son propre `locales/shell/`, pas de dépendance au bundle admin.
+- **`localStorage['latch:seen:<slug>']` = dernier `n` vu** : clé par slug, valeur = numéro de version. L'overlay se ré-affiche si `n` change (nouvelle version avec notes).
+
 ## 2026-06-26 — Hotfix prod `v0.3.1` : session admin non restaurée derrière HTTPS (bug axum_session)
 
 ### Dernière chose faite

@@ -3,6 +3,31 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Tous les protos en iframe via le shell — impacts (2026-06-29)
+
+Depuis la Phase 9 (notes de version), `GET /c/<slug>` sert **toujours** un shell HTML qui
+charge le prototype dans un `<iframe src="/c/<slug>/raw">`. Impacts à garder en tête :
+
+- **`window.top`** : depuis le proto, `window.top` pointe vers le shell (pas vers le navigateur).
+  Un proto qui teste `window === window.top` (anti-framing) verra `false` — il s'affichera vide ou
+  en erreur. À documenter aux clients si pertinent.
+- **Fullscreen API** : `requestFullscreen()` est bloqué par défaut dans un iframe sans
+  `allow="fullscreen"`. Le shell devrait ajouter l'attribut si des protos l'utilisent.
+- **CSP `frame-ancestors 'self'`** sur `/raw` : empêche d'embarquer le proto dans un contexte
+  tiers, mais **ne bloque pas** le shell lui-même (même origine). C'est intentionnel.
+- **Contournement pour tester** : l'admin peut utiliser la route de prévisualisation
+  (`/api/projects/<id>/versions/<n>/preview`) qui sert l'HTML brut **sans** iframe, derrière la
+  session admin — pratique pour vérifier un proto sans context iframe.
+
+## `release_notes` rendu côté client uniquement — jamais HTML serveur (2026-06-29)
+
+Le champ `versions.release_notes` est stocké **brut** (Markdown texte) en base. Le serveur ne
+convertit jamais ce Markdown en HTML : ni dans les réponses JSON (`/c/<slug>/notes` renvoie
+`notes_md` en chaîne brute), ni dans les DTOs admin. Le rendu Markdown se fait **exclusivement
+côté client** via le composant `MarkdownView` restreint (`react-markdown` + `skipHtml +
+allowedElements`). Raison : barrière XSS par construction — impossible d'injecter du HTML via
+les notes si le HTML n'est jamais produit côté serveur. Ne jamais ajouter de rendu serveur.
+
 ## Site doc (public_docs/, Fumadocs) — pièges Phase 8 (2026-06-26)
 
 - **Scaffold `create-fumadocs-app` interactif malgré les flags** : un prompt « Use `/src` directory? »

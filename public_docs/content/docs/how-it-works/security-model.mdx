@@ -52,6 +52,32 @@ The governor counters are **in-memory** and reset on reboot — an accepted trad
   `LATCH_PUBLIC_BASE_URL`. This closes a DNS-rebinding vector (CVE-class issue in older `rmcp`);
   `rmcp` is pinned to a floor of `1.4`.
 
+## Markdown rendering
+
+Release notes are stored as raw Markdown text — the server **never** renders them to HTML.
+Rendering happens exclusively on the client (browser), using a **restricted** `react-markdown`
+instance configured with `skipHtml` and an explicit `allowedElements` allow-list:
+
+| Allowed | Blocked |
+| --- | --- |
+| Headings, paragraphs, bold, italic | Links (`<a>`) |
+| Unordered and ordered lists | Images (`<img>`) |
+| Blockquotes | Code blocks and inline code |
+| — | Raw HTML |
+
+This allow-list is shared between the admin preview (deploy side-panel) and the visitor overlay,
+so what the admin sees is exactly what the visitor gets.
+
+The `/c/<slug>/notes` endpoint is gated by the same unlock check as the shell and `/c/<slug>/raw`:
+a code-protected prototype that has not been unlocked returns `403` — release notes are not
+exposed before authentication.
+
+### `frame-ancestors 'self'` on `/raw`
+
+The prototype HTML served at `/c/<slug>/raw` carries `Content-Security-Policy: frame-ancestors
+'self'`. This prevents any third-party page from embedding the prototype in its own `<iframe>`,
+ensuring the shell's unlock gate cannot be bypassed by embedding `/raw` directly elsewhere.
+
 ## Fail-secure secrets
 
 In production the boot **refuses to start** if a required secret is missing — `ADMIN_USER`,

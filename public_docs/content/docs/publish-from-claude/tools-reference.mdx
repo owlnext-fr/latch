@@ -11,7 +11,7 @@ database access. Neither ever returns a hash or a PIN.
 Deploys a single-file HTML prototype as a new version of an existing project.
 
 ```text
-deploy_prototype(slug, html, deploy_token, activate?)
+deploy_prototype(slug, html, deploy_token, activate?, release_notes?)
 ```
 
 | Argument | Notes |
@@ -20,6 +20,23 @@ deploy_prototype(slug, html, deploy_token, activate?)
 | `html` | The single-file HTML prototype. |
 | `deploy_token` | Validated first, in constant time. |
 | `activate` | Optional, defaults to **`true`** — the new version becomes active immediately. |
+| `release_notes` | Optional. Lightweight Markdown (see below). Max **10 000 characters** — exceeding this returns a validation error. |
+
+### `release_notes` format
+
+Pass a short Markdown string to describe what changed in this version. Supported elements:
+headings, bold, italic, unordered lists, ordered lists, blockquotes.
+
+**Not rendered on the client:** links, images, code blocks, and raw HTML are stripped by the
+restricted renderer — use plain descriptive text only.
+
+```text
+## What's new in v3
+
+- Revised onboarding flow
+- Fixed contrast on dark mode
+- Updated hero copy
+```
 
 On success it returns:
 
@@ -32,6 +49,12 @@ On success it returns:
 ```
 
 The `url` is built from `LATCH_PUBLIC_BASE_URL`. **No PIN, no hash** is ever included.
+
+<Callout type="info">
+When a visitor opens the URL for the first time after you deploy with release notes, they see an
+overlay with the notes. Dismissing it stores the version number locally — the overlay won't
+reappear for the same version.
+</Callout>
 
 ## `list_projects`
 
