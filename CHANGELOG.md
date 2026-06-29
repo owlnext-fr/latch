@@ -1,6 +1,64 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v1.1.0] — 2026-06-29
+
+### Ajouts
+
+- Migration release_notes sur versions
+- Champ release_notes sur l'entité versions
+- Paramètre release_notes + validation longueur
+- Release_notes dans VersionItem/DeployReq + ReleaseNotes
+- Argument release_notes sur deploy_prototype
+- Shell systématique + endpoints /raw et /notes
+- Composant MarkdownView restreint partagé
+- Éditeur de notes Tiptap restreint + aperçu
+- Saisie des notes de version dans le panneau de déploiement
+- Indicateur de présence de notes dans la liste des versions
+- Shell de serving (iframe proto + overlay notes + localStorage)
+- Barre d'outils sur l'éditeur de notes (WYSIWYG)
+- Preview de la version active depuis la liste projets
+- Panel read-only de détail de version (notes rendues)
+- Icône notes + bouton Détail (panel) sur la table versions
+
+### Corrections
+
+- Style le rendu markdown via la prop components react-markdown
+- Actions de ligne en boutons-icônes homogènes + croix Sheet alignée
+- Indicateur de notes en badge outline (cohérent avec le badge actif)
+- Icône sur chaque badge (active=CircleCheck, code=Lock, libre=LockOpen)
+- Bouton Activer reprend l'icône CircleCheck du badge actif
+
+### Documentation
+
+- Design notes de version (shell + iframe, overlay md)
+- Périmètre markdown unique éditeur+rendu (titres/emphase/listes/citation)
+- Indicateur notes in-scope + màj contrat-deploy & Fumadocs
+- Plan d'implémentation notes de version (16 tâches TDD)
+- Notes de version (contrat, Fumadocs, mémoire)
+- Corrections revue notes de version (chemin i18n, paragraphe, gates, localStorage)
+- HANDOFF post-refactor fix duplication Sonar
+- Patchs UX release-notes (preview liste, icône notes, panel détail version)
+- Plan patchs UX release-notes (6 tâches TDD, frontend + docs)
+- Patchs UX release-notes (Fumadocs + mémoire)
+- PreviewUrl s'ouvre via <a target=_blank>, pas window.open
+- Reflète les patchs UX + rafraîchit les captures
+- Aligne les snippets MarkdownView/panel sur l'API réelle
+
+### Interne
+
+- Extrait session_cookie_names + note backlog deploy-docs
+- Régénère client typé (release_notes/notes)
+- React-markdown + tiptap pour les notes de version
+- Augmentation de module pour editor.storage.markdown (retire le cast)
+- Inline l'augmentation tiptap storage, restaure tsc -b
+- Factorise i18n bundle + handlers serve (réduit duplication Sonar)
+- Factorise previewUrl dans lib/utils
+
+### Tests
+
+- Adapte serve-unlock au shell + overlay de notes de version
+- Synchro déterministe pour l'absence d'overlay (retire waitForTimeout)
 ## [v0.3.1] — 2026-06-26
 
 ### Corrections
@@ -10,6 +68,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 ### Documentation
 
 - Note refonte .env.example (Phase 9)
+- Régénère pour v0.3.1 (hotfix session admin prod)
 ## [v0.3.0] — 2026-06-26
 
 ### Ajouts
