@@ -1101,7 +1101,9 @@ export function previewUrl(projectId: number, n: number): string {
 ```
 
 Réutiliser ce helper partout où l'on a besoin d'un lien de preview admin (liste projets, liste
-versions, panel Détail). La route est derrière `AdminAuth` + `no-store` — ouvrir via `window.open(..., '_blank')`.
+versions, panel Détail). La route est derrière `AdminAuth` + `no-store` — l'ouvrir via un vrai
+`<a href={previewUrl(...)} target="_blank" rel="noopener noreferrer">` (cohérent avec la règle « garder
+les vrais liens » plus haut), pas `window.open`.
 
 ### Panel read-only via `<Sheet>` + `MarkdownView`
 
