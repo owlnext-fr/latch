@@ -1,4 +1,3 @@
-import '@/types'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -6,6 +5,12 @@ import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from '@/lib/markdown'
+
+declare module '@tiptap/core' {
+  interface Storage {
+    markdown: { getMarkdown: () => string }
+  }
+}
 
 /**
  * Éditeur WYSIWYG restreint au périmètre markdown partagé (titres, gras,
