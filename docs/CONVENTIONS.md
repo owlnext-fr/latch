@@ -1087,6 +1087,56 @@ export function MarkdownView({ content }: { content: string }) {
 - Ne jamais rendre les notes côté serveur. Le champ `notes_md` reçu de `/c/<slug>/notes` est passé
   directement à `MarkdownView`, sans traitement intermédiaire.
 
+## Helper `previewUrl` et panel read-only par version — feat/release-notes-ux
+
+### `previewUrl` (`@/lib/utils`)
+
+Fonction utilitaire qui construit l'URL de preview admin pour une version donnée :
+
+```ts
+// frontend/src/lib/utils.ts
+export function previewUrl(projectId: number, n: number): string {
+  return `/api/projects/${projectId}/versions/${n}/preview`
+}
+```
+
+Réutiliser ce helper partout où l'on a besoin d'un lien de preview admin (liste projets, liste
+versions, panel Détail). La route est derrière `AdminAuth` + `no-store` — ouvrir via `window.open(..., '_blank')`.
+
+### Panel read-only via `<Sheet>` + `MarkdownView`
+
+Pattern pour afficher les détails d'une version (read-only, pas de formulaire) :
+
+```tsx
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { MarkdownView } from '@/components/markdown-view'
+
+<Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+  <SheetContent>
+    <SheetHeader>
+      <SheetTitle>{t('version.detail_title', { n: version.n })}</SheetTitle>
+    </SheetHeader>
+    <dl className="grid gap-2 text-sm">
+      <div><dt>{t('version.number')}</dt><dd>v{version.n}</dd></div>
+      <div><dt>{t('version.deployed_at')}</dt><dd>{formatDate(version.created_at)}</dd></div>
+      <div><dt>{t('version.status')}</dt><dd>{version.is_active ? t('version.active') : '—'}</dd></div>
+    </dl>
+    {version.release_notes && (
+      <section>
+        <h3>{t('version.release_notes')}</h3>
+        <MarkdownView content={version.release_notes} />
+      </section>
+    )}
+  </SheetContent>
+</Sheet>
+```
+
+**Règles :**
+- Le `<Sheet>` intègre nativement un bouton de fermeture X — ne pas en ajouter un manuellement.
+- Le panel est **read-only** : pas de `<form>`, pas de mutation.
+- `MarkdownView` rend les notes exactement comme le visiteur les voit (même composant que l'overlay shell).
+- Les actions de ligne (Activer/Preview/Supprimer) restent sur la ligne ; le panel Détail est additif.
+
 ## Mini-SPA Vite isolée (moule shell) — Phase 9
 
 Le **shell visiteur** (`src/shell/`) suit le même moule que `unlock` et `error` : entrée Vite

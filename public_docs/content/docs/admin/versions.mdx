@@ -50,7 +50,7 @@ before the deploy is saved.
 
 ### Version indicator
 
-Rows in the version list show a 📝 indicator when a version has release notes attached, so
+Rows in the version list show a notes icon when a version has release notes attached, so
 you can tell at a glance which versions carried a message to visitors.
 
 ## How visitors see release notes
@@ -68,6 +68,8 @@ Each row in the version list offers:
   immediately serves it.
 - **Preview** — open the raw HTML through an admin-only, `no-store` route (behind your session) —
   handy to check a version without making it active.
+- **Details** — open a read-only side-panel showing the version number, deploy date, status, and
+  the release notes rendered exactly as visitors see them.
 - **Delete** — remove a version through a danger side-panel. Deleting the **active** version is
   refused (HTTP 400); activate another one first.
 

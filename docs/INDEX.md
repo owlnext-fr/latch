@@ -194,7 +194,8 @@
 - [x] **Modèle** : colonne `versions.release_notes` (TEXT NULL, max 10 000 chars `chars()`) — migration SeaORM — 2026-06-29
 - [x] **Backend** : `deploy()` accepte `release_notes` optionnel ; validation 400/`invalid_params` MCP au-delà de 10 000 ; `GET /c/<slug>/notes` (JSON `{ n, notes_md }` ou 204, gardé unlock, no-store) ; `GET /c/<slug>/raw` (HTML brut cible iframe, `frame-ancestors 'self'`, no-store, gardé unlock) ; `GET /c/<slug>` sert désormais un shell + `<iframe src=/c/<slug>/raw>` — 2026-06-29
 - [x] **MCP** : `deploy_prototype` + argument optionnel `release_notes` (markdown léger, max 10 000) — 2026-06-29
-- [x] **Admin** : panneau déploiement avec éditeur Tiptap (WYSIWYG léger) + onglet Aperçu ; indicateur 📝 sur les lignes de version ; composant `MarkdownView` restreint partagé (admin aperçu + overlay visiteur) — 2026-06-29
+- [x] **Admin** : panneau déploiement avec éditeur Tiptap (WYSIWYG léger) + onglet Aperçu ; indicateur icône (notes) sur les lignes de version ; composant `MarkdownView` restreint partagé (admin aperçu + overlay visiteur) — 2026-06-29
+- [x] **Admin UX patchs** : action Preview depuis la liste projets (version active, nouvel onglet, route admin `no-store`) ; indicateur notes en icône `FileText` (lucide, remplace l'emoji) ; panel Détail read-only par version (numéro, date, statut, notes rendues via `MarkdownView`) — Spec `docs/superpowers/specs/2026-06-29-release-notes-ux-design.md`, Plan `docs/superpowers/plans/2026-06-29-release-notes-ux.md` — 2026-06-29
 - [x] **Shell visiteur** : bundle Vite isolé (`src/shell/`) avec sa propre instance i18n (`src/shell/i18n.ts` + `locales/shell/`) ; overlay notes au premier passage (localStorage `latch:seen:<slug>` = dernier `n` vu) ; dismiss mémorisé — 2026-06-29
 - Spec : `docs/superpowers/specs/2026-06-29-release-notes-design.md`
 - Plan : `docs/superpowers/plans/2026-06-29-release-notes.md`

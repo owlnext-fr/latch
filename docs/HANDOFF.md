@@ -4,6 +4,47 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-29 — UX patchs release-notes (feat/release-notes-ux)
+
+### Dernière chose faite
+Documentation (Fumadocs + mémoire) des 3 patchs UX implémentés sur `feat/release-notes-ux` :
+
+1. **Preview depuis la liste projets** — chaque ligne de la liste admin a une action Preview (icône)
+   qui ouvre la version active dans un nouvel onglet via la route admin `GET /api/projects/{id}/versions/{n}/preview`
+   (`no-store`, derrière la session) ; l'action est désactivée si le projet n'a pas de version active.
+2. **Icône notes** — l'indicateur « a des notes » dans la liste des versions est désormais une icône
+   lucide `FileText` au lieu de l'emoji 📝.
+3. **Panel Détail** — un bouton « Détail » sur chaque ligne de version ouvre un side-panel read-only
+   via `Sheet` affichant le numéro de version, la date de déploiement, le statut (actif) et les notes
+   rendues via `MarkdownView` (identiques à ce que voit le visiteur).
+
+**Fichiers doc mis à jour :**
+- `public_docs/content/docs/admin/projects.mdx` (section « The project list » — action Preview)
+- `public_docs/content/docs/admin/versions.mdx` (icône notes + action Details dans la liste)
+- `docs/INDEX.md` (entrée « Admin UX patchs »)
+- `docs/CONVENTIONS.md` (helper `previewUrl` + pattern panel read-only Sheet + MarkdownView)
+- `docs/HANDOFF.md` (cette entrée)
+
+### Trucs en suspens
+- Tests frontend (Preview liste, panel Détail, icône `FileText`) = à la charge de la branche code.
+- CI SonarCloud gate `new_coverage ≥ 80%` à vérifier après l'implémentation.
+- Merge `feat/release-notes-ux` → `main` quand tests verts.
+
+### Prochaine chose à creuser
+- Vérifier le rendu du panel Détail sur mobile (plein écran / dismiss accessible).
+- Post-merge : régénérer le CHANGELOG (`git-cliff --tag vX.Y.Z`).
+
+### Notes pour future Claude
+- `previewUrl(projectId, n)` est dans `@/lib/utils` — réutiliser pour tout lien de preview admin.
+- Le panel Détail utilise `<Sheet>` (Radix) avec le bouton de fermeture X intégré — pattern
+  identique aux autres panels read-only (cf. CONVENTIONS « Side-panel via Radix `<Sheet>` »).
+- `MarkdownView` est partagé entre admin (aperçu déploiement, panel Détail) et shell (overlay
+  visiteur) — tout changement de l'allow-list affecte les deux.
+- La route preview `/api/projects/{id}/versions/{n}/preview` est derrière `AdminAuth` + `no-store`.
+  Elle est déjà câblée côté backend (Phase 2) ; la nouveauté est l'exposition dans la liste.
+
+---
+
 ## 2026-06-29 — Fix duplication Sonar (feat/release-notes)
 
 ### Dernière chose faite
