@@ -48,6 +48,10 @@ struct DeployArgs {
     /// Activer immédiatement la version déployée (défaut : true).
     #[serde(default)]
     activate: Option<bool>,
+    /// Notes de version en markdown léger (titres, gras, italique, listes, citation).
+    /// Liens, images et code sont ignorés au rendu. Optionnel.
+    #[serde(default)]
+    release_notes: Option<String>,
 }
 
 /// Arguments du tool `list_projects`.
@@ -117,7 +121,8 @@ impl LatchMcp {
     #[tool(
         description = "Déploie un prototype HTML mono-fichier comme nouvelle version d'un \
                        projet EXISTANT (identifié par son slug). Le projet doit avoir été créé \
-                       au préalable dans l'admin. Active la version par défaut."
+                       au préalable dans l'admin. Active la version par défaut. Accepte des \
+                       notes de version en markdown léger (release_notes)."
     )]
     async fn deploy_prototype(
         &self,
@@ -134,7 +139,12 @@ impl LatchMcp {
         let activate = args.activate.unwrap_or(true);
         let deploy = DeployService::new(self.db.clone(), self.storage.clone());
         let version = deploy
-            .deploy(project.id, &args.html, activate, None)
+            .deploy(
+                project.id,
+                &args.html,
+                activate,
+                args.release_notes.as_deref(),
+            )
             .await
             .map_err(map_core_err)?;
 
@@ -284,6 +294,7 @@ mod tests {
                 html: "<h1>x</h1>".to_string(),
                 deploy_token: "WRONG".to_string(),
                 activate: None,
+                release_notes: None,
             }))
             .await;
         // Le rejet doit venir du gate token (vérifié AVANT tout appel DB), pas
@@ -311,6 +322,7 @@ mod tests {
                 html: "<h1>x</h1>".to_string(),
                 deploy_token: TOKEN.to_string(),
                 activate: None,
+                release_notes: None,
             }))
             .await;
         assert!(
@@ -331,6 +343,7 @@ mod tests {
                 html: "<h1>hi</h1>".to_string(),
                 deploy_token: TOKEN.to_string(),
                 activate: None, // défaut = true
+                release_notes: None,
             }))
             .await
             .unwrap();
@@ -362,6 +375,7 @@ mod tests {
                 html: "<h1>draft</h1>".to_string(),
                 deploy_token: TOKEN.to_string(),
                 activate: Some(false),
+                release_notes: None,
             }))
             .await
             .unwrap();
