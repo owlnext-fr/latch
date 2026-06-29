@@ -206,11 +206,22 @@ export function DetailPage() {
                         {new Date(v.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {v.is_active && (
-                          <Badge className="bg-green-600 text-white hover:bg-green-600">
-                            {t('common.active')}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {v.is_active && (
+                            <Badge className="bg-green-600 text-white hover:bg-green-600">
+                              {t('common.active')}
+                            </Badge>
+                          )}
+                          {v.release_notes ? (
+                            <span
+                              title={t('detail.has_notes')}
+                              aria-label={t('detail.has_notes')}
+                              className="text-muted-foreground ml-2 text-xs"
+                            >
+                              📝
+                            </span>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">

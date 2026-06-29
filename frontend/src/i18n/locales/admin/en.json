@@ -53,6 +53,7 @@
   "detail.copy_pin_aria": "Copy the PIN",
   "detail.reveal_pin": "Reveal PIN",
   "detail.hide_pin": "Hide PIN",
+  "detail.has_notes": "Has release notes",
   "form.title_create": "New project",
   "form.title_edit": "Edit project",
   "form.name": "Name",

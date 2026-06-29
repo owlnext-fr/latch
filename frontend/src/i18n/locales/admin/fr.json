@@ -53,6 +53,7 @@
   "detail.copy_pin_aria": "Copier le PIN",
   "detail.reveal_pin": "Révéler le PIN",
   "detail.hide_pin": "Masquer le PIN",
+  "detail.has_notes": "Contient des notes de version",
   "form.title_create": "Nouveau projet",
   "form.title_edit": "Éditer le projet",
   "form.name": "Nom",
