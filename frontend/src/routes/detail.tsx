@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Zap } from 'lucide-react'
+import { Zap, FileText } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { PinField } from '@/components/pin-field'
@@ -10,6 +10,7 @@ import { ProjectForm } from '@/components/project-form'
 import { DeployPanel } from '@/components/deploy-panel'
 import { DeleteProjectPanel } from '@/components/delete-project-panel'
 import { DeleteVersionPanel } from '@/components/delete-version-panel'
+import { VersionDetailPanel } from '@/components/version-detail-panel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -47,6 +48,7 @@ export function DetailPage() {
   const [deployOpen, setDeployOpen] = useState(false)
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false)
   const [deleteVersion, setDeleteVersion] = useState<VersionItem | null>(null)
+  const [detailVersion, setDetailVersion] = useState<VersionItem | null>(null)
 
   let mainContent: ReactNode
   if (isLoading) {
@@ -209,13 +211,10 @@ export function DetailPage() {
                             </Badge>
                           )}
                           {v.release_notes ? (
-                            <span
-                              title={t('detail.has_notes')}
+                            <FileText
+                              className="text-muted-foreground size-4"
                               aria-label={t('detail.has_notes')}
-                              className="text-muted-foreground ml-2 text-xs"
-                            >
-                              📝
-                            </span>
+                            />
                           ) : null}
                         </div>
                       </TableCell>
@@ -239,6 +238,17 @@ export function DetailPage() {
                               {t('detail.activate_aria')}
                             </Button>
                           )}
+
+                          {/* Detail button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label={t('detail.detail_aria')}
+                            onClick={() => setDetailVersion(v)}
+                          >
+                            {t('detail.detail_aria')}
+                          </Button>
 
                           {/* Preview link */}
                           <a
@@ -301,6 +311,16 @@ export function DetailPage() {
             open={deleteVersion !== null}
             onOpenChange={(isOpen) => {
               if (!isOpen) setDeleteVersion(null)
+            }}
+          />
+        )}
+
+        {detailVersion && (
+          <VersionDetailPanel
+            version={detailVersion}
+            open={detailVersion !== null}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setDetailVersion(null)
             }}
           />
         )}

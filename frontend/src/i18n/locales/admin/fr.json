@@ -55,6 +55,7 @@
   "detail.reveal_pin": "Révéler le PIN",
   "detail.hide_pin": "Masquer le PIN",
   "detail.has_notes": "Contient des notes de version",
+  "detail.detail_aria": "Détail",
   "form.title_create": "Nouveau projet",
   "form.title_edit": "Éditer le projet",
   "form.name": "Nom",

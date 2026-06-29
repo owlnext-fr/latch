@@ -37,6 +37,7 @@ const PROJECT_DETAIL: ProjectDetail = {
       n: 1,
       created_at: '2024-01-15T10:00:00Z',
       is_active: false,
+      release_notes: '# Notes\n\n- x',
     },
     {
       id: 11,
@@ -284,5 +285,23 @@ describe('DetailPage', () => {
     mockProjectDetail(PROJECT_DETAIL)
     renderDetailPage(1)
     await waitFor(() => expect(document.title).toMatch(/— latch admin$/))
+  })
+
+  it('replaces the notes emoji with an icon and opens the version detail panel', async () => {
+    const user = userEvent.setup()
+    mockProjectDetail(PROJECT_DETAIL)
+    renderDetailPage(1)
+
+    await waitFor(() => {
+      expect(screen.getByText('Versions')).toBeInTheDocument()
+    })
+
+    // The emoji must not appear
+    expect(screen.queryByText('📝')).toBeNull()
+
+    // The Detail button opens the panel → release notes rendered as heading
+    const detailButtons = await screen.findAllByRole('button', { name: /détail|details/i })
+    await user.click(detailButtons[0])
+    expect(await screen.findByRole('heading', { name: 'Notes' })).toBeInTheDocument()
   })
 })
