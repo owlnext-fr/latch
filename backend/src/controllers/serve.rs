@@ -136,6 +136,42 @@ async fn load_active_version(
         .map_err(|e| loco_rs::Error::Message(format!("version lookup: {e}")))
 }
 
+/// Résout un projet par slug pour les handlers HTML (serve, raw).
+/// En cas d'erreur, renvoie directement une page d'erreur stylée.
+/// Retourne `Ok(Some(project))` si trouvé, `Ok(None)` si le handler doit rendre lui-même
+/// la réponse d'erreur (via le `Response` dans l'`Err`).
+async fn resolve_project_html(
+    svc: &ProjectsService,
+    slug: &str,
+    caller: &str,
+) -> Result<projects::Model, Response> {
+    match svc.get_by_slug(slug).await {
+        Ok(p) => Ok(p),
+        Err(CoreError::NotFound) => Err(serve_error_page(StatusCode::NOT_FOUND).await),
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "{caller}: get_by_slug failed");
+            Err(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await)
+        }
+    }
+}
+
+/// Résout un projet par slug pour les handlers JSON/status (notes).
+/// En cas d'erreur, renvoie directement un StatusCode brut.
+async fn resolve_project_status(
+    svc: &ProjectsService,
+    slug: &str,
+    caller: &str,
+) -> Result<projects::Model, Response> {
+    match svc.get_by_slug(slug).await {
+        Ok(p) => Ok(p),
+        Err(CoreError::NotFound) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!(error = %e, slug = %slug, "{caller}: get_by_slug failed");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
+}
+
 /// GET /api/public/{slug} — meta publique pour la page de déverrouillage.
 /// Renvoie `brand_name` + `code_enabled`, jamais le PIN (DTO sans champ pin).
 #[utoipa::path(
@@ -165,13 +201,9 @@ pub(crate) async fn serve(
     headers: HeaderMap,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    let project = match svc.get_by_slug(&slug).await {
+    let project = match resolve_project_html(&svc, &slug, "serve").await {
         Ok(p) => p,
-        Err(CoreError::NotFound) => return Ok(serve_error_page(StatusCode::NOT_FOUND).await),
-        Err(e) => {
-            tracing::error!(error = %e, slug = %slug, "serve: get_by_slug failed");
-            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
-        }
+        Err(resp) => return Ok(resp),
     };
 
     // Pas de version active → page d'erreur 404 (comportement inchangé).
@@ -196,13 +228,9 @@ pub(crate) async fn raw(
     headers: HeaderMap,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    let project = match svc.get_by_slug(&slug).await {
+    let project = match resolve_project_html(&svc, &slug, "raw").await {
         Ok(p) => p,
-        Err(CoreError::NotFound) => return Ok(serve_error_page(StatusCode::NOT_FOUND).await),
-        Err(e) => {
-            tracing::error!(error = %e, slug = %slug, "raw: get_by_slug failed");
-            return Ok(serve_error_page(StatusCode::INTERNAL_SERVER_ERROR).await);
-        }
+        Err(resp) => return Ok(resp),
     };
     if !unlock_ok(&ctx, &headers, &slug, &project)? {
         // Defense-in-depth : ne jamais servir le HTML d'un proto verrouillé.
@@ -229,13 +257,9 @@ pub(crate) async fn notes(
     headers: HeaderMap,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
-    let project = match svc.get_by_slug(&slug).await {
+    let project = match resolve_project_status(&svc, &slug, "notes").await {
         Ok(p) => p,
-        Err(CoreError::NotFound) => return Ok(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!(error = %e, slug = %slug, "notes: get_by_slug failed");
-            return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
+        Err(resp) => return Ok(resp),
     };
     if !unlock_ok(&ctx, &headers, &slug, &project)? {
         return Ok(StatusCode::FORBIDDEN.into_response());

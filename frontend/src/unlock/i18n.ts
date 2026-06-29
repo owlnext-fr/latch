@@ -1,24 +1,7 @@
-import i18next from 'i18next'
-import { initReactI18next } from 'react-i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
-import { parseLocales } from '@/i18n/available-locales'
+import { createBundleI18n } from '@/i18n/create-bundle-i18n'
 
-const { resources, locales } = parseLocales(
+const instance = createBundleI18n(
   import.meta.glob('../i18n/locales/unlock/*.json', { eager: true }),
 )
-
-const instance = i18next.createInstance()
-instance
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    supportedLngs: locales.map((l) => l.code),
-    keySeparator: false,
-    nsSeparator: false,
-    interpolation: { escapeValue: false },
-    detection: { order: ['localStorage', 'navigator'], lookupLocalStorage: 'latch.locale' },
-  })
 
 export default instance
