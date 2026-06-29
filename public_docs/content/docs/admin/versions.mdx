@@ -32,6 +32,7 @@ formatting before deploying.
 
 | Element | Syntax |
 | --- | --- |
+| Paragraph | plain text |
 | Heading | `## Heading` |
 | Bold | `**bold**` |
 | Italic | `*italic*` |
@@ -56,8 +57,8 @@ you can tell at a glance which versions carried a message to visitors.
 
 When a visitor opens `/c/<slug>` for a new version (one they haven't seen yet), the shell
 displays an overlay with the release notes rendered in Markdown. Dismissing the overlay stores
-the current version number in `localStorage` — the overlay will not appear again for the same
-version.
+the current version number in `localStorage` under the key `latch:seen:<slug>` — the overlay
+will not appear again for the same version.
 
 ## Per-version actions
 

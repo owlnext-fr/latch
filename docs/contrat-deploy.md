@@ -176,9 +176,10 @@ latch/                 # workspace
 **`deploy_prototype(slug, html, deploy_token, activate?, release_notes?)`**
 - `slug` doit **préexister** en base : aucune auto-création. Slug inconnu → erreur.
 - `activate` : défaut **`true`** (la version déployée devient immédiatement active).
-- `release_notes` : optionnel. Markdown léger (max 10 000 caractères). Au-delà : erreur
-  `invalid_params`. Les liens, images, code et HTML brut sont ignorés **au rendu** côté
-  client (jamais filtrés au stockage — c'est une barrière de rendu, pas d'entrée).
+- `release_notes` : optionnel. Markdown léger (max 10 000 caractères), **stocké brut en tant que
+  texte Markdown** (jamais convertis en HTML au stockage). Au-delà : erreur `invalid_params`.
+  Les liens, images, code et HTML brut sont **ignorés au rendu** côté client (barrière de rendu
+  réalisée par le composant `MarkdownView` restreint, jamais filtrés à l'écriture).
 - Token validé EN PREMIER (`secure_compare`) — avant toute lecture en base.
 - Réponse (succès) : `DeployResult { url: "<LATCH_PUBLIC_BASE_URL>/c/<slug>", version: <n>, code_protected: <bool> }`.
   Le champ `url` utilise `LATCH_PUBLIC_BASE_URL` comme source de vérité.
@@ -223,6 +224,19 @@ l'overlay de notes de version sans modifier l'HTML du proto.
   (HTTP **200**, pas 401), portant `brand_name` si présent.
 - `POST /c/<slug>/unlock` : vérifie le code (`services::projects::verify_code`,
   comparaison à temps constant), pose le **cookie signé**, redirige vers le GET.
+
+**Distinction des endpoints `/c/<slug>`, `/c/<slug>/raw`, `/c/<slug>/notes` :**
+
+- **`GET /c/<slug>` (shell)** — répond **200** (page de déverrouillage) quand le projet
+  est protégé sans cookie. L'utilisateur y entre le code et se déverrouille.
+- **`GET /c/<slug>/raw` (iframe, HTML brut du proto)** — répond **403 Forbidden** si le
+  projet est protégé et le cookie de déverrouillage est absent ou invalide. Le gate est
+  strict : aucune page de déverrouillage, accès refusé.
+- **`GET /c/<slug>/notes` (JSON des notes)** — répond **403 Forbidden** si le projet est
+  protégé et le cookie est absent ou invalide. Pas de contenu utile servi avant déverrouillage.
+
+Résumé : le shell (200 + formulaire) guide vers le déverrouillage, tandis que `/raw` et
+`/notes` refusent sèchement (403) tout accès non authentifié.
 
 **Compromis assumé** : tous les prototypes tournent désormais en iframe. Impacts
 potentiels : `window.top` (accessible depuis le proto = le shell), fullscreen API,

@@ -1109,9 +1109,9 @@ import { initReactI18next } from 'react-i18next'
 import type { LocaleInfo } from '@/i18n/available-locales'
 
 const resources = Object.fromEntries(
-  Object.entries(import.meta.glob('../locales/shell/*.json', { eager: true }))
+  Object.entries(import.meta.glob('../i18n/locales/shell/*.json', { eager: true }))
     .map(([path, mod]) => {
-      const lang = path.replace('../locales/shell/', '').replace('.json', '')
+      const lang = path.replace('../i18n/locales/shell/', '').replace('.json', '')
       return [lang, { translation: (mod as Record<string, unknown>) }]
     })
 )
