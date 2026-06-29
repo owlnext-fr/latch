@@ -29,6 +29,7 @@
   "list.empty": "Aucun projet pour l'instant.",
   "list.create_first": "+ Créer le premier projet",
   "list.copy_url_aria": "Copier l'URL",
+  "list.preview_aria": "Aperçu de la version active",
   "list.active": "active",
   "detail.back": "‹ Projets",
   "detail.intro": "Vue en lecture seule. Utilisez les actions pour éditer, déployer ou supprimer.",

@@ -195,4 +195,23 @@ describe('ListPage', () => {
     renderWithRouter('/')
     await waitFor(() => expect(document.title).toBe('Projects — latch admin'))
   })
+
+  it('shows a preview link to the active version for a deployed project', async () => {
+    // Mon Projet has active_version_n=2, id=1
+    mockProjectsList(PROJECTS)
+    renderWithRouter('/')
+
+    const link = await screen.findByRole('link', { name: /preview active version/i })
+    expect(link).toHaveAttribute('href', '/api/projects/1/versions/2/preview')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('does not show a preview link when the project has no active version', async () => {
+    // Only the project with active_version_n=null — no link should be rendered
+    mockProjectsList([PROJECTS[1]])
+    renderWithRouter('/')
+
+    await screen.findByText('Demo ACME')
+    expect(screen.queryByRole('link', { name: /preview active version/i })).toBeNull()
+  })
 })

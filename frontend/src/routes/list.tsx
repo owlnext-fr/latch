@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Eye } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { ProjectForm } from '@/components/project-form'
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/table'
 import { useProjects } from '@/hooks/use-projects'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { publicUrl } from '@/lib/utils'
+import { publicUrl, previewUrl } from '@/lib/utils'
 
 export function ListPage() {
   const { t } = useTranslation()
@@ -47,6 +48,7 @@ export function ListPage() {
             <TableHead>{t('list.col_url')}</TableHead>
             <TableHead>{t('list.col_code')}</TableHead>
             <TableHead>{t('list.col_version')}</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,6 +102,28 @@ export function ListPage() {
                       {t('list.versions_count', { count: project.version_count })}
                     </span>
                   </span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                {project.active_version_n == null ? (
+                  <span
+                    className="text-muted-foreground/40 inline-flex h-8 w-8 items-center justify-center"
+                    title={t('list.preview_aria')}
+                    aria-hidden="true"
+                  >
+                    <Eye className="size-4" />
+                  </span>
+                ) : (
+                  <a
+                    href={previewUrl(project.id, project.active_version_n)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t('list.preview_aria')}
+                    title={t('list.preview_aria')}
+                    className="text-muted-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-8 w-8 items-center justify-center rounded-md"
+                  >
+                    <Eye className="size-4" />
+                  </a>
                 )}
               </TableCell>
             </TableRow>
