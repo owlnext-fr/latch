@@ -11,6 +11,8 @@ pub struct Model {
     pub project_id: i32,
     pub n: i32,
     pub html_path: String,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub release_notes: Option<String>,
     pub created_at: DateTimeWithTimeZone,
 }
 
