@@ -33,10 +33,11 @@ async function deploy(
   id: number,
   html: string,
   activate = true,
+  notes?: string,
 ) {
   const res = await request.post(`/api/projects/${id}/deploy`, {
     headers: { Origin: baseURL },
-    data: { html, activate },
+    data: { html, activate, ...(notes !== undefined ? { notes } : {}) },
   })
   expect(res.ok()).toBeTruthy()
   return res.json() as Promise<{ id: number; n: number }>
@@ -47,9 +48,11 @@ test('projet libre : /c sert le proto en no-store', async ({ request, baseURL })
   const project = await createProject(request, baseURL!, { name: 'ACME', code_enabled: false })
   await deploy(request, baseURL!, project.id, protoV1)
 
-  const res = await request.get(`/c/${project.slug}`)
+  // Le HTML brut du proto est maintenant sur /raw (l'iframe du shell le charge).
+  const res = await request.get(`/c/${project.slug}/raw`)
   expect(res.status()).toBe(200)
   expect(res.headers()['cache-control']).toContain('no-store')
+  expect(res.headers()['content-security-policy']).toContain("frame-ancestors 'self'")
   expect(await res.text()).toContain('Demo proto')
 })
 
@@ -76,14 +79,15 @@ test('projet protégé : unlock par PIN puis proto servi', async ({ page, reques
   await expect(page.locator('#pin')).toBeVisible()
   await expect(page.getByText('Demo proto')).toHaveCount(0)
 
-  // 3) Bon PIN → auto-submit (onComplete) → cookie posé → reload → proto servi.
+  // 3) Bon PIN → auto-submit (onComplete) → cookie posé → reload → proto servi dans l'iframe.
   //    Synchro sur la réponse /unlock avant d'asserter le proto.
   await page.reload()
   await page.locator('#pin').click()
   const unlockResp = page.waitForResponse((r) => r.url().includes('/unlock'))
   await page.locator('#pin').pressSequentially('135790')
   await unlockResp
-  await expect(page.getByText('Demo proto')).toBeVisible()
+  // Le proto est chargé dans l'iframe /c/${slug}/raw par le shell.
+  await expect(page.frameLocator('iframe').getByText('Demo proto')).toBeVisible()
 })
 
 test('bascule de version : /c reflète la v2 activée', async ({ request, baseURL }) => {
@@ -91,14 +95,59 @@ test('bascule de version : /c reflète la v2 activée', async ({ request, baseUR
   const project = await createProject(request, baseURL!, { name: 'demo', code_enabled: false })
   await deploy(request, baseURL!, project.id, protoV1) // v1 active
 
-  let res = await request.get(`/c/${project.slug}`)
+  // Le contenu du proto se vérifie sur /raw (l'iframe du shell).
+  let res = await request.get(`/c/${project.slug}/raw`)
   expect(await res.text()).toContain('Demo proto')
 
   const v2 = await deploy(request, baseURL!, project.id, protoV2) // v2 active
   expect(v2.n).toBe(2)
 
-  res = await request.get(`/c/${project.slug}`)
+  res = await request.get(`/c/${project.slug}/raw`)
   const body = await res.text()
   expect(body).toContain('PROTO-V2')
   expect(body).not.toContain('Demo proto')
+})
+
+test('overlay de notes : visible puis mémorisé après dismiss', async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  await apiLogin(request)
+  const project = await createProject(request, baseURL!, {
+    name: 'Mon Projet',
+    code_enabled: false,
+  })
+
+  // Déploie avec des notes Markdown.
+  const notesContent = '# Nouveautés\n\n- point A\n- point B'
+  await deploy(request, baseURL!, project.id, protoV1, true, notesContent)
+
+  // Visite le shell — l'overlay de notes doit apparaître.
+  await page.goto(`/c/${project.slug}`)
+
+  // Synchro : attend la réponse /notes avant d'asserter le DOM.
+  await page.waitForResponse((r) => r.url().includes('/notes') && r.status() === 200)
+
+  // L'overlay doit être visible avec le bouton dismiss.
+  await expect(page.getByTestId('notes-dismiss')).toBeVisible({ timeout: 8000 })
+
+  // Le contenu Markdown rendu doit contenir les éléments des notes.
+  await expect(page.getByText('point A')).toBeVisible()
+
+  // Le proto reste accessible dans l'iframe.
+  await expect(page.frameLocator('iframe').getByText('Demo proto')).toBeVisible()
+
+  // Dismiss → l'overlay disparaît.
+  await page.getByTestId('notes-dismiss').click()
+  await expect(page.getByTestId('notes-dismiss')).toHaveCount(0)
+
+  // Reload → l'overlay NE réapparaît PAS (mémorisé dans localStorage `latch:seen:<slug>`).
+  await page.reload()
+  // Laisser le temps au fetch /notes de revenir (s'il revient), puis asserter l'absence.
+  await page.waitForTimeout(2000)
+  await expect(page.getByTestId('notes-dismiss')).toHaveCount(0)
+
+  // Le proto est toujours accessible dans l'iframe après le reload.
+  await expect(page.frameLocator('iframe').getByText('Demo proto')).toBeVisible()
 })
