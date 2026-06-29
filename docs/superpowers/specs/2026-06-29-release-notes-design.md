@@ -225,8 +225,9 @@ sur le même moule que `unlock.html`. La couche serving devient :
 - i18n (`src/i18n/locales/admin/{en,fr}.json`, clés plates) : ajouter
   `deploy.notes`, `deploy.notes_help`, `deploy.notes_edit`, `deploy.notes_preview`
   (FR + EN).
-- (Optionnel, hors périmètre strict) afficher un indicateur « a des notes » dans
-  le tableau des versions de `detail.tsx`. À trancher au plan.
+- **Dans le périmètre** : afficher un indicateur « a des notes » dans le tableau
+  des versions de `detail.tsx` (ex. icône / badge sur la ligne, au survol ou en
+  colonne). S'appuie sur `VersionItem.release_notes`.
 
 ### Régénération du client typé
 
@@ -289,5 +290,26 @@ sur le même moule que `unlock.html`. La couche serving devient :
   partagé, si introduit.
 - `docs/ENVIRONMENT.md` : si une env var (ex. limite de longueur configurable) est
   ajoutée.
-- `docs/contrat-deploy.md` : documenter la nouvelle surface shell `/c` et l'endpoint
-  `/notes` + son gating, puisque ça touche l'archi du serving.
+- `docs/contrat-deploy.md` : documenter la nouvelle surface shell `/c`, l'endpoint
+  `/notes` + son gating, et le champ `release_notes` dans le flux deploy, puisque
+  ça touche l'archi du serving (le contrat fait loi).
+
+## 10. Documentation publique (Fumadocs — `public_docs/`)
+
+À mettre à jour **dans le même chantier** (la doc publique fait partie du
+livrable), couvrant la création de version (UI + MCP) et la visualisation `/c` :
+
+- **`content/docs/admin/versions.mdx`** : section sur la saisie des notes de
+  version au déploiement (éditeur WYSIWYG léger + aperçu, périmètre markdown :
+  titres, gras, italique, listes, citation) et l'indicateur « a des notes » dans
+  la liste des versions.
+- **`content/docs/publish-from-claude/tools-reference.mdx`** : ajouter l'argument
+  `release_notes` à la signature et au tableau de `deploy_prototype` (markdown
+  léger, optionnel ; liens/images/code ignorés au rendu).
+- **`content/docs/how-it-works/`** : décrire la nouvelle surface de serving
+  `/c/<slug>` = **shell + iframe** (`/raw`, `frame-ancestors 'self'`, `no-store`),
+  l'endpoint `/notes` gardé par l'unlock, et l'**overlay de notes** côté visiteur
+  (affiché au premier passage sur une nouvelle version, mémorisé en
+  `localStorage`, masqué au dismiss). Extension de `architecture.mdx` /
+  `security-model.mdx`, ou nouvelle page de serving — à trancher au plan.
+- Mettre à jour les `meta.json` concernés si une page est ajoutée.
