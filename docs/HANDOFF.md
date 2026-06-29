@@ -4,6 +4,31 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-29 — Fix duplication Sonar (feat/release-notes)
+
+### Dernière chose faite
+Gate Sonar `new_duplicated_lines_density` ramenée sous 3 % (était 4,7 %).
+
+**Refactors appliqués :**
+- Frontend : factory `src/i18n/create-bundle-i18n.ts` — shell/i18n.ts, unlock/i18n.ts, error/i18n.ts réduits à 5 lignes chacun.
+- Backend : helpers `resolve_project_html` / `resolve_project_status` dans `serve.rs` — bloc `get_by_slug` factorisé (serve, raw, notes).
+
+**Gate résultat :** `QUALITY GATE STATUS: PASSED` (scan local SonarCloud confirmé).  
+**Commit :** `59c7b45` — tous tests verts (146 nextest + 94 vitest), clippy OK, build OK.
+
+### Trucs en suspens
+Branche `feat/release-notes` prête à merger (gate Sonar passée).
+
+### Prochaine chose à creuser
+Merger feat/release-notes dans main et créer la release v0.4.0.
+
+### Notes pour future Claude
+La factory `createBundleI18n` est dans `src/i18n/create-bundle-i18n.ts`.
+Le glob DOIT rester un littéral statique chez l'appelant (contrainte Vite).
+Chaque bundle garde son propre `createInstance()` — isolation requise par Sonar et par le design multi-bundle.
+
+---
+
 ## 2026-06-29 — Phase 9 : notes de version livrées (feat/release-notes)
 
 ### Dernière chose faite
