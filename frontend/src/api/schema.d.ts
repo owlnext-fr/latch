@@ -217,6 +217,7 @@ export interface components {
         DeployReq: {
             activate?: boolean;
             html: string;
+            notes?: string | null;
         };
         /** @description Réponse de déploiement : identifiant et numéro de la version créée. */
         DeployResponse: {
@@ -303,6 +304,7 @@ export interface components {
             is_active: boolean;
             /** Format: int32 */
             n: number;
+            release_notes?: string | null;
         };
     };
     responses: never;
