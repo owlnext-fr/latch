@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { NotesEditor } from '@/components/notes-editor'
 import { useDeploy } from '@/hooks/use-projects'
 import { humanSize } from '@/lib/utils'
 
@@ -37,6 +38,7 @@ function DeployPanelContent({
   const [activate, setActivate] = useState(true)
   const [isDragOver, setIsDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState('')
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -85,7 +87,10 @@ function DeployPanelContent({
     }
 
     deploy.mutate(
-      { id: projectId, body: { html, activate } },
+      {
+        id: projectId,
+        body: { html, activate, notes: notes.trim() ? notes : undefined },
+      },
       { onSuccess: () => onOpenChange(false) },
     )
   }
@@ -158,6 +163,13 @@ function DeployPanelContent({
         <p className="text-muted-foreground pl-6 text-xs">
           {t('deploy.activate_help')}
         </p>
+      </div>
+
+      {/* Release notes */}
+      <div className="flex flex-col gap-1.5">
+        <Label>{t('deploy.notes')}</Label>
+        <NotesEditor value={notes} onChange={setNotes} />
+        <p className="text-muted-foreground text-xs">{t('deploy.notes_help')}</p>
       </div>
 
       <SheetFooter className="flex-row justify-end gap-2 px-0">
