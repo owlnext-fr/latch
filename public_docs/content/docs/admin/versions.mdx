@@ -6,6 +6,8 @@ description: Deploy, preview, switch the active version, and delete.
 A project is a series of **versions**. One of them is the **active** version — the one served at
 `/c/<slug>`. Versions are numbered per project (`v1`, `v2`, …).
 
+![The version list, with Active and Notes badges and per-row icon actions](/img/admin-versions.png)
+
 ## Deploy a new version
 
 From the detail view, **Deploy** opens a side-panel. Upload a single-file HTML prototype and
@@ -50,8 +52,9 @@ before the deploy is saved.
 
 ### Version indicator
 
-Rows in the version list show a notes icon when a version has release notes attached, so
-you can tell at a glance which versions carried a message to visitors.
+Rows in the version list show a **Notes** badge (with a document icon) when a version has release
+notes attached, so you can tell at a glance which versions carried a message to visitors. The
+active version is marked with an **Active** badge.
 
 ## How visitors see release notes
 
@@ -62,7 +65,7 @@ will not appear again for the same version.
 
 ## Per-version actions
 
-Each row in the version list offers:
+Each row's actions are compact icon buttons — hover for a tooltip:
 
 - **Activate** — flip the active pointer to this version (a transactional update). The client link
   immediately serves it.
