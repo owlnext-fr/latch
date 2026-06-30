@@ -7,7 +7,7 @@ export function normalizeText(s: string): string {
 }
 
 /** Rôle ARIA explicite, sinon rôle implicite minimal, sinon null. */
-function roleOf(el: Element): string | null {
+export function roleOf(el: Element): string | null {
   const explicit = el.getAttribute('role')
   if (explicit) return explicit
   const implicit: Record<string, string> = {

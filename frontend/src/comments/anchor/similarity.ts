@@ -1,4 +1,4 @@
-import { normalizeText } from './describe'
+import { normalizeText, roleOf } from './describe'
 import type { Fingerprint } from './descriptor'
 
 /** Similarité de texte par bag-of-words (Jaccard sur les tokens). */
@@ -11,19 +11,6 @@ function textSimilarity(a: string, b: string): number {
   for (const t of ta) if (tb.has(t)) inter++
   const union = ta.size + tb.size - inter
   return union === 0 ? 0 : inter / union
-}
-
-function roleOf(el: Element): string | null {
-  const explicit = el.getAttribute('role')
-  if (explicit) return explicit
-  const implicit: Record<string, string> = {
-    BUTTON: 'button',
-    A: 'link',
-    NAV: 'navigation',
-    MAIN: 'main',
-    HEADER: 'banner',
-  }
-  return implicit[el.tagName] ?? null
 }
 
 /**
