@@ -1,6 +1,19 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v1.2.0] — 2026-06-30
+
+### Ajouts
+
+- Redirige GET / vers /admin (307 temporaire)
+
+### Corrections
+
+- LATCH_STORAGE_ROOT en chemin absolu + doc du piège relatif/éphémère
+
+### Documentation
+
+- Resync post-release v1.1.0 + nettoyage repo
 ## [v1.1.0] — 2026-06-29
 
 ### Ajouts
@@ -44,6 +57,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - PreviewUrl s'ouvre via <a target=_blank>, pas window.open
 - Reflète les patchs UX + rafraîchit les captures
 - Aligne les snippets MarkdownView/panel sur l'API réelle
+- Régénère pour v1.1.0 (notes de version + patchs UX)
 
 ### Interne
 
