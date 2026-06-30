@@ -26,10 +26,8 @@ use crate::services::unlock_cookie::{issue_token, verify_token};
 pub(crate) const UNLOCK_COOKIE_NAME: &str = "latch_unlock";
 
 /// Cookie d'identité visiteur pour les commentaires (ULID opaque, signé). Scopé par slug.
-#[allow(dead_code)]
 pub(crate) const COMMENT_COOKIE_NAME: &str = "latch_comment";
 /// Durée de vie du cookie d'identité (jours).
-#[allow(dead_code)]
 const COMMENT_IDENTITY_TTL_DAYS: i64 = 365;
 
 /// Construit la réponse HTML brute du proto actif, `no-store`.
@@ -337,13 +335,11 @@ pub(crate) async fn unlock(
 }
 
 /// Génère un `owner_token` opaque (ULID Crockford base32, 26 chars).
-#[allow(dead_code)]
 pub(crate) fn mint_owner_token() -> String {
     ulid::Ulid::new().to_string()
 }
 
 /// Lit l'`owner_token` du cookie signé `latch_comment`, s'il est présent et valide.
-#[allow(dead_code)]
 pub(crate) fn read_owner_token(ctx: &AppContext, headers: &HeaderMap) -> Result<Option<String>> {
     let key = crate::web::unlock_key(ctx)?;
     let jar = SignedCookieJar::from_headers(headers, key);
@@ -351,7 +347,6 @@ pub(crate) fn read_owner_token(ctx: &AppContext, headers: &HeaderMap) -> Result<
 }
 
 /// Construit le cookie d'identité signé pour `slug` (réutilise la clé `UNLOCK_COOKIE_SECRET`).
-#[allow(dead_code)]
 pub(crate) fn comment_identity_cookie(
     ctx: &AppContext,
     slug: &str,
@@ -368,15 +363,128 @@ pub(crate) fn comment_identity_cookie(
 
 /// Middleware : exige le header `X-Comment-Client` sur les écritures de commentaires
 /// (anti-CSRF complémentaire au SameSite + garde Origin). 403 si absent.
-#[allow(dead_code)]
 pub(crate) async fn require_comment_client(
     req: axum::extract::Request,
     next: axum::middleware::Next,
-) -> std::result::Result<Response, StatusCode> {
+) -> Result<Response> {
     if req.headers().contains_key("x-comment-client") {
         Ok(next.run(req).await)
     } else {
-        Err(StatusCode::FORBIDDEN)
+        Ok(StatusCode::FORBIDDEN.into_response())
+    }
+}
+
+/// Gate commun aux routes commentaires. Renvoie le projet, ou une `Response` prête :
+/// slug inconnu / `comments_enabled=false` → **404** ; projet verrouillé → **403**.
+/// Pattern `Result<_, Response>` identique à `resolve_project_html` (statuts exacts,
+/// pas de mapping via `loco_rs::Error` qui transformerait le 403 en 401).
+async fn comments_gate(
+    ctx: &AppContext,
+    headers: &HeaderMap,
+    slug: &str,
+) -> std::result::Result<projects::Model, Response> {
+    let svc = ProjectsService::new(ctx.db.clone());
+    let project = match svc.get_by_slug(slug).await {
+        Ok(p) => p,
+        Err(_) => return Err(StatusCode::NOT_FOUND.into_response()),
+    };
+    if !project.comments_enabled {
+        return Err(StatusCode::NOT_FOUND.into_response());
+    }
+    match unlock_ok(ctx, headers, slug, &project) {
+        Ok(true) => Ok(project),
+        Ok(false) => Err(StatusCode::FORBIDDEN.into_response()),
+        Err(e) => Err(e.into_response()),
+    }
+}
+
+/// En-têtes JSON `no-store` pour les réponses de commentaires.
+fn comments_json_response(value: impl serde::Serialize) -> Result<Response> {
+    let body = serde_json::to_string(&value)
+        .map_err(|e| loco_rs::Error::Message(format!("serialize comments: {e}")))?;
+    Ok((
+        [
+            (CACHE_CONTROL, HeaderValue::from_static("no-store")),
+            (CONTENT_TYPE, HeaderValue::from_static("application/json")),
+        ],
+        body,
+    )
+        .into_response())
+}
+
+/// GET /c/{slug}/comments — mes pins+fils de la version active.
+#[debug_handler]
+pub(crate) async fn list_comments(
+    State(ctx): State<AppContext>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response> {
+    let project = match comments_gate(&ctx, &headers, &slug).await {
+        Ok(p) => p,
+        Err(resp) => return Ok(resp),
+    };
+    let Some(version) = load_active_version(&ctx, &project).await? else {
+        return Err(loco_rs::Error::NotFound);
+    };
+    let owner = read_owner_token(&ctx, &headers)?;
+    let pins = match owner {
+        Some(token) => {
+            let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+            let rows = svc
+                .list_for_version_and_owner(version.id, &token)
+                .await
+                .map_err(into_response)?;
+            rows.iter()
+                .map(|pwm| crate::dto::to_comment_pin(&pwm.pin, &pwm.messages, &token))
+                .collect()
+        }
+        None => vec![],
+    };
+    comments_json_response(crate::dto::CommentList {
+        version: version.n,
+        pins,
+    })
+}
+
+/// POST /c/{slug}/comments — crée un pin + 1ᵉʳ message ; pose le cookie d'identité si absent.
+#[debug_handler]
+pub(crate) async fn create_comment(
+    State(ctx): State<AppContext>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<crate::dto::CreatePinReq>,
+) -> Result<Response> {
+    let project = match comments_gate(&ctx, &headers, &slug).await {
+        Ok(p) => p,
+        Err(resp) => return Ok(resp),
+    };
+    let Some(version) = load_active_version(&ctx, &project).await? else {
+        return Err(loco_rs::Error::NotFound);
+    };
+    let (token, fresh) = match read_owner_token(&ctx, &headers)? {
+        Some(t) => (t, false),
+        None => (mint_owner_token(), true),
+    };
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let pwm = svc
+        .create_pin(
+            version.id,
+            &token,
+            &body.author_name,
+            &body.body,
+            &body.anchor,
+        )
+        .await
+        .map_err(into_response)?;
+    let dto = crate::dto::to_comment_pin(&pwm.pin, &pwm.messages, &token);
+    let json = comments_json_response(dto)?;
+    if fresh {
+        let key = crate::web::unlock_key(&ctx)?;
+        let jar = SignedCookieJar::from_headers(&headers, key)
+            .add(comment_identity_cookie(&ctx, &slug, &token));
+        Ok((jar, json).into_response())
+    } else {
+        Ok(json)
     }
 }
 
@@ -433,12 +541,55 @@ pub fn routes() -> Routes {
 
     let unlock_layers = ServiceBuilder::new().layer(ip_layer).layer(slug_layer);
 
+    let c_ip_burst: u32 = env_u32("LATCH_COMMENT_RL_IP_BURST", 10);
+    let c_ip_per_sec: u64 = env_u64("LATCH_COMMENT_RL_IP_PER_SECOND", 1);
+    let c_slug_burst: u32 = env_u32("LATCH_COMMENT_RL_SLUG_BURST", 60);
+    let c_slug_period: u64 = env_u64("LATCH_COMMENT_RL_SLUG_PERIOD_SECS", 1);
+    let comment_ip_layer = {
+        #[allow(clippy::expect_used)]
+        let config = Arc::new(
+            GovernorConfigBuilder::default()
+                .per_second(c_ip_per_sec)
+                .burst_size(c_ip_burst)
+                .key_extractor(IpSlugKeyExtractor)
+                .finish()
+                .expect("governor comment IP config valide"),
+        );
+        GovernorLayer { config }
+    };
+    let comment_slug_layer = {
+        #[allow(clippy::expect_used)]
+        let config = Arc::new(
+            GovernorConfigBuilder::default()
+                .period(Duration::from_secs(c_slug_period))
+                .burst_size(c_slug_burst)
+                .key_extractor(SlugKeyExtractor)
+                .finish()
+                .expect("governor comment slug config valide"),
+        );
+        GovernorLayer { config }
+    };
+
+    // Empilement : rate-limit (outermost) → origin → client-header → handler.
+    let comment_post_layers = ServiceBuilder::new()
+        .layer(comment_ip_layer.clone())
+        .layer(comment_slug_layer.clone())
+        .layer(axum::middleware::from_fn(
+            crate::controllers::middleware::origin::require_same_origin,
+        ))
+        .layer(axum::middleware::from_fn(require_comment_client));
+
     Routes::new()
         .add("/api/public/{slug}", get(public_meta))
         .add("/c/{slug}", get(serve))
         .add("/c/{slug}/raw", get(raw))
         .add("/c/{slug}/notes", get(notes))
         .add("/c/{slug}/unlock", post(unlock).layer(unlock_layers))
+        .add("/c/{slug}/comments", get(list_comments))
+        .add(
+            "/c/{slug}/comments",
+            post(create_comment).layer(comment_post_layers),
+        )
 }
 
 #[cfg(test)]
