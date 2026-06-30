@@ -173,17 +173,32 @@ impl CommentsService {
             .all(&self.db)
             .await?;
 
+        if pins.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Requête unique pour tous les messages — pas de N+1.
+        let pin_ids: Vec<i32> = pins.iter().map(|p| p.id).collect();
+        let all_msgs = comments::Entity::find()
+            .filter(comments::Column::PinId.is_in(pin_ids))
+            .filter(comments::Column::DeletedAt.is_null())
+            .order_by_asc(comments::Column::Id)
+            .all(&self.db)
+            .await?;
+
+        // Regroupement en mémoire : pin_id → Vec<comments::Model> (ordre id-asc préservé).
+        let mut msgs_by_pin: HashMap<i32, Vec<comments::Model>> = HashMap::new();
+        for msg in all_msgs {
+            msgs_by_pin.entry(msg.pin_id).or_default().push(msg);
+        }
+
         let mut out = Vec::with_capacity(pins.len());
         for pin in pins {
-            let messages = comments::Entity::find()
-                .filter(comments::Column::PinId.eq(pin.id))
-                .filter(comments::Column::DeletedAt.is_null())
-                .order_by_asc(comments::Column::Id)
-                .all(&self.db)
-                .await?;
             // Un pin sans message vivant n'est pas montré (cohérent avec le soft-delete du dernier message).
-            if !messages.is_empty() {
-                out.push(PinWithMessages { pin, messages });
+            if let Some(messages) = msgs_by_pin.remove(&pin.id) {
+                if !messages.is_empty() {
+                    out.push(PinWithMessages { pin, messages });
+                }
             }
         }
         Ok(out)
@@ -417,5 +432,27 @@ mod tests {
 
         let counts = svc.count_comments_by_version(&[v.id]).await.unwrap();
         assert_eq!(counts.get(&v.id).copied(), Some(2));
+    }
+
+    #[tokio::test]
+    async fn create_pin_rejects_when_cap_reached() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+
+        for i in 0..MAX_PINS_PER_VERSION_PER_OWNER {
+            svc.create_pin(v.id, OWNER_A, "Léa", &format!("message {i}"), "{}")
+                .await
+                .unwrap();
+        }
+
+        let err = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un de trop", "{}")
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, CoreError::Validation(_)),
+            "attendu Validation, obtenu {err:?}"
+        );
     }
 }
