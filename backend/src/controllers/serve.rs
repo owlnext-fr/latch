@@ -13,6 +13,8 @@ use loco_rs::prelude::*;
 use tower::ServiceBuilder;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
+use axum::routing::put;
+
 use crate::controllers::serve_ratelimit::{IpSlugKeyExtractor, SlugKeyExtractor};
 
 use crate::controllers::error::into_response;
@@ -488,6 +490,100 @@ pub(crate) async fn create_comment(
     }
 }
 
+/// Lit l'owner_token requis (écritures sur ressource existante). 401 si pas d'identité.
+fn require_owner(ctx: &AppContext, headers: &HeaderMap) -> Result<String> {
+    read_owner_token(ctx, headers)?
+        .ok_or_else(|| loco_rs::Error::Unauthorized("no identity".to_string()))
+}
+
+/// POST /c/{slug}/comments/pins/{pin}/replies — ajoute un message à un pin existant.
+#[debug_handler]
+pub(crate) async fn reply_comment(
+    State(ctx): State<AppContext>,
+    Path((slug, pin)): Path<(String, i32)>,
+    headers: HeaderMap,
+    Json(body): Json<crate::dto::ReplyReq>,
+) -> Result<Response> {
+    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
+        return Ok(resp);
+    }
+    let token = require_owner(&ctx, &headers)?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let msg = svc
+        .add_reply(pin, &token, &body.author_name, &body.body)
+        .await
+        .map_err(into_response)?;
+    comments_json_response(crate::dto::CommentMessage {
+        id: msg.id,
+        author_name: msg.author_name,
+        body: msg.body,
+        created_at: msg.created_at.to_rfc3339(),
+        updated_at: msg.updated_at.to_rfc3339(),
+        editable: true,
+    })
+}
+
+/// PUT /c/{slug}/comments/messages/{id} — édite mon message.
+#[debug_handler]
+pub(crate) async fn edit_comment(
+    State(ctx): State<AppContext>,
+    Path((slug, id)): Path<(String, i32)>,
+    headers: HeaderMap,
+    Json(body): Json<crate::dto::EditMessageReq>,
+) -> Result<Response> {
+    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
+        return Ok(resp);
+    }
+    let token = require_owner(&ctx, &headers)?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let msg = svc
+        .edit_message(id, &token, &body.body)
+        .await
+        .map_err(into_response)?;
+    comments_json_response(crate::dto::CommentMessage {
+        id: msg.id,
+        author_name: msg.author_name,
+        body: msg.body,
+        created_at: msg.created_at.to_rfc3339(),
+        updated_at: msg.updated_at.to_rfc3339(),
+        editable: true,
+    })
+}
+
+/// DELETE /c/{slug}/comments/messages/{id} — supprime mon message.
+#[debug_handler]
+pub(crate) async fn delete_comment(
+    State(ctx): State<AppContext>,
+    Path((slug, id)): Path<(String, i32)>,
+    headers: HeaderMap,
+) -> Result<Response> {
+    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
+        return Ok(resp);
+    }
+    let token = require_owner(&ctx, &headers)?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    svc.delete_message(id, &token)
+        .await
+        .map_err(into_response)?;
+    comments_json_response(crate::dto::OkResponse::ok())
+}
+
+/// DELETE /c/{slug}/comments/pins/{pin} — supprime mon pin entier.
+#[debug_handler]
+pub(crate) async fn delete_comment_pin(
+    State(ctx): State<AppContext>,
+    Path((slug, pin)): Path<(String, i32)>,
+    headers: HeaderMap,
+) -> Result<Response> {
+    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
+        return Ok(resp);
+    }
+    let token = require_owner(&ctx, &headers)?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    svc.delete_pin(pin, &token).await.map_err(into_response)?;
+    comments_json_response(crate::dto::OkResponse::ok())
+}
+
 fn env_u32(name: &str, default: u32) -> u32 {
     std::env::var(name)
         .ok()
@@ -589,6 +685,54 @@ pub fn routes() -> Routes {
         .add(
             "/c/{slug}/comments",
             post(create_comment).layer(comment_post_layers),
+        )
+        .add(
+            "/c/{slug}/comments/pins/{pin}/replies",
+            post(reply_comment).layer(
+                ServiceBuilder::new()
+                    .layer(comment_ip_layer.clone())
+                    .layer(comment_slug_layer.clone())
+                    .layer(axum::middleware::from_fn(
+                        crate::controllers::middleware::origin::require_same_origin,
+                    ))
+                    .layer(axum::middleware::from_fn(require_comment_client)),
+            ),
+        )
+        .add(
+            "/c/{slug}/comments/messages/{id}",
+            put(edit_comment).layer(
+                ServiceBuilder::new()
+                    .layer(comment_ip_layer.clone())
+                    .layer(comment_slug_layer.clone())
+                    .layer(axum::middleware::from_fn(
+                        crate::controllers::middleware::origin::require_same_origin,
+                    ))
+                    .layer(axum::middleware::from_fn(require_comment_client)),
+            ),
+        )
+        .add(
+            "/c/{slug}/comments/messages/{id}",
+            axum::routing::delete(delete_comment).layer(
+                ServiceBuilder::new()
+                    .layer(comment_ip_layer.clone())
+                    .layer(comment_slug_layer.clone())
+                    .layer(axum::middleware::from_fn(
+                        crate::controllers::middleware::origin::require_same_origin,
+                    ))
+                    .layer(axum::middleware::from_fn(require_comment_client)),
+            ),
+        )
+        .add(
+            "/c/{slug}/comments/pins/{pin}",
+            axum::routing::delete(delete_comment_pin).layer(
+                ServiceBuilder::new()
+                    .layer(comment_ip_layer.clone())
+                    .layer(comment_slug_layer.clone())
+                    .layer(axum::middleware::from_fn(
+                        crate::controllers::middleware::origin::require_same_origin,
+                    ))
+                    .layer(axum::middleware::from_fn(require_comment_client)),
+            ),
         )
 }
 

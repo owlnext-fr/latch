@@ -123,3 +123,100 @@ async fn comments_disabled_project_returns_404() {
     .await;
     drop(tmp);
 }
+
+#[tokio::test]
+#[serial]
+async fn reply_edit_delete_lifecycle() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/api/login")
+            .json(&serde_json::json!({"user":"admin","pass":"s3cret"}))
+            .await;
+        let created = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name":"Demo","code_enabled":false,"comments_enabled":true}))
+            .await;
+        let id = created.json::<serde_json::Value>()["id"].as_i64().unwrap();
+        let slug = created.json::<serde_json::Value>()["slug"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        request
+            .post(&format!("/api/projects/{id}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html":"<h1>v1</h1>","activate":true}))
+            .await;
+
+        let pin = request
+            .post(&format!("/c/{slug}/comments"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .json(&serde_json::json!({"anchor":"{}","author_name":"Léa","body":"un"}))
+            .await;
+        let pin_id = pin.json::<serde_json::Value>()["id"].as_i64().unwrap();
+        let msg_id = pin.json::<serde_json::Value>()["messages"][0]["id"]
+            .as_i64()
+            .unwrap();
+
+        // reply
+        let reply = request
+            .post(&format!("/c/{slug}/comments/pins/{pin_id}/replies"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .json(&serde_json::json!({"author_name":"Léa","body":"deux"}))
+            .await;
+        assert_eq!(reply.status_code(), 200);
+
+        // edit first message
+        let edit = request
+            .put(&format!("/c/{slug}/comments/messages/{msg_id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .json(&serde_json::json!({"body":"un-corrigé"}))
+            .await;
+        assert_eq!(edit.status_code(), 200);
+        assert_eq!(edit.json::<serde_json::Value>()["body"], "un-corrigé");
+
+        // delete the reply message
+        let reply_id = reply.json::<serde_json::Value>()["id"].as_i64().unwrap();
+        let del = request
+            .delete(&format!("/c/{slug}/comments/messages/{reply_id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .await;
+        assert_eq!(del.status_code(), 200);
+
+        let listed = request.get(&format!("/c/{slug}/comments")).await;
+        assert_eq!(
+            listed.json::<serde_json::Value>()["pins"][0]["messages"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+
+        // delete the whole pin
+        let delpin = request
+            .delete(&format!("/c/{slug}/comments/pins/{pin_id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .await;
+        assert_eq!(delpin.status_code(), 200);
+        let after = request.get(&format!("/c/{slug}/comments")).await;
+        assert_eq!(
+            after.json::<serde_json::Value>()["pins"]
+                .as_array()
+                .unwrap()
+                .len(),
+            0
+        );
+    })
+    .await;
+    drop(tmp);
+}
