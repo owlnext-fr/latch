@@ -58,12 +58,14 @@ test('visiteur : cibler un élément, écrire et persister un commentaire', asyn
   // Le div comments-mount a des enfants positionnés en absolute/fixed → taille nulle.
   // On vérifie l'attache ET que le bouton de l'ActionBar est visible (module opérationnel).
   await expect(page.getByTestId('comments-mount')).toBeAttached()
-  await expect(page.getByRole('button', { name: /^(Comment|Commenter)$/ })).toBeVisible()
+  const commentBtn = page.getByRole('button', { name: /^(Comment|Commenter)$/ })
+  await expect(commentBtn).toBeVisible()
 
   // Entrer en mode sélection d'élément.
-  await page.getByRole('button', { name: /^(Comment|Commenter)$/ }).click()
+  await commentBtn.click()
 
   // Cibler le bouton #cta dans l'iframe.
+  // Le shell rend le proto dans une iframe avec title="prototype" (src `/c/{slug}/raw`).
   // frameLocator.boundingBox() retourne les coordonnées en page-space.
   const ctaBox = await page
     .frameLocator('iframe[title="prototype"]')
@@ -93,6 +95,7 @@ test('visiteur : cibler un élément, écrire et persister un commentaire', asyn
   await expect(page.locator('[data-status="anchored"]').first()).toBeVisible()
 
   // Reload : le cookie d'identité visiteur + GET /comments reconstruit les pins.
+  // Le proto HTML est identique → le pin doit se ré-ancrer sur `anchored` (pas `approximate` ni `orphaned`).
   await page.reload()
-  await expect(page.locator('[data-status]').first()).toBeVisible()
+  await expect(page.locator('[data-status="anchored"]').first()).toBeVisible()
 })
