@@ -48,6 +48,7 @@ tower_governor = { version = "0.7" }
 axum_session = { version = "0.16" }
 axum_session_sqlx = { version = "0.5", features = ["sqlite", "tls-rustls"] }
 time = { version = "0.3" }
+ulid = { version = "1" }
 # MCP (contrat §5). >= 1.4.0 impératif : CVE-2026-42559 (Host-header < 1.4.0).
 rmcp = { version = "1.4", features = ["server", "macros", "transport-streamable-http-server"] }
 

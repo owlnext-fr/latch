@@ -25,6 +25,13 @@ use crate::services::unlock_cookie::{issue_token, verify_token};
 /// Nom du cookie de déverrouillage (scopé par `Path=/c/{slug}` → nom constant OK).
 pub(crate) const UNLOCK_COOKIE_NAME: &str = "latch_unlock";
 
+/// Cookie d'identité visiteur pour les commentaires (ULID opaque, signé). Scopé par slug.
+#[allow(dead_code)]
+pub(crate) const COMMENT_COOKIE_NAME: &str = "latch_comment";
+/// Durée de vie du cookie d'identité (jours).
+#[allow(dead_code)]
+const COMMENT_IDENTITY_TTL_DAYS: i64 = 365;
+
 /// Construit la réponse HTML brute du proto actif, `no-store`.
 fn html_response(html: String) -> Response {
     (
@@ -329,6 +336,50 @@ pub(crate) async fn unlock(
     Ok((jar, StatusCode::NO_CONTENT).into_response())
 }
 
+/// Génère un `owner_token` opaque (ULID Crockford base32, 26 chars).
+#[allow(dead_code)]
+pub(crate) fn mint_owner_token() -> String {
+    ulid::Ulid::new().to_string()
+}
+
+/// Lit l'`owner_token` du cookie signé `latch_comment`, s'il est présent et valide.
+#[allow(dead_code)]
+pub(crate) fn read_owner_token(ctx: &AppContext, headers: &HeaderMap) -> Result<Option<String>> {
+    let key = crate::web::unlock_key(ctx)?;
+    let jar = SignedCookieJar::from_headers(headers, key);
+    Ok(jar.get(COMMENT_COOKIE_NAME).map(|c| c.value().to_string()))
+}
+
+/// Construit le cookie d'identité signé pour `slug` (réutilise la clé `UNLOCK_COOKIE_SECRET`).
+#[allow(dead_code)]
+pub(crate) fn comment_identity_cookie(
+    ctx: &AppContext,
+    slug: &str,
+    token: &str,
+) -> Cookie<'static> {
+    Cookie::build((COMMENT_COOKIE_NAME, token.to_string()))
+        .path(format!("/c/{slug}"))
+        .http_only(true)
+        .secure(crate::web::cookie_secure(ctx))
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::days(COMMENT_IDENTITY_TTL_DAYS))
+        .build()
+}
+
+/// Middleware : exige le header `X-Comment-Client` sur les écritures de commentaires
+/// (anti-CSRF complémentaire au SameSite + garde Origin). 403 si absent.
+#[allow(dead_code)]
+pub(crate) async fn require_comment_client(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> std::result::Result<Response, StatusCode> {
+    if req.headers().contains_key("x-comment-client") {
+        Ok(next.run(req).await)
+    } else {
+        Err(StatusCode::FORBIDDEN)
+    }
+}
+
 fn env_u32(name: &str, default: u32) -> u32 {
     std::env::var(name)
         .ok()
@@ -388,4 +439,22 @@ pub fn routes() -> Routes {
         .add("/c/{slug}/raw", get(raw))
         .add("/c/{slug}/notes", get(notes))
         .add("/c/{slug}/unlock", post(unlock).layer(unlock_layers))
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod comment_identity_tests {
+    use super::*;
+
+    #[test]
+    fn minted_token_is_26_char_ulid() {
+        let t = mint_owner_token();
+        assert_eq!(t.len(), 26, "ULID Crockford base32 = 26 chars");
+        assert!(t.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn two_tokens_differ() {
+        assert_ne!(mint_owner_token(), mint_owner_token());
+    }
 }
