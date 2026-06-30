@@ -1,3 +1,4 @@
+import { it, expect, vi } from 'vitest'
 import { createAdminAdapter } from './admin-adapter'
 import type { Mock } from 'vitest'
 

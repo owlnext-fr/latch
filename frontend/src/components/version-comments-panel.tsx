@@ -38,7 +38,7 @@ interface VersionCommentsPanelProps {
 
 export function VersionCommentsPanel(
   props: Readonly<VersionCommentsPanelProps>,
-): JSX.Element {
+) {
   const { projectId, version, open, onOpenChange } = props
   const { t } = useTranslation()
   const { data, isLoading } = useVersionComments(projectId, version)
