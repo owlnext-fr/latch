@@ -4,6 +4,31 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Task P1 : **rate-limit login tunable par env + désarmement e2e (retire retry-429)**
+
+### Dernière chose faite
+Gate complète validée (commit `571fa88`) :
+- Backend : `cargo fmt` clean, `clippy` 0 warning, `cargo nextest` 181 passed (dont `login_is_rate_limited` PASS — défaut burst=5 conservé).
+- Frontend : `pnpm lint` 0 err, `pnpm typecheck` 0 err, Playwright **8 passed / 0 failed / 2 skipped** × 2 runs (dont `CI=1`).
+- Grep e2e : `429`/`setTimeout` ne renvoient plus que des commentaires explicatifs — aucune logique de retry.
+
+### Ce qui a changé
+- `env_u32`/`env_u64` passés `pub(crate)` dans `serve.rs` → réutilisés dans `auth.rs` sans duplication.
+- `auth.rs` lit `LATCH_LOGIN_RL_BURST` (défaut 5) et `LATCH_LOGIN_RL_PER_SECOND` (défaut 2).
+- `playwright.config.ts` webServer.command : `LATCH_LOGIN_RL_BURST=100000` ajouté.
+- `apiLogin`/`pageLogin` dans les 3 specs : retour à la forme simple (pas de retry).
+- `.env.example`, `docs/ENVIRONMENT.md`, `docs/QUIRKS.md` mis à jour.
+
+### Trucs en suspens
+Rien — la branche `feat/prototype-comments` est complète. Prête pour review/merge sur `main`.
+
+### Prochaine chose à creuser
+Merge `feat/prototype-comments` → `main` + 1ᵉʳ déploiement en prod (cf. `docs/INDEX.md` item Post-merge).
+
+### Notes pour future Claude
+- Le défaut `burst=5` / `per_second=2` est load-bearing : NE PAS le modifier sans adapter `login_is_rate_limited`.
+- Si un 429 en e2e réapparaît, vérifier les logs webServer (la var doit apparaître au démarrage du serveur loco).
+
 ## 2026-06-30 — Task N1 : **Plan 3 (admin Review + toggle + docs) LIVRÉ — feature commentaires TERMINÉE bout-en-bout**
 
 ### Dernière chose faite

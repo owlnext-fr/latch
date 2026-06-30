@@ -116,6 +116,7 @@
 - [x] `controllers/serve_ratelimit.rs` : deux `GovernorLayer` in-memory (par-IP + slug-global) via `ServiceBuilder`, montés sur POST /c/{slug}/unlock — Phase 4 Task 7 — 2026-06-25
 - [x] `frontend/src/unlock/` (`main.tsx`, `unlock-page.tsx`, `i18n.ts`, `reload.ts`) + `unlock.html` : page de déverrouillage standalone (2ᵉ entrée Vite, formulaire PIN, fetch POST /unlock, `brand_name`) — Phase 4 Task 8 — 2026-06-25
 - [x] Config env unlock : `UNLOCK_COOKIE_SECRET` (≥ 64 B), `LATCH_UNLOCK_TTL_DAYS`, `LATCH_UNLOCK_RL_*` documentés dans `.env.example` + `docs/ENVIRONMENT.md` — Phase 4 Task 10 — 2026-06-25
+- [x] Rate-limit `/api/login` tunable par env (`LATCH_LOGIN_RL_BURST` / `LATCH_LOGIN_RL_PER_SECOND`, défauts 5/2 inchangés) ; `env_u32`/`env_u64` passés `pub(crate)` dans `serve.rs` ; webServer e2e Playwright pose `LATCH_LOGIN_RL_BURST=100000` ; retry-on-429 retiré des helpers e2e — Task P1 — 2026-07-01
 - [x] `InputOTP` shadcn (6 slots, `REGEXP_ONLY_DIGITS`) remplace `<Input>` dans la page unlock — itération UI — 2026-06-25
 - [x] `CardDescription` (clé `unlock.instructions` EN+FR) dans la page unlock — itération UI — 2026-06-25
 - [x] `vite.config.ts` base `'/'` + mount `/assets` dans `after_routes` (backend) — découplage assets admin/unlock — 2026-06-25
