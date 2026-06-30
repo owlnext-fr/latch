@@ -202,9 +202,18 @@ pipeline `deploy-docs` vert + le site accessible à l'URL Pages (charger une pag
 - **Zoom des images (docs + landing)** : permettre d'agrandir les captures — côté docs via le composant
   Fumadocs `ImageZoom` (déjà dispo) sur les images MDX ; côté landing, un lightbox/zoom sur les captures
   du parcours.
-- **Retravailler `.env.example`** : passe de cohérence/pédagogie avant distribution (placeholders uniformes,
-  commande de génération par secret, séparation requis-prod / défauts optionnels, dev vs prod). Détail et
-  points relevés : `docs/BACKLOG.md`.
+- **Retravailler `.env.example` + docs liées** : passe de cohérence/pédagogie avant distribution
+  (placeholders uniformes, commande de génération par secret, séparation requis-prod / défauts optionnels,
+  dev vs prod). Détail et points relevés : `docs/BACKLOG.md`.
+  - **⚠️ Déclencheur incident prod (2026-06-29)** : `LATCH_STORAGE_ROOT=./data` (relatif) écrivait les HTML
+    dans `/app/data` (couche éphémère, WORKDIR `/app`) au lieu du volume `/data` → fichiers perdus à la
+    recréation du conteneur, base intacte mais 404/500 sur toutes les versions. Corrigé en `/data` dans
+    `.env.example` (cf. `docs/QUIRKS.md`). **À faire dans la passe** : auditer **toutes** les variables de
+    chemin pour ce piège relatif-vs-absolu (`LATCH_SPA_DIST` vide, `DATABASE_URL`, etc.), et envisager un
+    **garde-fou code** : `storage_from_ctx` pourrait avertir (ou refuser le boot hors Dev/Test) si
+    `LATCH_STORAGE_ROOT` est relatif en prod — fail-secure, comme les secrets de cookie. Documenter le
+    couplage `.env` ↔ volume `docker-compose.yml` ↔ `DATABASE_URL` dans `docs/ENVIRONMENT.md` et le site public.
 
 **Sortie** : login aligné sur le sélecteur de langue unifié ; pages de doc corrigées ; images
-agrandissables sur docs et landing ; `.env.example` propre et homogène.
+agrandissables sur docs et landing ; `.env.example` propre et homogène, **toutes les variables de chemin
+auditées (relatif vs absolu)** et le couplage env ↔ volume documenté.

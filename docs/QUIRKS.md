@@ -3,6 +3,28 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## `LATCH_STORAGE_ROOT` relatif → HTML écrits sur la couche éphémère du conteneur (2026-06-29)
+**Symptôme** : en prod, après un redéploiement (`docker compose up -d`, hotfix, restart), **toutes les
+versions** tombent en erreur : `GET /c/<slug>/raw` → **500** (page d'erreur serving) et
+`GET /api/projects/{id}/versions/{n}/preview` → **404** JSON. La base est intacte (projets/versions
+présents, login OK), seuls les **fichiers HTML** manquent. Log serveur :
+`"raw: storage read failed","error":"resource not found"`.
+**Cause** : `storage_from_ctx` (`web/mod.rs`) lit `LATCH_STORAGE_ROOT` avec un **défaut relatif** (`"data"`),
+et `.env.example` livrait `./data`. Le `WORKDIR` de l'image runtime est **`/app`** → un chemin relatif
+résout vers **`/app/data`**, soit la **couche d'écriture éphémère** du conteneur, PAS le volume monté
+(`./data:/data`). La base SQLite, elle, a un chemin **absolu** (`sqlite:///data/latch.sqlite`) → elle vit
+sur le volume et **persiste**. Résultat : DB et storage sur deux persistances distinctes. À la première
+recréation du conteneur, `/app/data` est effacé → la DB pointe vers des fichiers HTML disparus.
+Invisible jusqu'au premier `up -d`/restart (le fichier est là, au mauvais endroit, tant que le conteneur
+vit). L'ordre storage-first de `deploy()` ne protège PAS contre ce cas (il garde la DB cohérente *dans une
+même couche*, pas entre deux couches de persistance).
+**Fix** : `LATCH_STORAGE_ROOT=/data` (chemin **absolu** sur le volume) dans le `.env` de prod.
+**Données déjà perdues** : les HTML écrits dans `/app/data` avant le redémarrage sont **irrécupérables** ;
+après correction de l'env, **re-déployer chaque proto** (MCP `deploy_prototype` ou upload admin) pour
+réécrire le fichier sur le volume. **Vérif** sur la box : `ls -laR ./data` doit montrer les HTML de versions
+À CÔTÉ de `latch.sqlite` ; s'il n'y a que la base, le storage part sur la couche éphémère.
+`.env.example` corrigé (`/data` + commentaire « chemin absolu obligatoire »).
+
 ## Tous les protos en iframe via le shell — impacts (2026-06-29)
 
 Depuis la Phase 9 (notes de version), `GET /c/<slug>` sert **toujours** un shell HTML qui
