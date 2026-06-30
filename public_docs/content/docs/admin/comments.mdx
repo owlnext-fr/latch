@@ -1,0 +1,60 @@
+---
+title: Commenting a prototype
+description: Anchored comments let reviewers annotate elements directly on the prototype.
+---
+
+Anchored comments let your reviewers pin feedback directly onto elements of a prototype, without leaving their browser. Each pin stays attached to the target DOM element — it follows the element as the page scrolls and across scene changes inside the prototype.
+
+Comments are enabled per project via the `comments_enabled` toggle (see [Projects](/docs/admin/projects#comments)).
+
+## Reviewer experience (visitor surface)
+
+### The floating action bar
+
+When comments are active, a **floating action bar** appears in the corner of the prototype. It exposes three buttons:
+
+| Button | Role |
+| --- | --- |
+| ✏️ Comment mode | Enters pick mode: the cursor changes; hovering highlights the target element. |
+| 👁️ Show pins | Toggles the pin overlay, with a total count. |
+| 💬 My comments | Opens the list of threads created by this reviewer. |
+
+### Anchoring a comment
+
+In comment mode the reviewer hovers the prototype to choose an element, then clicks. A text panel opens to start a **comment thread** anchored to that element. Each thread can receive multiple replies.
+
+The generated pin **follows the element on scroll** and across scene changes (internal navigation within the prototype). If the element leaves the DOM, the pin hides temporarily and reappears when the element returns.
+
+### Identity and privacy
+
+Identity is **lazy and anonymous**: the reviewer's display name is requested on the first comment, then remembered in a signed cookie (`latch_comment`). As long as that cookie is present, the reviewer can edit or delete their own messages.
+
+**Each reviewer only sees their own threads.** Reviewer A's comments are not visible to reviewer B — only the administrator sees every thread.
+
+### Comments are tied to the active version
+
+Comments are attached to the **version that was active when the comment was posted**. If a new version is deployed, earlier comments remain associated with the previous version and are not migrated.
+
+## Admin management
+
+### Enabling comments
+
+The `comments_enabled` toggle is on the project detail page (see [Projects](/docs/admin/projects#comments)). Its **default follows the access-code setting**: without an access code, comments are open for writing (protected by an anti-spam filter); with an access code, comments are disabled by default.
+
+### Comment list per version
+
+On a version's panel, a **Comments** section lists every thread received for that version — author, message text, anchor selector, date. The administrator sees all threads regardless of which reviewer posted them.
+
+### Review page
+
+The Review page for a version is accessible from the version list. It embeds the prototype in a frame with the **pins positioned** on the annotated elements, so the administrator can see exactly where each comment was anchored in the visual context of the prototype.
+
+<Callout type="info">
+The Review page is only accessible to signed-in administrators. The prototype is loaded through an admin-only, `no-store` route — the same route used by the per-row Preview action on the version list.
+</Callout>
+
+### Moderation
+
+From the Review page or the Comments panel, the administrator can **delete any individual message** (message-by-message moderation). Deletion is permanent.
+
+Administrators cannot post comments themselves — the comment surface is reserved for reviewers.

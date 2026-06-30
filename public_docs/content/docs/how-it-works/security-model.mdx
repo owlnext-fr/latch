@@ -20,6 +20,8 @@ These are non-negotiable and covered by tests that break the build if violated:
 3. **The `deploy_token` is validated on every MCP tool**, reads included.
 4. **Auth lives in the adapter, never in the core.** A service assumes its caller is authorized;
    an architecture test fails the build if `axum` or `loco_rs` is imported under `src/services/`.
+5. **The `owner_token` of a comment thread is never serialized** — responses return a boolean
+   `editable` flag instead. No client (visitor or admin) ever receives the raw token.
 </Callout>
 
 ## Two cookies
@@ -31,6 +33,31 @@ These are non-negotiable and covered by tests that break the build if violated:
 - **Unlock cookie** — issued after a correct PIN on `/c/<slug>/unlock`. Signed (HMAC over the
   slug + an imprint of the current PIN), `HttpOnly` + `Secure` + `SameSite=Lax`, scoped to
   `Path=/c/<slug>`. No server-side state. **Rotating the project's PIN revokes every cookie.**
+
+## Comment identity cookie
+
+When comments are enabled for a project, the shell issues a third cookie:
+
+- **`latch_comment`** — a signed identity cookie (HMAC, reuses `UNLOCK_COOKIE_SECRET`),
+  `HttpOnly + Secure + SameSite=Lax`. It carries the reviewer's display name and a
+  per-browser identity token. No user account is created. The cookie is issued lazily on the
+  first comment the reviewer posts.
+
+### Comment gating
+
+Comment endpoints require **both** conditions to hold:
+
+- The **unlock gate** — the prototype must be accessible (no unsatisfied PIN check).
+- **`comments_enabled`** on the project — the admin has not disabled comments.
+
+If either condition fails, comment reads and writes return `403`.
+
+### The `owner_token` invariant
+
+Each comment thread holds an `owner_token` used to gate edits and deletes server-side. This
+token is **never sent to any client** — not to the reviewer, not to the admin, not over MCP.
+Responses expose a boolean `editable` flag derived server-side from the cookie's identity.
+This is hard invariant #5 above, covered by tests that break the build if violated.
 
 ## Load-bearing rate-limits
 

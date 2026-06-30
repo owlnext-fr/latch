@@ -97,6 +97,20 @@ renders the notes in a full-screen overlay using the restricted Markdown rendere
 [Security model](/docs/how-it-works/security-model#markdown-rendering)). Dismissing the overlay
 updates `localStorage` — the overlay won't reappear for the same version.
 
+### Comment layer
+
+When comments are enabled for a project, the shell also hosts the **anchored-comment layer**:
+the floating action bar, the pin overlays, and the thread panels are injected into the shell
+page — not into the prototype `<iframe>`. This separation means:
+
+- The comment UI has full access to the shell DOM and can position pins relative to the
+  prototype's viewport without touching the prototype's HTML.
+- The prototype served at `/c/<slug>/raw` remains byte-for-byte identical whether comments are
+  enabled or not — no instrumentation is injected into the prototype itself.
+- Auth for comments (the `latch_comment` identity cookie) is checked at the shell level and
+  is gated by the same unlock check as the prototype. See
+  [Security model](/docs/how-it-works/security-model#comment-identity-cookie).
+
 <Callout type="warn">
 All prototypes now run inside an iframe. Code in the prototype that relies on `window.top`,
 fullscreen APIs, or behaviours that differ in an embedded context may need adjustment.

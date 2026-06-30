@@ -45,3 +45,19 @@ dedicated side-panel. From here you:
 - **Deploy** a new version,
 - **Delete** the project (a danger side-panel with a typed confirmation),
 - manage versions — see [Versions](/docs/admin/versions).
+
+## Comments
+
+The project edit panel exposes a **`comments_enabled`** toggle. Its default depends on
+whether the project has an access code:
+
+| Access code | Default for `comments_enabled` |
+| --- | --- |
+| Enabled (PIN required) | **Off** — comments disabled until explicitly turned on. |
+| Disabled (open access) | **On** — comments open for writing, protected by an anti-spam filter. |
+
+This default is security-aware: a publicly accessible prototype gets comments automatically;
+a gated prototype keeps comments off until the admin intentionally enables them.
+
+When enabled, reviewers see a floating action bar on the prototype that lets them anchor
+comments to specific elements. See [Commenting a prototype](/docs/admin/comments) for details.

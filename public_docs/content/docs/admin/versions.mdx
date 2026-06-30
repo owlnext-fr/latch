@@ -76,6 +76,34 @@ Each row's actions are compact icon buttons — hover for a tooltip:
 - **Delete** — remove a version through a danger side-panel. Deleting the **active** version is
   refused (HTTP 400); activate another one first.
 
+## Comments by version
+
+When comments are enabled for a project, each version accumulates threads posted by reviewers.
+On the version list page a **Comments** panel lists every thread for that version: reviewer
+name, message text, element anchor, and date. The administrator sees all threads regardless
+of which reviewer posted them.
+
+<Callout type="info">
+Comments are tied to the version that was active when they were posted. Deploying a new
+version does not migrate existing comments — they remain attached to the version on which they
+were created.
+</Callout>
+
+### Review page
+
+The **Review** action on a version row opens the Review page. It embeds the prototype in a
+frame with the **pins positioned** on the annotated elements, so you can see every comment in
+its visual context — exactly what the reviewer saw when they anchored their feedback.
+
+### Moderation
+
+From the Review page or the Comments panel you can **delete any individual message** (per-message
+moderation). Deletion is permanent. To remove all comments for a version, delete them
+individually from the panel.
+
+See [Commenting a prototype](/docs/admin/comments) for the full reviewer experience and
+configuration options.
+
 ## First deploy
 
 Before the first deploy a project has no active version, so `/c/<slug>` returns a 404 page. The
