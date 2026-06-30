@@ -1224,3 +1224,67 @@ partagé. Invariant testé sur 3 surfaces (POST + GET visiteur + GET admin) dans
 `find_version(ctx, id, n)` et `find_project(ctx, id)` factorisent les lookups `find_by_id().ok_or(NotFound)`
 répétés (detail/update/activate/delete/preview/comments). `project_detail_json(ctx, project, id)` factorise
 versions + `count_comments_by_version` + `to_detail`. Extraits notamment pour passer la gate Sonar duplication.
+
+## Module frontend partagé derrière un seam + adaptateur + capabilities (Plan 2 commentaires, 2026-06-30)
+
+Pattern pour une feature front chargée en contexte multiple (visiteur / admin) :
+
+- **Seam `Picker`** : interface avec une seule implémentation concrète (`SameOriginPicker`) exposée dans l'index du module. Le code consommateur ne dépend que de l'interface — facile à mocker en test.
+- **Adaptateur de données** : objet passé au composant racine, portant les fonctions de lecture/écriture (query/mutate). Pas de couplage au transport : les hooks React Query sont dans l'adaptateur, pas dans l'UI.
+- **Objet `capabilities`** (`canAuthor / canEditOwn / canModerate`) : détermine ce que l'UI affiche. L'autorisation réelle est au backend — `capabilities` sert uniquement à masquer des boutons non pertinents.
+
+```ts
+// src/comments/index.ts
+export type { Picker } from './picker'
+export { SameOriginPicker } from './picker-same-origin'
+export type { CommentAdapter } from './adapter'
+export type { Capabilities } from './capabilities'
+export { CommentsRoot } from './root'
+```
+
+## Hooks React Query paramétrés par un `adapter` — clé `commentsKey(slug)` (Plan 2, 2026-06-30)
+
+Les hooks de commentaires (`useCommentPins`, `useAddComment`, etc.) reçoivent un `adapter: CommentAdapter` au lieu d'importer directement `openapi-fetch`. Avantage : testable sans MSW, réutilisable en contexte admin.
+
+```ts
+const commentsKey = (slug: string) => ['comments', slug] as const
+
+export function useCommentPins(slug: string, adapter: CommentAdapter) {
+  return useQuery({ queryKey: commentsKey(slug), queryFn: () => adapter.listPins(slug) })
+}
+```
+
+## Module lazy avec son propre `QueryClient` (React Query confiné au chunk) (Plan 2, 2026-06-30)
+
+Quand un module est chargé en `React.lazy`, il peut avoir son propre `QueryClientProvider` pour confiner le cache. Cela évite de contaminer le `QueryClient` du shell (ou de ne pas en avoir du tout).
+
+```tsx
+// src/comments/root.tsx
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+export function CommentsRoot({ slug, adapter, capabilities }: Props) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CommentsApp slug={slug} adapter={adapter} capabilities={capabilities} />
+    </QueryClientProvider>
+  )
+}
+```
+
+**Règles :**
+- Le `QueryClient` du chunk est créé **une seule fois** (module-level), pas dans le render.
+- Le shell ne voit jamais le cache commentaires.
+
+## En-tête `X-Comment-Client` sur les writes commentaire (Plan 2, 2026-06-30)
+
+Tous les appels d'écriture de commentaire (POST pin, POST reply, PUT edit, DELETE) doivent porter l'en-tête `X-Comment-Client: '1'`. Sans lui, le backend renvoie 403.
+
+`openapi-fetch` ne supporte que les en-têtes définis dans le schéma OpenAPI. Pour un en-tête hors-spec, caster le type :
+
+```ts
+client.POST('/c/{slug}/comments', {
+  params: { path: { slug } },
+  headers: { 'X-Comment-Client': '1' } as Record<string, string>,
+  body: { ... },
+})
+```

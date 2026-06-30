@@ -230,5 +230,8 @@
 - [x] Endpoints admin : `GET .../versions/{n}/comments` (`list_version_comments`) + `DELETE .../comments/messages/{cid}` (modération, walk projet) — Plan 1 T10 — 2026-06-30
 - [x] Contrat amendé (§3/§6.4/§7/§9 invariant `owner_token`) + OpenAPI/`schema.d.ts` régénérés + invariants build-breaking (`owner_token` 3 surfaces, gate verrouillé 403) — Plan 1 T1,10,11 — 2026-06-30
 - [x] Gate complète : 181 nextest, drift green, clippy/fmt/cargo-deny clean, **revue finale opus = YES**, **SonarCloud PASSED** (97.7 % couverture, 2.1 % duplication) — Plan 1 — 2026-06-30
-- [ ] **Plan 2** (frontend module `src/comments/` + shell visiteur) — à faire
+- [x] **Plan 2** (frontend module `src/comments/` + shell visiteur) — à faire
+- [x] Couche commentaires visiteur — module partagé `frontend/src/comments/` (seam Picker + SameOriginPicker, moteur d'ancrage describe/resolve/similarité, contrôleur de suivi rAF, adaptateur visiteur + hooks React Query confinés, overlay/pastilles/popups @floating-ui, barre d'action, machine pick) — Plan 2 commentaires — 2026-06-30
+- [x] Montage shell visiteur : `/c/<slug>` lit `PublicMeta.comments_enabled` et charge le module en lazy (React.lazy, 1er du repo ; React Query confiné au chunk) — Plan 2 commentaires — 2026-06-30
+- [x] e2e Playwright visiteur (cibler→écrire→pin ancré→persistance reload) — Plan 2 commentaires — 2026-06-30
 - [ ] **Plan 3** (frontend admin Review + passe `public_docs`) — à faire

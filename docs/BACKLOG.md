@@ -3,6 +3,25 @@
 > Idées et durcissements écartés *consciemment* de la v1, gardés pour ne pas les
 > redécouvrir. Rien ici n'est un manque : ce sont des choix de périmètre.
 
+## Clustering des pastilles denses (spec §8.5) — Plan 2 commentaires, 2026-06-30
+Non implémenté en v1. Quand plusieurs pins sont très proches visuellement, regrouper les pastilles
+en cluster (bulle avec compteur) pour éviter la surcharge visuelle. À traiter si l'usage montre
+des prototypes très annotés.
+
+## Panneau « mes commentaires » avec saut-au-pin (spec §8.6) — Plan 2 commentaires, 2026-06-30
+Le 3ᵉ bouton de la barre d'action (liste des commentaires du visiteur courant) a été implémenté en
+version minimale uniquement (toggle visibilité). La variante complète — liste cliquable avec scroll
+vers le pin correspondant — n'est pas faite. À reprendre si la demande utilisateur le justifie.
+
+## Minors techniques à traiter avant merge (Plan 2 commentaires, 2026-06-30)
+Lot de nettoyages identifiés pendant l'implémentation Plan 2 et différés, listés dans
+`.superpowers/sdd/progress.md` section « MINORS DIFFÉRÉS » :
+- Clés i18n `_plural` mortes (ancienne convention) à supprimer.
+- `countOf ?? 0` dans quelques hooks (valeur ne devrait pas être undefined).
+- `ctrlRef` mort dans un composant — à retirer.
+- Busy disable sur les textareas pendant une soumission en cours.
+Ces nettoyages sont non-bloquants fonctionnellement ; à passer avant le merge de branche.
+
 ## Retravailler `.env.example` (Phase 9 polish – 2026-06-26)
 Le `.env.example` actuel mérite une passe de cohérence/pédagogie avant distribution. Points relevés :
 - **Placeholders hétérogènes** : `change-me`, `change-me-long-random`, `change-me-64-bytes-min-random-…`

@@ -4,6 +4,33 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Commentaires ancrés : **Plan 2 (FRONTEND VISITEUR) LIVRÉ**
+
+### Dernière chose faite
+Module `src/comments/` complet + montage shell lazy, exécuté en subagent-driven (Tasks 0,A1-A4,B0-B2,C1-C2,D0-D9,E1,F0-F2). Branche `feat/prototype-comments`.
+
+Livré (frontend visiteur) :
+- **Module partagé `src/comments/`** : seam `Picker` + `SameOriginPicker` (transposition iframe→shell), moteur d'ancrage `describe`/`resolve`/`similarity`, contrôleur de suivi rAF, adaptateur visiteur + hooks React Query confinés (`commentsKey(slug)`), overlay/pastilles/popups `@floating-ui`, barre d'action, machine pick.
+- **Shell visiteur** : `/c/<slug>` lit `PublicMeta.comments_enabled` et charge le module en lazy (`React.lazy`, 1er du repo) ; React Query confiné au chunk (son propre `QueryClient`).
+- **e2e Playwright** : `e2e/comments.spec.ts` — cibler un élément, écrire un commentaire, pin ancré, persistance après reload.
+- **Gate finale verte** : lint 0 err, typecheck 0 err, vitest **173 passed** (44 fichiers), playwright **6 passed**.
+
+### Trucs en suspens
+**Plan 3 = admin Review (§10 spec), toggle `comments_enabled` dans `ProjectForm` (§10.1), docs publiques Fumadocs (§13) — PAS commencés.** La feature n'est PAS terminée bout-en-bout (le visiteur marche, l'admin ne lit/modère pas encore via UI).
+
+Une revue finale whole-branch + un lot de petits nettoyages (Minors) restent à passer avant merge (voir `.superpowers/sdd/progress.md` section « MINORS DIFFÉRÉS »).
+
+### Prochaine chose à creuser
+Écrire et exécuter le **Plan 3** : toggle `comments_enabled` dans `ProjectForm`, vue Review admin (monte le même module `src/comments/` côté admin), passe `public_docs`. Spec : `docs/superpowers/specs/2026-06-30-prototype-comments-design.md`.
+
+### Notes pour future Claude
+- Corps des commentaires = texte brut (pas de markdown) ; `owner_token` jamais reçu côté client (booléen `editable`).
+- Le gros module se charge en lazy ; React Query est confiné au chunk.
+- Transposition iframe→shell : le picker ajoute le rect de l'iframe (voir QUIRKS). Le clic de pick se calcule en espace shell (`e.clientX`), pas `el.getBoundingClientRect()` (espace iframe).
+- En-tête `X-Comment-Client: '1'` requis sur tous les writes commentaire (anti-CSRF).
+
+---
+
 ## 2026-06-30 — Commentaires ancrés : **Plan 1 (Backend) LIVRÉ** (T1-T11), frontend à venir
 
 ### Dernière chose faite

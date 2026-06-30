@@ -3,6 +3,55 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Shims jsdom requis pour la couche commentaire (2026-06-30)
+
+Plusieurs APIs DOM manquent en jsdom et font planter les tests si non stubées :
+
+- **`IntersectionObserver`** : pas implémenté en jsdom. Shim global ajouté dans `vitest.setup.ts` (`window.IntersectionObserver = class { ... }`).
+- **`getBoundingClientRect`** renvoie toujours `{0,0,0,0}` en jsdom. Stubber par test (ex. `vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({...})`) quand la logique de positionnement en dépend.
+- **`@floating-ui/dom computePosition`** retombe en `(0,0)` sans layout réel (aucun impact sur les tests de formulaire — pas de piège de valeur inattendue, mais les snapshots de position ne sont pas significatifs en jsdom).
+
+## `erasableSyntaxOnly` dans tsconfig — interdit les parameter properties (2026-06-30)
+
+Le `tsconfig.json` frontend a `"erasableSyntaxOnly": true`. Cela **interdit** les *parameter properties* TypeScript (`constructor(private x: T)`). Utiliser des champs explicites à la place :
+
+```ts
+// ❌ interdit
+constructor(private slug: string) {}
+
+// ✅ ok
+private slug: string;
+constructor(slug: string) { this.slug = slug; }
+```
+
+## `eslint-plugin-react-hooks` v7 STRICT — deux nouvelles règles (2026-06-30)
+
+La v7 est plus stricte :
+
+- **`react-hooks/refs`** : interdit d'écrire dans une ref pendant le render (même via `useRef` + assignation directe dans le corps du composant).
+- **`react-hooks/set-state-in-effect`** : interdit d'appeler `setState` directement dans le corps d'un `useEffect` (sans `if` ou condition) — favorise la dérivation d'état.
+
+Tout dispatch React doit lancer `pnpm lint` pour vérifier la conformité.
+
+## i18next v26 — formes plurielles CLDR (`_one`/`_other`, PAS `_plural`) (2026-06-30)
+
+Depuis i18next v21+ / i18next-resources-for-ts v26, les clés plurielles suivent la convention **CLDR** :
+- `_one` pour le singulier, `_other` pour le pluriel (et non plus `_plural` qui était l'ancienne convention).
+- Les clés `_plural` **mortes** ne produisent pas d'erreur au runtime mais sont ignorées silencieusement → texte pluriel absent.
+
+## Transposition iframe→shell pour le picker de commentaires (2026-06-30)
+
+Le prototype est servi dans un `<iframe>` ; le shell hôte monte le module de commentaires. Le picker calcule la position du pin en deux étapes :
+
+1. **`e.clientX / e.clientY`** : coordonnées en espace shell (viewport navigateur).
+2. On ajoute le **rect de l'iframe** (`iframe.getBoundingClientRect()`) pour convertir vers l'espace du document hôte.
+
+Erreur classique : utiliser `el.getBoundingClientRect()` côté proto (espace iframe — coordonnées relatives à l'origine de l'iframe, pas du shell). Le résultat est faux dès que l'iframe n'est pas positionnée à l'origine. Toujours calculer en espace shell.
+
+## `resolve()` byTextQuote — TreeWalker peut renvoyer un conteneur (2026-06-30)
+
+Dans `src/comments/engine/resolve.ts`, la branche `byTextQuote` utilise un `TreeWalker` en mode `SHOW_ELEMENT`. Ce mode visite les nœuds ancêtres **avant** les feuilles texte → il peut renvoyer un élément conteneur (ex. `<p>`, `<div>`) au lieu du nœud texte direct. Filtrer sur `nodeType === Node.TEXT_NODE` ou utiliser `SHOW_TEXT` selon le besoin.
+
 ## `LATCH_STORAGE_ROOT` relatif → HTML écrits sur la couche éphémère du conteneur (2026-06-29)
 **Symptôme** : en prod, après un redéploiement (`docker compose up -d`, hotfix, restart), **toutes les
 versions** tombent en erreur : `GET /c/<slug>/raw` → **500** (page d'erreur serving) et
