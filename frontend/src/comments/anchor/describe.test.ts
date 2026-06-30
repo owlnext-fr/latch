@@ -15,6 +15,10 @@ describe('normalizeText', () => {
   it('trims and collapses whitespace', () => {
     expect(normalizeText('  En savoir   plus\n')).toBe('En savoir plus')
   })
+
+  it('caps at 120 characters', () => {
+    expect(normalizeText('x'.repeat(200))).toHaveLength(120)
+  })
 })
 
 describe('describe()', () => {
@@ -45,5 +49,12 @@ describe('describe()', () => {
   it('sets format version 1', () => {
     const anchor = describeAnchor(document.getElementById('a')!, { x: 0, y: 0 })
     expect(anchor.v).toBe(1)
+  })
+
+  it('produces a textQuote with exact text and a prefix from surrounding text', () => {
+    const el = document.getElementById('b')!
+    const anchor = describeAnchor(el, { x: 5, y: 5 })
+    expect(anchor.textQuote?.exact).toBe('En savoir plus')
+    expect(anchor.textQuote?.prefix).toMatch(/First/)
   })
 })
