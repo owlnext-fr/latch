@@ -20,8 +20,3 @@ export function publicUrl(slug: string): string {
 export function previewUrl(projectId: number, n: number): string {
   return `/api/projects/${projectId}/versions/${n}/preview`
 }
-
-/** Route SPA admin de la page Review d'une version (sans basepath). */
-export function reviewPath(projectId: number, n: number): string {
-  return `/projects/${projectId}/versions/${n}/review`
-}

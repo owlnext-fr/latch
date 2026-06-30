@@ -154,7 +154,6 @@
   "version_comments.confirm_no": "Cancel",
   "version_comments.action": "Comments",
   "detail.comments_aria": "View comments for this version",
-  "review.title": "Review — {{name}}",
   "review.action": "Review",
   "review.back": "← Back to project",
   "detail.review_aria": "Open review mode for this version"
