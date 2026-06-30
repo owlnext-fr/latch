@@ -18,8 +18,10 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
+    "@medv/finder": "^4.0.2",
     "@tailwindcss/vite": "^4",
     "@tanstack/react-query": "^5.101.1",
     "@tanstack/react-router": "^1.170.16",
