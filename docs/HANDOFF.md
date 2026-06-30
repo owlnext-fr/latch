@@ -4,6 +4,42 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Resync post-release v1.1.0 + nettoyage repo
+
+### Dernière chose faite
+Resync de l'état réel du repo après la **release des notes de version + patchs UX, taggée
+`v1.1.0` et poussée hier**. Les entrées datées 2026-06-29 ci-dessous (feat/release-notes,
+feat/release-notes-ux) sont **toutes mergées et releasées** — elles parlaient encore de « à
+merger » / « v0.4.0 », c'était périmé. `main` == `origin/main` (synchro).
+
+Nettoyage effectué :
+- **Commit `5de6c8b`** : fix `LATCH_STORAGE_ROOT` (`./data` → `/data`, chemin absolu) +
+  doc du piège (QUIRKS) + déclencheur incident rattaché à la Phase 9 (ROADMAP). C'étaient les
+  3 fichiers qui traînaient non commités dans le working-tree.
+- **6 branches locales mergées supprimées** : `chore/toolchain-ci-hardening`, `feat/admin-react`,
+  `feat/phase-3-spa-yew-admin`, `feat/phase-4-serving`, `feat/phase-5-mcp`,
+  `feat/phase-7-lot-1-fondations`. Les branches `feat/release-notes*` avaient déjà été nettoyées.
+
+### Trucs en suspens
+- **`5de6c8b` non poussé** : commit local sur `main`, à pousser (`git push`).
+- La passe **Phase 9** reste ouverte (cf. ROADMAP) — c'est le prochain gros chantier.
+
+### Prochaine chose à creuser
+- **Phase 9 — passe de polish** : (1) login → `LanguageSelect` (Select + drapeaux) au lieu du
+  vieux `LocaleSwitcher` ; (2) corrections pages de doc `public_docs/` ; (3) zoom des images
+  (docs `ImageZoom` + lightbox landing) ; (4) **audit relatif-vs-absolu de toutes les variables
+  de chemin** (`LATCH_SPA_DIST`, `DATABASE_URL`…) + garde-fou code envisagé sur `storage_from_ctx`
+  (refus de boot si chemin relatif hors Dev/Test, fail-secure comme les secrets de cookie).
+- **Post-merge Phase 8** (toujours coché [ ] dans INDEX) : confirmer le déploiement GitHub Pages
+  vert + basePath sur l'URL live.
+
+### Notes pour future Claude
+- Le **storage prod DOIT être un chemin absolu** (`/data`) — un relatif part sur la couche
+  éphémère `/app/data`, perdue à la recréation du conteneur (DB sur volume, HTML perdus). Cf. QUIRKS.
+- Si une donnée HTML a été perdue par ce piège : re-déployer chaque proto (MCP ou upload admin).
+
+---
+
 ## 2026-06-29 — UX patchs release-notes (feat/release-notes-ux)
 
 ### Dernière chose faite
