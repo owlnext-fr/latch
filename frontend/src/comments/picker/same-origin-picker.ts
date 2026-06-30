@@ -4,7 +4,10 @@ import type { AnchorDescriptor, Point } from '../anchor/descriptor'
 import type { FrameRef, Picker, ShellRect } from './picker'
 
 export class SameOriginPicker implements Picker {
-  constructor(private readonly frame: FrameRef) {}
+  private readonly frame: FrameRef
+  constructor(frame: FrameRef) {
+    this.frame = frame
+  }
 
   get doc(): Document | null {
     return this.frame.contentDocument
