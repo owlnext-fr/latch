@@ -120,6 +120,25 @@ if (!document.elementFromPoint) {
 ```
 Pattern identique au mock `ResizeObserver` déjà présent.
 
+## `input-otp` : timer post-teardown → `window is not defined` (flaky CI) (2026-06-30)
+**Symptôme** : le job CI `front (lint/typecheck/test/build)` échoue **par intermittence** sur le
+**même commit** (un run vert, l'autre rouge). Tous les tests passent (`100 passed`) mais Vitest
+reporte `Errors 1 error` → exit 1. La trace : `ReferenceError: window is not defined` dans
+`react-dom` (`resolveUpdatePriority` → `dispatchSetState`), déclenchée par
+`Timeout._onTimeout` dans `input-otp/dist/index.mjs`, « originated in `src/unlock/unlock-page.test.tsx` ».
+**Cause** : `input-otp` planifie des `setTimeout` **longue durée** (`0, 10, 50` ms **et** `0, 2000, 5000` ms,
+cf. `index.mjs`) pour synchroniser le caret. Les timers à 2 s / 5 s survivent largement à la fin du
+test ; s'ils se déclenchent **après** que Vitest a démonté l'environnement jsdom, react-dom tente une
+mise à jour d'état et touche `window` (disparu). Le flakiness vient du timing : selon que le timer
+tire avant ou après le teardown, le run passe ou casse. Distinct du quirk `elementFromPoint` ci-dessus
+(qui, lui, ne fait pas échouer la CI de façon non-déterministe).
+**Workaround** (`vitest.setup.ts`) : **tracer les `setTimeout` et annuler ceux encore pendants dans
+`afterEach`** — wrapper global de `globalThis.setTimeout` qui enregistre les ids dans un `Set`, les
+retire à l'exécution du callback, et `clearTimeout` le reliquat après chaque test. Aucun timer ne
+survit ainsi à l'environnement. Sûr car **aucun test n'utilise de fake timers** (vérifié) — sinon le
+patch global entrerait en conflit. Un simple flush (`await setTimeout(0)`) **ne suffit pas** : il ne
+purge pas les timers à 2 s / 5 s.
+
 ## Loco `limit_payload` plafonne le body à **2 Mo par défaut** → 413 sur un gros proto (2026-06-25)
 **Symptôme** : le deploy d'un HTML mono-fichier > 2 Mo échoue en **413** (`Failed to buffer the request
 body: length limit exceeded`, `JsonRejection(... LengthLimitError)`). Le petit HTML passe, le gros non.
