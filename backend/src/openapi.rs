@@ -28,7 +28,7 @@ use crate::dto;
         admin::activate_version,
         admin::delete_version,
         admin::preview_version,
-        admin::list_comments,
+        admin::list_version_comments,
         admin::moderate_delete_comment,
         serve::public_meta,
         serve::list_comments,

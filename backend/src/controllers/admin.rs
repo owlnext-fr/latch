@@ -459,7 +459,7 @@ async fn preview_version(
               (status = 401, description = "Non authentifié"))
 )]
 #[debug_handler]
-async fn list_comments(
+async fn list_version_comments(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
@@ -554,7 +554,10 @@ pub fn routes() -> Routes {
             "/projects/{id}/versions/{n}",
             axum::routing::delete(delete_version).layer(from_fn(require_same_origin)),
         )
-        .add("/projects/{id}/versions/{n}/comments", get(list_comments))
+        .add(
+            "/projects/{id}/versions/{n}/comments",
+            get(list_version_comments),
+        )
         .add(
             "/projects/{id}/comments/messages/{cid}",
             axum::routing::delete(moderate_delete_comment).layer(from_fn(require_same_origin)),

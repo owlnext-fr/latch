@@ -169,7 +169,7 @@ export interface paths {
             cookie?: never;
         };
         /** GET /api/projects/{id}/versions/{n}/comments — tous les fils de la version (lecture seule). */
-        get: operations["list_comments"];
+        get: operations["list_version_comments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1019,7 +1019,7 @@ export interface operations {
             };
         };
     };
-    list_comments: {
+    list_version_comments: {
         parameters: {
             query?: never;
             header?: never;

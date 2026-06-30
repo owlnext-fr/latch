@@ -60,6 +60,88 @@ async fn admin_lists_all_comments_without_owner_token() {
 
 #[tokio::test]
 #[serial]
+async fn admin_cannot_moderate_other_projects_message() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/api/login")
+            .json(&serde_json::json!({"user":"admin","pass":"s3cret"}))
+            .await;
+
+        // Projet A
+        let proj_a = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name":"ACME","code_enabled":false,"comments_enabled":true}))
+            .await;
+        let id_a = proj_a.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        // Projet B
+        let proj_b = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name":"Demo","code_enabled":false,"comments_enabled":true}))
+            .await;
+        let id_b = proj_b.json::<serde_json::Value>()["id"].as_i64().unwrap();
+        let slug_b = proj_b.json::<serde_json::Value>()["slug"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        // Déploiement d'une version sur chaque projet
+        request
+            .post(&format!("/api/projects/{id_a}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html":"<h1>A</h1>","activate":true}))
+            .await;
+        request
+            .post(&format!("/api/projects/{id_b}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html":"<h1>B</h1>","activate":true}))
+            .await;
+
+        // Commentaire sur le projet B (flux visiteur)
+        let pin = request
+            .post(&format!("/c/{slug_b}/comments"))
+            .add_header("origin", "http://127.0.0.1")
+            .add_header("x-comment-client", "1")
+            .json(&serde_json::json!({"anchor":"{}","author_name":"Léa","body":"bonjour B"}))
+            .await;
+        let mid_b = pin.json::<serde_json::Value>()["messages"][0]["id"]
+            .as_i64()
+            .unwrap();
+
+        // Tentative de modération via le projet A → doit renvoyer 404
+        let del = request
+            .delete(&format!("/api/projects/{id_a}/comments/messages/{mid_b}"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(del.status_code(), 404);
+
+        // Le commentaire du projet B est toujours présent
+        let list_b = request
+            .get(&format!("/api/projects/{id_b}/versions/1/comments"))
+            .await;
+        assert_eq!(list_b.status_code(), 200);
+        let pins_len = list_b.json::<serde_json::Value>()["pins"]
+            .as_array()
+            .unwrap()
+            .len();
+        assert_eq!(
+            pins_len, 1,
+            "le commentaire du projet B ne doit pas avoir été supprimé"
+        );
+    })
+    .await;
+    drop(tmp);
+}
+
+#[tokio::test]
+#[serial]
 async fn admin_moderates_a_message() {
     std::env::set_var("ADMIN_USER", "admin");
     std::env::set_var("ADMIN_PASS", "s3cret");
