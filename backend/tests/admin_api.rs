@@ -338,6 +338,13 @@ async fn deploy_creates_version_and_preview_serves_html() {
         assert_eq!(preview.status_code(), 200);
         assert!(preview.text().contains("<h1>v1</h1>"));
         assert_eq!(preview.header("cache-control"), "no-store");
+        assert_eq!(
+            preview
+                .headers()
+                .get("content-security-policy")
+                .map(|v| v.to_str().unwrap()),
+            Some("frame-ancestors 'self'"),
+        );
     })
     .await;
     // Garder `tmp` vivant jusqu'ici (drop après le test, pas avant).

@@ -414,6 +414,10 @@ async fn preview_version(
                 axum::http::header::CONTENT_TYPE,
                 axum::http::HeaderValue::from_static("text/html; charset=utf-8"),
             ),
+            (
+                axum::http::header::CONTENT_SECURITY_POLICY,
+                axum::http::HeaderValue::from_static("frame-ancestors 'self'"),
+            ),
         ],
         html,
     )
