@@ -6,7 +6,7 @@ use serde::de;
 use serde::{Deserialize, Deserializer, Serialize};
 use utoipa::ToSchema;
 
-use crate::models::_entities::{projects, versions};
+use crate::models::_entities::{comment_pins, comments, projects, versions};
 
 /// Item de liste — **sans PIN** (invariant §9.2 : structurellement absent).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -31,6 +31,7 @@ pub struct VersionItem {
     pub created_at: String,
     pub is_active: bool,
     pub release_notes: Option<String>,
+    pub comment_count: i32,
 }
 
 /// Détail — expose le PIN (copiable en admin uniquement, invariant §9.2).
@@ -217,7 +218,12 @@ pub fn to_list_item(m: &projects::Model, vers: &[versions::Model]) -> ProjectLis
 }
 
 /// Projet + ses versions → détail (avec PIN).
-pub fn to_detail(m: projects::Model, vers: Vec<versions::Model>) -> ProjectDetail {
+/// `counts` : nombre de commentaires par `version_id` (issu de `CommentsService`).
+pub fn to_detail(
+    m: projects::Model,
+    vers: Vec<versions::Model>,
+    counts: &std::collections::HashMap<i32, i32>,
+) -> ProjectDetail {
     let active = m.active_version_id;
     let versions = vers
         .into_iter()
@@ -227,6 +233,7 @@ pub fn to_detail(m: projects::Model, vers: Vec<versions::Model>) -> ProjectDetai
             created_at: v.created_at.to_rfc3339(),
             is_active: Some(v.id) == active,
             release_notes: v.release_notes,
+            comment_count: counts.get(&v.id).copied().unwrap_or(0),
         })
         .collect();
     ProjectDetail {
@@ -248,6 +255,129 @@ pub fn to_public_meta(m: &projects::Model) -> PublicMeta {
         brand_name: m.brand_name.clone(),
         code_enabled: m.code_enabled,
         comments_enabled: m.comments_enabled,
+    }
+}
+
+// ---- Commentaires ancrés (surface /c) -----------------------------------
+
+/// Corps de `POST /c/{slug}/comments` — crée un pin + 1ᵉʳ message.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct CreatePinReq {
+    /// Descripteur d'ancrage JSON opaque (le serveur ne l'interprète jamais).
+    pub anchor: String,
+    pub author_name: String,
+    pub body: String,
+}
+
+/// Corps de `POST /c/{slug}/comments/pins/{pin}/replies`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct ReplyReq {
+    pub author_name: String,
+    pub body: String,
+}
+
+/// Corps de `PUT /c/{slug}/comments/messages/{id}`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct EditMessageReq {
+    pub body: String,
+}
+
+/// Message d'un fil, vu par le visiteur (jamais d'`owner_token`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct CommentMessage {
+    pub id: i32,
+    pub author_name: String,
+    pub body: String,
+    pub created_at: String,
+    pub updated_at: String,
+    /// `true` si l'appelant courant est l'auteur (peut éditer/supprimer).
+    pub editable: bool,
+}
+
+/// Pin + son fil, vu par le visiteur.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct CommentPin {
+    pub id: i32,
+    pub anchor: String,
+    pub created_at: String,
+    pub messages: Vec<CommentMessage>,
+}
+
+/// Réponse de `GET /c/{slug}/comments`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct CommentList {
+    pub version: i32,
+    pub pins: Vec<CommentPin>,
+}
+
+/// Message vu par l'admin (lecture seule — pas d'`editable`, jamais d'`owner_token`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct AdminCommentMessage {
+    pub id: i32,
+    pub author_name: String,
+    pub body: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct AdminCommentPin {
+    pub id: i32,
+    pub anchor: String,
+    pub created_at: String,
+    pub messages: Vec<AdminCommentMessage>,
+}
+
+/// Réponse de `GET /api/projects/{id}/versions/{n}/comments`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct AdminCommentList {
+    pub version: i32,
+    pub pins: Vec<AdminCommentPin>,
+}
+
+/// Pin + messages → DTO visiteur. `editable` = l'appelant est l'auteur du message.
+pub fn to_comment_pin(
+    pin: &comment_pins::Model,
+    messages: &[comments::Model],
+    caller_owner_token: &str,
+) -> CommentPin {
+    CommentPin {
+        id: pin.id,
+        anchor: pin.anchor.clone(),
+        created_at: pin.created_at.to_rfc3339(),
+        messages: messages
+            .iter()
+            .map(|m| CommentMessage {
+                id: m.id,
+                author_name: m.author_name.clone(),
+                body: m.body.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                updated_at: m.updated_at.to_rfc3339(),
+                editable: m.owner_token == caller_owner_token,
+            })
+            .collect(),
+    }
+}
+
+/// Pin + messages → DTO admin (lecture seule).
+pub fn to_admin_comment_pin(
+    pin: &comment_pins::Model,
+    messages: &[comments::Model],
+) -> AdminCommentPin {
+    AdminCommentPin {
+        id: pin.id,
+        anchor: pin.anchor.clone(),
+        created_at: pin.created_at.to_rfc3339(),
+        messages: messages
+            .iter()
+            .map(|m| AdminCommentMessage {
+                id: m.id,
+                author_name: m.author_name.clone(),
+                body: m.body.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                updated_at: m.updated_at.to_rfc3339(),
+            })
+            .collect(),
     }
 }
 
@@ -286,7 +416,12 @@ mod tests {
 
     #[test]
     fn detail_does_serialize_pin() {
-        let json = serde_json::to_string(&to_detail(sample_model(), vec![])).unwrap();
+        let json = serde_json::to_string(&to_detail(
+            sample_model(),
+            vec![],
+            &std::collections::HashMap::new(),
+        ))
+        .unwrap();
         assert!(
             json.contains("424242"),
             "le détail doit exposer le PIN (copiable en admin)"
@@ -338,7 +473,7 @@ mod tests {
             release_notes: Some("# Notes".to_string()),
             created_at: chrono::Utc::now().into(),
         };
-        let detail = to_detail(sample_model(), vec![v]);
+        let detail = to_detail(sample_model(), vec![v], &std::collections::HashMap::new());
         assert_eq!(detail.versions[0].release_notes.as_deref(), Some("# Notes"));
     }
 
@@ -353,7 +488,103 @@ mod tests {
 
     #[test]
     fn detail_carries_comments_enabled() {
-        let json = serde_json::to_string(&to_detail(sample_model(), vec![])).unwrap();
+        let json = serde_json::to_string(&to_detail(
+            sample_model(),
+            vec![],
+            &std::collections::HashMap::new(),
+        ))
+        .unwrap();
         assert!(json.contains("comments_enabled"));
+    }
+
+    #[test]
+    fn comment_pin_hides_owner_token_and_computes_editable() {
+        use crate::models::_entities::{comment_pins, comments};
+        let now = chrono::Utc::now();
+        let pin = comment_pins::Model {
+            id: 7,
+            version_id: 1,
+            owner_token: "01OWNERAAAAAAAAAAAAAAAAAAA".to_string(),
+            anchor: r#"{"v":1}"#.to_string(),
+            status: "open".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let msg = comments::Model {
+            id: 9,
+            pin_id: 7,
+            owner_token: "01OWNERAAAAAAAAAAAAAAAAAAA".to_string(),
+            author_name: "Léa".to_string(),
+            body: "hi".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let dto = to_comment_pin(&pin, &[msg], "01OWNERAAAAAAAAAAAAAAAAAAA");
+        let json = serde_json::to_string(&dto).unwrap();
+        assert!(
+            !json.contains("owner_token"),
+            "owner_token ne doit jamais sortir"
+        );
+        assert!(!json.contains("01OWNERAAAAAAAAAAAAAAAAAAA"));
+        assert!(dto.messages[0].editable, "auteur courant ⇒ editable");
+    }
+
+    #[test]
+    fn comment_pin_not_editable_for_other_caller() {
+        use crate::models::_entities::{comment_pins, comments};
+        let now = chrono::Utc::now();
+        let pin = comment_pins::Model {
+            id: 7,
+            version_id: 1,
+            owner_token: "A".to_string(),
+            anchor: "{}".to_string(),
+            status: "open".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let msg = comments::Model {
+            id: 9,
+            pin_id: 7,
+            owner_token: "A".to_string(),
+            author_name: "Léa".to_string(),
+            body: "hi".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let dto = to_comment_pin(&pin, &[msg], "B");
+        assert!(!dto.messages[0].editable);
+    }
+
+    #[test]
+    fn admin_comment_pin_hides_owner_token() {
+        use crate::models::_entities::{comment_pins, comments};
+        let now = chrono::Utc::now();
+        let pin = comment_pins::Model {
+            id: 1,
+            version_id: 1,
+            owner_token: "SECRET".to_string(),
+            anchor: "{}".to_string(),
+            status: "open".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let msg = comments::Model {
+            id: 2,
+            pin_id: 1,
+            owner_token: "SECRET".to_string(),
+            author_name: "Max".to_string(),
+            body: "y".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        };
+        let json = serde_json::to_string(&to_admin_comment_pin(&pin, &[msg])).unwrap();
+        assert!(!json.contains("SECRET") && !json.contains("owner_token"));
+        assert!(!json.contains("editable"), "pas d'editable côté admin");
     }
 }

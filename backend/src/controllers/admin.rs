@@ -66,7 +66,11 @@ async fn detail(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::dto::to_detail(project, vers))
+    format::json(crate::dto::to_detail(
+        project,
+        vers,
+        &std::collections::HashMap::new(),
+    ))
 }
 
 /// POST /api/projects — crée un nouveau projet.
@@ -97,7 +101,11 @@ async fn create(
         })
         .await
         .map_err(into_response)?;
-    format::json(crate::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(
+        project,
+        vec![],
+        &std::collections::HashMap::new(),
+    ))
 }
 
 /// PUT /api/projects/{id} — met à jour le nom ou le brand_name d'un projet.
@@ -160,7 +168,11 @@ async fn update(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::dto::to_detail(saved, vers))
+    format::json(crate::dto::to_detail(
+        saved,
+        vers,
+        &std::collections::HashMap::new(),
+    ))
 }
 
 /// DELETE /api/projects/{id} — supprime un projet et ses versions.
@@ -224,7 +236,11 @@ async fn set_code(
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let project = svc.set_code(id, &body.pin).await.map_err(into_response)?;
-    format::json(crate::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(
+        project,
+        vec![],
+        &std::collections::HashMap::new(),
+    ))
 }
 
 /// DELETE /api/projects/{id}/code — désactive le code d'accès (PIN effacé).
@@ -243,7 +259,11 @@ async fn clear_code(
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let project = svc.clear_code(id).await.map_err(into_response)?;
-    format::json(crate::dto::to_detail(project, vec![]))
+    format::json(crate::dto::to_detail(
+        project,
+        vec![],
+        &std::collections::HashMap::new(),
+    ))
 }
 
 /// POST /api/projects/{id}/deploy — déploie un nouveau HTML, crée une version.
