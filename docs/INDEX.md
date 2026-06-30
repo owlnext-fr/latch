@@ -36,6 +36,7 @@
 - [x] Swagger UI sous `/api-docs` en dev uniquement — Migration React Plan 1 — 2026-06-25
 - [x] API JSON re-préfixée sous `/api/*` (depuis `/admin/*`) + conversions libres `dto::to_list_item`/`to_detail` — Phase 3 — 2026-06-24
 - [x] `web::spa_dist_dir()` + `nest_service("/admin", ServeDir + ServeFile fallback)` dans `after_routes` — serving SPA sous `/admin` avec fallback `index.html` — Phase 3 — 2026-06-24
+- [x] Redirection racine `GET /` → `/admin` (307 temporaire, `root_redirect` dans `after_routes`) — remplace la page welcome Loco (dev) / 404 (prod) — micro-feature — 2026-06-30
 - [x] `LATCH_BODY_LIMIT` — taille max body configurable (Loco `limit_payload`, défaut 5 Mo, `disable` possible) + test de régression deploy > 2 Mo — Migration React Plan 3 (post-validation) — 2026-06-25
 - [x] `ProjectListItem` enrichi : `active_version_n` + `version_count` (retrait `active_version_id`), service `list_with_versions` (pas de N+1), `openapi.json`/`schema.d.ts` régénérés — Plan 2 (post-validation) — 2026-06-25
 

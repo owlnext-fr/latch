@@ -19,6 +19,13 @@ use tower_http::services::{ServeDir, ServeFile};
 #[allow(unused_imports)]
 use crate::{controllers, tasks};
 
+/// La racine `/` n'a pas de surface propre : on renvoie vers l'admin, seul point
+/// d'entrée humain. Redirection **temporaire** (307) — non mise en cache dur, donc
+/// réversible si `/` doit un jour servir autre chose (landing, etc.).
+async fn root_redirect() -> axum::response::Redirect {
+    axum::response::Redirect::temporary("/admin")
+}
+
 /// robots.txt servi par l'app (le « hide » ne dépend pas d'un proxy externe).
 async fn robots_txt() -> impl axum::response::IntoResponse {
     (
@@ -118,6 +125,10 @@ impl Hooks for App {
         crate::web::deploy_token(ctx)?;
         let mcp = crate::mcp::service(ctx)?;
         let router = router.nest_service("/mcp", mcp);
+
+        // Racine → admin (point d'entrée humain). Évite la page welcome Loco en dev
+        // et le 404 en prod sur `/`.
+        let router = router.route("/", get(root_redirect));
 
         // robots.txt + X-Robots-Tag : « hide » porté par l'app (contrat §9 « Hide this thing »).
         let router = router.route("/robots.txt", get(robots_txt));

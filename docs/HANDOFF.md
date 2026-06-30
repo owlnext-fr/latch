@@ -4,6 +4,29 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Micro-feature : redirection `GET /` → `/admin`
+
+### Dernière chose faite
+Ajout d'une **redirection `GET / → /admin`** (307 temporaire). Avant : `/` tombait sur le
+fallback Loco (page welcome en dev, 404 en prod). Implémentation minimale :
+- `backend/src/app.rs` : handler `root_redirect()` (`axum::response::Redirect::temporary("/admin")`)
+  + route `router.route("/", get(root_redirect))` dans `after_routes` (à côté de `robots.txt`).
+- `backend/tests/hardening.rs` : test `root_redirects_to_admin` (assert 307 + `Location: /admin`).
+  axum-test ne suit pas les redirections (`Policy::none`) → on observe le 307 brut.
+
+**Gate** : `cargo fmt` OK, `clippy --all-targets -D warnings` 0 issue, `cargo nextest run` **147 passed**.
+
+### Trucs en suspens
+- Commit + push à faire (backend-only, aucun impact frontend).
+- 307 **temporaire** choisi à dessein (réversible si `/` doit un jour servir une landing) — ne pas
+  passer en 308 sans raison (cache navigateur dur).
+
+### Notes pour future Claude
+- La racine `/` n'était capturée par aucune route (les contrôleurs `home` sont préfixés `/api`,
+  l'admin est `nest_service("/admin", …)`). La route `/` est donc libre — pas de conflit axum au boot.
+
+---
+
 ## 2026-06-30 — Resync post-release v1.1.0 + nettoyage repo
 
 ### Dernière chose faite

@@ -26,6 +26,27 @@ async fn robots_txt_is_served() {
 
 #[tokio::test]
 #[serial]
+async fn root_redirects_to_admin() {
+    request::<App, _, _>(|request, _ctx| async move {
+        // axum-test ne suit pas les redirections (Policy::none) → on observe le 307 brut.
+        let res = request.get("/").await;
+        assert_eq!(
+            res.status_code(),
+            axum::http::StatusCode::TEMPORARY_REDIRECT,
+            "GET / doit répondre 307 (redirection temporaire), pas un 404/welcome Loco"
+        );
+        let location = res
+            .headers()
+            .get("location")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert_eq!(location, "/admin", "GET / doit rediriger vers /admin");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn x_robots_tag_on_admin() {
     request::<App, _, _>(|request, _ctx| async move {
         let res = request.get("/admin").await;
