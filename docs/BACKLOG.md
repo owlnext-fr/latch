@@ -252,3 +252,9 @@ future : purge explicite en transaction dans `delete_project`/`delete_version`.
   garde inatteignable `if !messages.is_empty()` dans `list_pins` ; durcir quelques tests (assertion DB sur
   `delete_pin`, re-query sur edit). Aucun n'affecte la correction.
 - **Nettoyage orphelins** (déjà noté) : confirmé bénin (AUTOINCREMENT SQLite → pas de réutilisation d'id).
+
+## Write-error UX pour les mutations visiteur (nettoyage post-revue – 2026-06-30)
+`createPin`, `addReply`, `editMessage`, `deleteMessage`, `deletePin` n'ont aucun `onError` côté frontend visiteur.
+La clé i18n `comment.error.network` existe déjà dans les deux locales mais n'est câblée nulle part.
+Déféré consciemment en v1 (erreur réseau rare sur un prototype interne). À reprendre dans un follow-up :
+brancher chaque mutation sur un toast (sonner) ou une erreur inline via `onError` dans `use-comments.ts`.

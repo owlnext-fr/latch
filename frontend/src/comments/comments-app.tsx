@@ -87,7 +87,7 @@ function CommentsInner({ slug, frame }: Readonly<CommentsAppProps>) {
         onPick={onPick}
         onPinClick={setActivePinId}
         activePinId={activePinId}
-        countOf={(id) => pins.find((p) => p.id === id)?.messages.length ?? 1}
+        countOf={(id) => pins.find((p) => p.id === id)?.messages.length ?? 0}
       />
       {pick.mode === 'compose' && (
         <ComposePopup

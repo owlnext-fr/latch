@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { render, screen } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
@@ -16,6 +16,10 @@ beforeEach(() => {
       HttpResponse.json({ version: 1, pins: [] }, { status: 200 }),
     ),
   )
+})
+
+afterEach(() => {
+  document.body.querySelector('iframe')?.remove()
 })
 
 describe('CommentsMount', () => {

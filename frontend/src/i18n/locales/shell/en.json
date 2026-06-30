@@ -6,7 +6,6 @@
   "comment.bar.toggle_pins": "Show comments",
   "comment.bar.list": "My comments",
   "comment.bar.count": "{{count}} comment",
-  "comment.bar.count_plural": "{{count}} comments",
   "comment.bar.count_one": "{{count}} comment",
   "comment.bar.count_other": "{{count}} comments",
   "comment.compose.name_label": "Your name",

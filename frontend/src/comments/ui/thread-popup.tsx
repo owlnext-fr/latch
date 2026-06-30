@@ -123,7 +123,7 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
           </div>
         </div>
       )}
-      {capabilities.canEditOwn && (
+      {capabilities.canEditOwn && (pin.messages[0]?.editable ?? false) && (
         <div className="flex justify-end">
           <Button type="button" variant="ghost" size="sm" onClick={onDeletePin}>
             {t('comment.thread.delete_thread')}

@@ -26,13 +26,11 @@ export function OverlayLayer({
   const [hover, setHover] = useState<ShellRect | null>(null)
 
   function onMove(e: MouseEvent) {
-    if (!pickMode) return
     const el = picker.getElementAt(e.clientX, e.clientY)
     setHover(el ? picker.toShellRect(el) : null)
   }
 
   function onClick(e: MouseEvent) {
-    if (!pickMode) return
     const el = picker.getElementAt(e.clientX, e.clientY)
     if (!el) return
     const shellRect = picker.toShellRect(el)
