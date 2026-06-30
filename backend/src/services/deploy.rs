@@ -109,6 +109,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: false,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap()

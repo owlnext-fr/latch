@@ -19,6 +19,8 @@ pub struct CreateProject {
     pub code_enabled: bool,
     /// PIN explicite ; si `None` et `code_enabled`, un PIN est auto-généré.
     pub pin: Option<String>,
+    /// Active les commentaires sur le projet (défaut sécurité-aware posé par l'appelant).
+    pub comments_enabled: bool,
 }
 
 pub struct ProjectsService {
@@ -51,6 +53,7 @@ impl ProjectsService {
             code_enabled: Set(input.code_enabled),
             pin: Set(pin_value),
             brand_name: Set(input.brand_name),
+            comments_enabled: Set(input.comments_enabled),
             ..Default::default()
         }
         .insert(&self.db)
@@ -154,6 +157,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: true,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap();
@@ -174,6 +178,7 @@ mod tests {
                 brand_name: Some("ACME".to_string()),
                 code_enabled: false,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap();
@@ -191,6 +196,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: true,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap_err();
@@ -213,6 +219,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: false,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap();
@@ -235,6 +242,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: false,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap();
@@ -251,6 +259,7 @@ mod tests {
                 brand_name: None,
                 code_enabled: true,
                 pin: Some("135790".to_string()),
+                comments_enabled: false,
             })
             .await
             .unwrap();
@@ -268,9 +277,26 @@ mod tests {
                 brand_name: None,
                 code_enabled: false,
                 pin: None,
+                comments_enabled: false,
             })
             .await
             .unwrap();
         assert!(s.verify_code(&p.slug, "whatever").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn create_stores_comments_enabled() {
+        let s = svc(test_db().await);
+        let p = s
+            .create(CreateProject {
+                name: "P".to_string(),
+                brand_name: None,
+                code_enabled: true,
+                pin: Some("424242".to_string()),
+                comments_enabled: true,
+            })
+            .await
+            .unwrap();
+        assert!(p.comments_enabled);
     }
 }

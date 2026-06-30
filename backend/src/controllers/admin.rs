@@ -86,12 +86,14 @@ async fn create(
     Json(body): Json<CreateProjectReq>,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
+    let comments_enabled = body.comments_enabled.unwrap_or(body.code_enabled);
     let project = svc
         .create(CreateProject {
             name: body.name,
             brand_name: body.brand_name,
             code_enabled: body.code_enabled,
             pin: body.pin,
+            comments_enabled,
         })
         .await
         .map_err(into_response)?;
@@ -138,6 +140,9 @@ async fn update(
     }
     if let Some(brand) = body.brand_name {
         active.brand_name = Set(brand);
+    }
+    if let Some(ce) = body.comments_enabled {
+        active.comments_enabled = Set(ce);
     }
     // updated_at posé manuellement (le hook before_save ne s'applique pas hors tx, cf. QUIRKS).
     active.updated_at = Set(chrono::Utc::now().into());

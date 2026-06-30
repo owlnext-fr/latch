@@ -277,6 +277,7 @@ mod tests {
                 } else {
                     None
                 },
+                comments_enabled: false,
             })
             .await
             .unwrap()

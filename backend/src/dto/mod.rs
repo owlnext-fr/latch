@@ -21,6 +21,7 @@ pub struct ProjectListItem {
     pub active_version_n: Option<i32>,
     /// Nombre total de versions du projet.
     pub version_count: i32,
+    pub comments_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -42,6 +43,7 @@ pub struct ProjectDetail {
     pub pin: Option<String>,
     pub brand_name: Option<String>,
     pub active_version_id: Option<i32>,
+    pub comments_enabled: bool,
     pub versions: Vec<VersionItem>,
 }
 
@@ -52,6 +54,7 @@ pub struct ProjectDetail {
 pub struct PublicMeta {
     pub brand_name: Option<String>,
     pub code_enabled: bool,
+    pub comments_enabled: bool,
 }
 
 /// Réponse de `GET /c/{slug}/notes` — notes de la version active, rendues côté client.
@@ -77,6 +80,8 @@ pub struct CreateProjectReq {
     pub code_enabled: bool,
     #[serde(default)]
     pub pin: Option<String>,
+    #[serde(default)]
+    pub comments_enabled: Option<bool>,
 }
 
 fn default_true() -> bool {
@@ -133,6 +138,8 @@ pub struct UpdateProjectReq {
     #[serde(default, deserialize_with = "deserialize_optional_optional_string")]
     #[schema(value_type = Option<String>, nullable)]
     pub brand_name: Option<Option<String>>,
+    #[serde(default)]
+    pub comments_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -205,6 +212,7 @@ pub fn to_list_item(m: &projects::Model, vers: &[versions::Model]) -> ProjectLis
         brand_name: m.brand_name.clone(),
         active_version_n,
         version_count: vers.len() as i32,
+        comments_enabled: m.comments_enabled,
     }
 }
 
@@ -229,6 +237,7 @@ pub fn to_detail(m: projects::Model, vers: Vec<versions::Model>) -> ProjectDetai
         pin: m.pin,
         brand_name: m.brand_name,
         active_version_id: m.active_version_id,
+        comments_enabled: m.comments_enabled,
         versions,
     }
 }
@@ -238,6 +247,7 @@ pub fn to_public_meta(m: &projects::Model) -> PublicMeta {
     PublicMeta {
         brand_name: m.brand_name.clone(),
         code_enabled: m.code_enabled,
+        comments_enabled: m.comments_enabled,
     }
 }
 
@@ -330,5 +340,20 @@ mod tests {
         };
         let detail = to_detail(sample_model(), vec![v]);
         assert_eq!(detail.versions[0].release_notes.as_deref(), Some("# Notes"));
+    }
+
+    #[test]
+    fn create_req_comments_enabled_defaults_none() {
+        let req: CreateProjectReq = serde_json::from_str(r#"{"name":"X"}"#).unwrap();
+        assert_eq!(
+            req.comments_enabled, None,
+            "absent ⇒ None (handler dérive du code)"
+        );
+    }
+
+    #[test]
+    fn detail_carries_comments_enabled() {
+        let json = serde_json::to_string(&to_detail(sample_model(), vec![])).unwrap();
+        assert!(json.contains("comments_enabled"));
     }
 }
