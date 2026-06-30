@@ -13,8 +13,8 @@ use crate::controllers::auth::AdminAuth;
 use crate::controllers::error::into_response;
 use crate::controllers::middleware::origin::require_same_origin;
 use crate::dto::{
-    ActivateResponse, CreateProjectReq, DeployReq, DeployResponse, OkResponse, ProjectDetail,
-    ProjectListItem, SetCodeReq, UpdateProjectReq,
+    ActivateResponse, AdminCommentList, CreateProjectReq, DeployReq, DeployResponse, OkResponse,
+    ProjectDetail, ProjectListItem, SetCodeReq, UpdateProjectReq,
 };
 use crate::models::_entities::versions;
 use crate::services::deploy::DeployService;
@@ -66,11 +66,13 @@ async fn detail(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::dto::to_detail(
-        project,
-        vers,
-        &std::collections::HashMap::new(),
-    ))
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let version_ids: Vec<i32> = vers.iter().map(|v| v.id).collect();
+    let counts = svc
+        .count_comments_by_version(&version_ids)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_detail(project, vers, &counts))
 }
 
 /// POST /api/projects — crée un nouveau projet.
@@ -168,11 +170,13 @@ async fn update(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    format::json(crate::dto::to_detail(
-        saved,
-        vers,
-        &std::collections::HashMap::new(),
-    ))
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let version_ids: Vec<i32> = vers.iter().map(|v| v.id).collect();
+    let counts = svc
+        .count_comments_by_version(&version_ids)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_detail(saved, vers, &counts))
 }
 
 /// DELETE /api/projects/{id} — supprime un projet et ses versions.
@@ -445,6 +449,63 @@ async fn preview_version(
         .into_response())
 }
 
+/// GET /api/projects/{id}/versions/{n}/comments — tous les fils de la version (lecture seule).
+#[utoipa::path(
+    get, path = "/api/projects/{id}/versions/{n}/comments", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("n" = i32, Path, description = "Numéro de version")),
+    responses((status = 200, description = "Commentaires de la version", body = AdminCommentList),
+              (status = 404, description = "Version inconnue"),
+              (status = 401, description = "Non authentifié"))
+)]
+#[debug_handler]
+async fn list_comments(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, n)): Path<(i32, i32)>,
+) -> Result<Response> {
+    let version = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .filter(versions::Column::N.eq(n))
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let rows = svc
+        .list_for_version(version.id)
+        .await
+        .map_err(into_response)?;
+    let pins = rows
+        .iter()
+        .map(|pwm| crate::dto::to_admin_comment_pin(&pwm.pin, &pwm.messages))
+        .collect();
+    format::json(crate::dto::AdminCommentList { version: n, pins })
+}
+
+/// DELETE /api/projects/{id}/comments/messages/{cid} — modération (vérifie l'appartenance au projet).
+#[utoipa::path(
+    delete, path = "/api/projects/{id}/comments/messages/{cid}", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("cid" = i32, Path, description = "Identifiant du message")),
+    responses((status = 200, description = "Message supprimé", body = OkResponse),
+              (status = 404, description = "Message hors projet ou inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
+#[debug_handler]
+async fn moderate_delete_comment(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, cid)): Path<(i32, i32)>,
+) -> Result<Response> {
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    svc.moderate_delete_message(id, cid)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::OkResponse::ok())
+}
+
 /// Routes de l'adaptateur admin. Les endpoints de lecture (GET) sont publics après
 /// auth ; les mutations (POST/PUT/DELETE) sont également protégées par la garde
 /// `require_same_origin` (contrat §4/§9.6 — CSRF complémentaire au SameSite).
@@ -492,6 +553,11 @@ pub fn routes() -> Routes {
         .add(
             "/projects/{id}/versions/{n}",
             axum::routing::delete(delete_version).layer(from_fn(require_same_origin)),
+        )
+        .add("/projects/{id}/versions/{n}/comments", get(list_comments))
+        .add(
+            "/projects/{id}/comments/messages/{cid}",
+            axum::routing::delete(moderate_delete_comment).layer(from_fn(require_same_origin)),
         )
         // Preview : GET idempotent, pas de garde Origin, mais derrière AdminAuth.
         .add("/projects/{id}/versions/{n}/preview", get(preview_version))

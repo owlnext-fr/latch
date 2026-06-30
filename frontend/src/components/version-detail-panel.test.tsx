@@ -20,6 +20,7 @@ const base: VersionItem = {
   n: 2,
   created_at: '2024-01-15T10:00:00Z',
   is_active: true,
+  comment_count: 0,
 }
 
 describe('VersionDetailPanel', () => {

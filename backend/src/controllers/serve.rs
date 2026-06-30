@@ -415,6 +415,13 @@ fn comments_json_response(value: impl serde::Serialize) -> Result<Response> {
 }
 
 /// GET /c/{slug}/comments — mes pins+fils de la version active.
+#[utoipa::path(
+    get, path = "/c/{slug}/comments", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet")),
+    responses((status = 200, description = "Liste des commentaires du visiteur", body = crate::dto::CommentList),
+              (status = 403, description = "Projet verrouillé"),
+              (status = 404, description = "Projet inconnu ou commentaires désactivés"))
+)]
 #[debug_handler]
 pub(crate) async fn list_comments(
     State(ctx): State<AppContext>,
@@ -449,6 +456,14 @@ pub(crate) async fn list_comments(
 }
 
 /// POST /c/{slug}/comments — crée un pin + 1ᵉʳ message ; pose le cookie d'identité si absent.
+#[utoipa::path(
+    post, path = "/c/{slug}/comments", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet")),
+    request_body = crate::dto::CreatePinReq,
+    responses((status = 200, description = "Pin créé avec son premier message", body = crate::dto::CommentPin),
+              (status = 403, description = "Projet verrouillé ou header manquant"),
+              (status = 404, description = "Projet inconnu ou commentaires désactivés"))
+)]
 #[debug_handler]
 pub(crate) async fn create_comment(
     State(ctx): State<AppContext>,
@@ -497,6 +512,15 @@ fn require_owner(ctx: &AppContext, headers: &HeaderMap) -> Result<String> {
 }
 
 /// POST /c/{slug}/comments/pins/{pin}/replies — ajoute un message à un pin existant.
+#[utoipa::path(
+    post, path = "/c/{slug}/comments/pins/{pin}/replies", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet"),
+           ("pin" = i32, Path, description = "Identifiant du pin")),
+    request_body = crate::dto::ReplyReq,
+    responses((status = 200, description = "Message ajouté", body = crate::dto::CommentMessage),
+              (status = 403, description = "Projet verrouillé ou header manquant"),
+              (status = 404, description = "Pin inconnu ou étranger"))
+)]
 #[debug_handler]
 pub(crate) async fn reply_comment(
     State(ctx): State<AppContext>,
@@ -524,6 +548,15 @@ pub(crate) async fn reply_comment(
 }
 
 /// PUT /c/{slug}/comments/messages/{id} — édite mon message.
+#[utoipa::path(
+    put, path = "/c/{slug}/comments/messages/{id}", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet"),
+           ("id" = i32, Path, description = "Identifiant du message")),
+    request_body = crate::dto::EditMessageReq,
+    responses((status = 200, description = "Message modifié", body = crate::dto::CommentMessage),
+              (status = 403, description = "Projet verrouillé ou header manquant"),
+              (status = 404, description = "Message inconnu ou étranger"))
+)]
 #[debug_handler]
 pub(crate) async fn edit_comment(
     State(ctx): State<AppContext>,
@@ -551,6 +584,14 @@ pub(crate) async fn edit_comment(
 }
 
 /// DELETE /c/{slug}/comments/messages/{id} — supprime mon message.
+#[utoipa::path(
+    delete, path = "/c/{slug}/comments/messages/{id}", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet"),
+           ("id" = i32, Path, description = "Identifiant du message")),
+    responses((status = 200, description = "Message supprimé", body = crate::dto::OkResponse),
+              (status = 403, description = "Projet verrouillé ou header manquant"),
+              (status = 404, description = "Message inconnu ou étranger"))
+)]
 #[debug_handler]
 pub(crate) async fn delete_comment(
     State(ctx): State<AppContext>,
@@ -569,6 +610,14 @@ pub(crate) async fn delete_comment(
 }
 
 /// DELETE /c/{slug}/comments/pins/{pin} — supprime mon pin entier.
+#[utoipa::path(
+    delete, path = "/c/{slug}/comments/pins/{pin}", tag = "serving",
+    params(("slug" = String, Path, description = "Slug public du projet"),
+           ("pin" = i32, Path, description = "Identifiant du pin")),
+    responses((status = 200, description = "Pin supprimé", body = crate::dto::OkResponse),
+              (status = 403, description = "Projet verrouillé ou header manquant"),
+              (status = 404, description = "Pin inconnu ou étranger"))
+)]
 #[debug_handler]
 pub(crate) async fn delete_comment_pin(
     State(ctx): State<AppContext>,

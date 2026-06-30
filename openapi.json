@@ -351,6 +351,58 @@
         }
       }
     },
+    "/api/projects/{id}/comments/messages/{cid}": {
+      "delete": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "DELETE /api/projects/{id}/comments/messages/{cid} — modération (vérifie l'appartenance au projet).",
+        "operationId": "moderate_delete_comment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "description": "Identifiant du message",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Message hors projet ou inconnu"
+          }
+        }
+      }
+    },
     "/api/projects/{id}/deploy": {
       "post": {
         "tags": [
@@ -507,6 +559,55 @@
         }
       }
     },
+    "/api/projects/{id}/versions/{n}/comments": {
+      "get": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "GET /api/projects/{id}/versions/{n}/comments — tous les fils de la version (lecture seule).",
+        "operationId": "list_comments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "Numéro de version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Commentaires de la version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCommentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Version inconnue"
+          }
+        }
+      }
+    },
     "/api/projects/{id}/versions/{n}/preview": {
       "get": {
         "tags": [
@@ -610,6 +711,300 @@
           }
         }
       }
+    },
+    "/c/{slug}/comments": {
+      "get": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "GET /c/{slug}/comments — mes pins+fils de la version active.",
+        "operationId": "list_comments",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des commentaires du visiteur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentList"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé"
+          },
+          "404": {
+            "description": "Projet inconnu ou commentaires désactivés"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "POST /c/{slug}/comments — crée un pin + 1ᵉʳ message ; pose le cookie d'identité si absent.",
+        "operationId": "create_comment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePinReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pin créé avec son premier message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentPin"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé ou header manquant"
+          },
+          "404": {
+            "description": "Projet inconnu ou commentaires désactivés"
+          }
+        }
+      }
+    },
+    "/c/{slug}/comments/messages/{id}": {
+      "put": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "PUT /c/{slug}/comments/messages/{id} — édite mon message.",
+        "operationId": "edit_comment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du message",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message modifié",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé ou header manquant"
+          },
+          "404": {
+            "description": "Message inconnu ou étranger"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "DELETE /c/{slug}/comments/messages/{id} — supprime mon message.",
+        "operationId": "delete_comment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du message",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé ou header manquant"
+          },
+          "404": {
+            "description": "Message inconnu ou étranger"
+          }
+        }
+      }
+    },
+    "/c/{slug}/comments/pins/{pin}": {
+      "delete": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "DELETE /c/{slug}/comments/pins/{pin} — supprime mon pin entier.",
+        "operationId": "delete_comment_pin",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pin",
+            "in": "path",
+            "description": "Identifiant du pin",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pin supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé ou header manquant"
+          },
+          "404": {
+            "description": "Pin inconnu ou étranger"
+          }
+        }
+      }
+    },
+    "/c/{slug}/comments/pins/{pin}/replies": {
+      "post": {
+        "tags": [
+          "serving"
+        ],
+        "summary": "POST /c/{slug}/comments/pins/{pin}/replies — ajoute un message à un pin existant.",
+        "operationId": "reply_comment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Slug public du projet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pin",
+            "in": "path",
+            "description": "Identifiant du pin",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message ajouté",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Projet verrouillé ou header manquant"
+          },
+          "404": {
+            "description": "Pin inconnu ou étranger"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -631,6 +1026,185 @@
           }
         }
       },
+      "AdminCommentList": {
+        "type": "object",
+        "description": "Réponse de `GET /api/projects/{id}/versions/{n}/comments`.",
+        "required": [
+          "version",
+          "pins"
+        ],
+        "properties": {
+          "pins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCommentPin"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AdminCommentMessage": {
+        "type": "object",
+        "description": "Message vu par l'admin (lecture seule — pas d'`editable`, jamais d'`owner_token`).",
+        "required": [
+          "id",
+          "author_name",
+          "body",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminCommentPin": {
+        "type": "object",
+        "required": [
+          "id",
+          "anchor",
+          "created_at",
+          "messages"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCommentMessage"
+            }
+          }
+        }
+      },
+      "CommentList": {
+        "type": "object",
+        "description": "Réponse de `GET /c/{slug}/comments`.",
+        "required": [
+          "version",
+          "pins"
+        ],
+        "properties": {
+          "pins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentPin"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CommentMessage": {
+        "type": "object",
+        "description": "Message d'un fil, vu par le visiteur (jamais d'`owner_token`).",
+        "required": [
+          "id",
+          "author_name",
+          "body",
+          "created_at",
+          "updated_at",
+          "editable"
+        ],
+        "properties": {
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean",
+            "description": "`true` si l'appelant courant est l'auteur (peut éditer/supprimer)."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "CommentPin": {
+        "type": "object",
+        "description": "Pin + son fil, vu par le visiteur.",
+        "required": [
+          "id",
+          "anchor",
+          "created_at",
+          "messages"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentMessage"
+            }
+          }
+        }
+      },
+      "CreatePinReq": {
+        "type": "object",
+        "description": "Corps de `POST /c/{slug}/comments` — crée un pin + 1ᵉʳ message.",
+        "required": [
+          "anchor",
+          "author_name",
+          "body"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "description": "Descripteur d'ancrage JSON opaque (le serveur ne l'interprète jamais)."
+          },
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
       "CreateProjectReq": {
         "type": "object",
         "required": [
@@ -645,6 +1219,12 @@
           },
           "code_enabled": {
             "type": "boolean"
+          },
+          "comments_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "name": {
             "type": "string"
@@ -695,6 +1275,18 @@
           }
         }
       },
+      "EditMessageReq": {
+        "type": "object",
+        "description": "Corps de `PUT /c/{slug}/comments/messages/{id}`.",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        }
+      },
       "LoginReq": {
         "type": "object",
         "required": [
@@ -730,6 +1322,7 @@
           "slug",
           "name",
           "code_enabled",
+          "comments_enabled",
           "versions"
         ],
         "properties": {
@@ -747,6 +1340,9 @@
             ]
           },
           "code_enabled": {
+            "type": "boolean"
+          },
+          "comments_enabled": {
             "type": "boolean"
           },
           "id": {
@@ -781,7 +1377,8 @@
           "slug",
           "name",
           "code_enabled",
-          "version_count"
+          "version_count",
+          "comments_enabled"
         ],
         "properties": {
           "active_version_n": {
@@ -799,6 +1396,9 @@
             ]
           },
           "code_enabled": {
+            "type": "boolean"
+          },
+          "comments_enabled": {
             "type": "boolean"
           },
           "id": {
@@ -822,7 +1422,8 @@
         "type": "object",
         "description": "Meta publique servie à la page de déverrouillage (`GET /api/public/{slug}`).\n**Sans PIN** (invariant §9.2 : structurellement absent) — `brand_name` est fait\npour être affiché publiquement sur la page de code.",
         "required": [
-          "code_enabled"
+          "code_enabled",
+          "comments_enabled"
         ],
         "properties": {
           "brand_name": {
@@ -833,6 +1434,25 @@
           },
           "code_enabled": {
             "type": "boolean"
+          },
+          "comments_enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReplyReq": {
+        "type": "object",
+        "description": "Corps de `POST /c/{slug}/comments/pins/{pin}/replies`.",
+        "required": [
+          "author_name",
+          "body"
+        ],
+        "properties": {
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
           }
         }
       },
@@ -877,6 +1497,12 @@
             ],
             "description": "`Option<Option<String>>` : absent ⇒ inchangé ; `null` ⇒ effacer ; valeur ⇒ définir.\nVu par OpenAPI comme une string nullable (`value_type` force le schéma)."
           },
+          "comments_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "name": {
             "type": [
               "string",
@@ -891,9 +1517,14 @@
           "id",
           "n",
           "created_at",
-          "is_active"
+          "is_active",
+          "comment_count"
         ],
         "properties": {
+          "comment_count": {
+            "type": "integer",
+            "format": "int32"
+          },
           "created_at": {
             "type": "string"
           },

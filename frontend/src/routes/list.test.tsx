@@ -20,6 +20,7 @@ const PROJECTS: ProjectListItem[] = [
     active_version_n: 2,
     version_count: 3,
     brand_name: null,
+    comments_enabled: false,
   },
   {
     id: 2,
@@ -29,6 +30,7 @@ const PROJECTS: ProjectListItem[] = [
     active_version_n: null,
     version_count: 0,
     brand_name: 'ACME',
+    comments_enabled: false,
   },
 ]
 

@@ -93,6 +93,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/comments/messages/{cid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** DELETE /api/projects/{id}/comments/messages/{cid} — modération (vérifie l'appartenance au projet). */
+        delete: operations["moderate_delete_comment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/deploy": {
         parameters: {
             query?: never;
@@ -138,6 +155,23 @@ export interface paths {
         put?: never;
         /** POST /api/projects/{id}/versions/{n}/activate — bascule le pointeur actif. */
         post: operations["activate_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/versions/{n}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/projects/{id}/versions/{n}/comments — tous les fils de la version (lecture seule). */
+        get: operations["list_comments"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -198,6 +232,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/c/{slug}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /c/{slug}/comments — mes pins+fils de la version active. */
+        get: operations["list_comments"];
+        put?: never;
+        /** POST /c/{slug}/comments — crée un pin + 1ᵉʳ message ; pose le cookie d'identité si absent. */
+        post: operations["create_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/c/{slug}/comments/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** PUT /c/{slug}/comments/messages/{id} — édite mon message. */
+        put: operations["edit_comment"];
+        post?: never;
+        /** DELETE /c/{slug}/comments/messages/{id} — supprime mon message. */
+        delete: operations["delete_comment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/c/{slug}/comments/pins/{pin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** DELETE /c/{slug}/comments/pins/{pin} — supprime mon pin entier. */
+        delete: operations["delete_comment_pin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/c/{slug}/comments/pins/{pin}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /c/{slug}/comments/pins/{pin}/replies — ajoute un message à un pin existant. */
+        post: operations["reply_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -208,9 +312,64 @@ export interface components {
             active_version_id: number;
             ok: boolean;
         };
+        /** @description Réponse de `GET /api/projects/{id}/versions/{n}/comments`. */
+        AdminCommentList: {
+            pins: components["schemas"]["AdminCommentPin"][];
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description Message vu par l'admin (lecture seule — pas d'`editable`, jamais d'`owner_token`). */
+        AdminCommentMessage: {
+            author_name: string;
+            body: string;
+            created_at: string;
+            /** Format: int32 */
+            id: number;
+            updated_at: string;
+        };
+        AdminCommentPin: {
+            anchor: string;
+            created_at: string;
+            /** Format: int32 */
+            id: number;
+            messages: components["schemas"]["AdminCommentMessage"][];
+        };
+        /** @description Réponse de `GET /c/{slug}/comments`. */
+        CommentList: {
+            pins: components["schemas"]["CommentPin"][];
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description Message d'un fil, vu par le visiteur (jamais d'`owner_token`). */
+        CommentMessage: {
+            author_name: string;
+            body: string;
+            created_at: string;
+            /** @description `true` si l'appelant courant est l'auteur (peut éditer/supprimer). */
+            editable: boolean;
+            /** Format: int32 */
+            id: number;
+            updated_at: string;
+        };
+        /** @description Pin + son fil, vu par le visiteur. */
+        CommentPin: {
+            anchor: string;
+            created_at: string;
+            /** Format: int32 */
+            id: number;
+            messages: components["schemas"]["CommentMessage"][];
+        };
+        /** @description Corps de `POST /c/{slug}/comments` — crée un pin + 1ᵉʳ message. */
+        CreatePinReq: {
+            /** @description Descripteur d'ancrage JSON opaque (le serveur ne l'interprète jamais). */
+            anchor: string;
+            author_name: string;
+            body: string;
+        };
         CreateProjectReq: {
             brand_name?: string | null;
             code_enabled?: boolean;
+            comments_enabled?: boolean | null;
             name: string;
             pin?: string | null;
         };
@@ -226,6 +385,10 @@ export interface components {
             /** Format: int32 */
             n: number;
         };
+        /** @description Corps de `PUT /c/{slug}/comments/messages/{id}`. */
+        EditMessageReq: {
+            body: string;
+        };
         LoginReq: {
             pass: string;
             user: string;
@@ -240,6 +403,7 @@ export interface components {
             active_version_id?: number | null;
             brand_name?: string | null;
             code_enabled: boolean;
+            comments_enabled: boolean;
             /** Format: int32 */
             id: number;
             name: string;
@@ -257,6 +421,7 @@ export interface components {
             active_version_n?: number | null;
             brand_name?: string | null;
             code_enabled: boolean;
+            comments_enabled: boolean;
             /** Format: int32 */
             id: number;
             name: string;
@@ -275,6 +440,12 @@ export interface components {
         PublicMeta: {
             brand_name?: string | null;
             code_enabled: boolean;
+            comments_enabled: boolean;
+        };
+        /** @description Corps de `POST /c/{slug}/comments/pins/{pin}/replies`. */
+        ReplyReq: {
+            author_name: string;
+            body: string;
         };
         SetCodeReq: {
             pin: string;
@@ -295,9 +466,12 @@ export interface components {
              *     Vu par OpenAPI comme une string nullable (`value_type` force le schéma).
              */
             brand_name?: string | null;
+            comments_enabled?: boolean | null;
             name?: string | null;
         };
         VersionItem: {
+            /** Format: int32 */
+            comment_count: number;
             created_at: string;
             /** Format: int32 */
             id: number;
@@ -659,6 +833,52 @@ export interface operations {
             };
         };
     };
+    moderate_delete_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Identifiant du message */
+                cid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message supprimé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin invalide (CSRF) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Message hors projet ou inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     deploy: {
         parameters: {
             query?: never;
@@ -799,6 +1019,45 @@ export interface operations {
             };
         };
     };
+    list_comments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Numéro de version */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Commentaires de la version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCommentList"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version inconnue */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     preview_version: {
         parameters: {
             query?: never;
@@ -888,6 +1147,248 @@ export interface operations {
             };
             /** @description Non authentifié */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_comments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste des commentaires du visiteur */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentList"];
+                };
+            };
+            /** @description Projet verrouillé */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projet inconnu ou commentaires désactivés */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePinReq"];
+            };
+        };
+        responses: {
+            /** @description Pin créé avec son premier message */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPin"];
+                };
+            };
+            /** @description Projet verrouillé ou header manquant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projet inconnu ou commentaires désactivés */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    edit_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+                /** @description Identifiant du message */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditMessageReq"];
+            };
+        };
+        responses: {
+            /** @description Message modifié */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentMessage"];
+                };
+            };
+            /** @description Projet verrouillé ou header manquant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Message inconnu ou étranger */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+                /** @description Identifiant du message */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Message supprimé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Projet verrouillé ou header manquant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Message inconnu ou étranger */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_comment_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+                /** @description Identifiant du pin */
+                pin: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pin supprimé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Projet verrouillé ou header manquant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pin inconnu ou étranger */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reply_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Slug public du projet */
+                slug: string;
+                /** @description Identifiant du pin */
+                pin: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyReq"];
+            };
+        };
+        responses: {
+            /** @description Message ajouté */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentMessage"];
+                };
+            };
+            /** @description Projet verrouillé ou header manquant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pin inconnu ou étranger */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

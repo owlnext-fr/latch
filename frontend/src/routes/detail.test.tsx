@@ -28,6 +28,7 @@ const PROJECT_DETAIL: ProjectDetail = {
   name: 'Mon Projet',
   slug: 'mon-projet-k7Qp2maZ',
   code_enabled: true,
+  comments_enabled: false,
   pin: '123456',
   active_version_id: 2,
   brand_name: 'ACME',
@@ -38,12 +39,14 @@ const PROJECT_DETAIL: ProjectDetail = {
       created_at: '2024-01-15T10:00:00Z',
       is_active: false,
       release_notes: '# Notes\n\n- x',
+      comment_count: 0,
     },
     {
       id: 11,
       n: 2,
       created_at: '2024-01-20T12:00:00Z',
       is_active: true,
+      comment_count: 0,
     },
   ],
 }
