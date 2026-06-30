@@ -403,6 +403,34 @@ pub fn to_admin_comment_pin(
 mod tests {
     use super::*;
 
+    fn sample_pin(owner: &str) -> crate::models::_entities::comment_pins::Model {
+        let now = chrono::Utc::now();
+        crate::models::_entities::comment_pins::Model {
+            id: 7,
+            version_id: 1,
+            owner_token: owner.to_string(),
+            anchor: "{}".to_string(),
+            status: "open".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        }
+    }
+
+    fn sample_msg(owner: &str, author: &str) -> crate::models::_entities::comments::Model {
+        let now = chrono::Utc::now();
+        crate::models::_entities::comments::Model {
+            id: 9,
+            pin_id: 7,
+            owner_token: owner.to_string(),
+            author_name: author.to_string(),
+            body: "hi".to_string(),
+            created_at: now.into(),
+            updated_at: now.into(),
+            deleted_at: None,
+        }
+    }
+
     fn sample_model() -> projects::Model {
         projects::Model {
             id: 1,
@@ -516,28 +544,8 @@ mod tests {
 
     #[test]
     fn comment_pin_hides_owner_token_and_computes_editable() {
-        use crate::models::_entities::{comment_pins, comments};
-        let now = chrono::Utc::now();
-        let pin = comment_pins::Model {
-            id: 7,
-            version_id: 1,
-            owner_token: "01OWNERAAAAAAAAAAAAAAAAAAA".to_string(),
-            anchor: r#"{"v":1}"#.to_string(),
-            status: "open".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
-        let msg = comments::Model {
-            id: 9,
-            pin_id: 7,
-            owner_token: "01OWNERAAAAAAAAAAAAAAAAAAA".to_string(),
-            author_name: "Léa".to_string(),
-            body: "hi".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
+        let pin = sample_pin("01OWNERAAAAAAAAAAAAAAAAAAA");
+        let msg = sample_msg("01OWNERAAAAAAAAAAAAAAAAAAA", "Léa");
         let dto = to_comment_pin(&pin, &[msg], "01OWNERAAAAAAAAAAAAAAAAAAA");
         let json = serde_json::to_string(&dto).unwrap();
         assert!(
@@ -550,56 +558,16 @@ mod tests {
 
     #[test]
     fn comment_pin_not_editable_for_other_caller() {
-        use crate::models::_entities::{comment_pins, comments};
-        let now = chrono::Utc::now();
-        let pin = comment_pins::Model {
-            id: 7,
-            version_id: 1,
-            owner_token: "A".to_string(),
-            anchor: "{}".to_string(),
-            status: "open".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
-        let msg = comments::Model {
-            id: 9,
-            pin_id: 7,
-            owner_token: "A".to_string(),
-            author_name: "Léa".to_string(),
-            body: "hi".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
+        let pin = sample_pin("A");
+        let msg = sample_msg("A", "Léa");
         let dto = to_comment_pin(&pin, &[msg], "B");
         assert!(!dto.messages[0].editable);
     }
 
     #[test]
     fn admin_comment_pin_hides_owner_token() {
-        use crate::models::_entities::{comment_pins, comments};
-        let now = chrono::Utc::now();
-        let pin = comment_pins::Model {
-            id: 1,
-            version_id: 1,
-            owner_token: "SECRET".to_string(),
-            anchor: "{}".to_string(),
-            status: "open".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
-        let msg = comments::Model {
-            id: 2,
-            pin_id: 1,
-            owner_token: "SECRET".to_string(),
-            author_name: "Max".to_string(),
-            body: "y".to_string(),
-            created_at: now.into(),
-            updated_at: now.into(),
-            deleted_at: None,
-        };
+        let pin = sample_pin("SECRET");
+        let msg = sample_msg("SECRET", "Max");
         let json = serde_json::to_string(&to_admin_comment_pin(&pin, &[msg])).unwrap();
         assert!(!json.contains("SECRET") && !json.contains("owner_token"));
         assert!(!json.contains("editable"), "pas d'editable côté admin");

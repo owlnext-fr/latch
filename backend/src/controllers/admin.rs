@@ -42,6 +42,15 @@ async fn project_detail_json(
     format::json(crate::dto::to_detail(project, vers, &counts))
 }
 
+/// Charge un projet par `id` → `loco_rs::Error::NotFound` si absent.
+async fn find_project(ctx: &AppContext, id: i32) -> Result<projects::Model> {
+    projects::Entity::find_by_id(id)
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)
+}
+
 /// Charge une version par `(project_id, n)` → `loco_rs::Error::NotFound` si absente.
 async fn find_version(ctx: &AppContext, id: i32, n: i32) -> Result<versions::Model> {
     versions::Entity::find()
@@ -84,11 +93,7 @@ async fn detail(
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
 ) -> Result<Response> {
-    let project = projects::Entity::find_by_id(id)
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let project = find_project(&ctx, id).await?;
 
     project_detail_json(&ctx, project, id).await
 }
@@ -150,11 +155,7 @@ async fn update(
     Path(id): Path<i32>,
     Json(body): Json<UpdateProjectReq>,
 ) -> Result<Response> {
-    let model = projects::Entity::find_by_id(id)
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let model = find_project(&ctx, id).await?;
 
     let mut active: projects::ActiveModel = model.into();
 
@@ -318,11 +319,7 @@ async fn activate_version(
 ) -> Result<Response> {
     let version = find_version(&ctx, id, n).await?;
 
-    let project = projects::Entity::find_by_id(id)
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let project = find_project(&ctx, id).await?;
 
     let mut active: projects::ActiveModel = project.into();
     active.active_version_id = Set(Some(version.id));
@@ -361,11 +358,7 @@ async fn delete_version(
 ) -> Result<Response> {
     let version = find_version(&ctx, id, n).await?;
 
-    let project = projects::Entity::find_by_id(id)
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let project = find_project(&ctx, id).await?;
 
     // Invariant : ne jamais supprimer la version active (laisserait un pointeur orphelin).
     if project.active_version_id == Some(version.id) {
