@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,7 +20,7 @@ interface ThreadPopupProps {
 }
 
 export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
-  const { pin, position, capabilities, busy, onReply, onEdit, onDelete } = props
+  const { pin, position, capabilities, busy, onReply, onEdit, onDelete, onDeletePin, onClose } = props
   const { t } = useTranslation()
   const { ref, style } = useFloatingRect(position.rect)
   const [reply, setReply] = useState('')
@@ -43,6 +44,16 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
       data-status={position.status}
       className="bg-background z-[60] flex w-80 flex-col gap-3 rounded-lg border p-3 shadow-xl"
     >
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t('comment.thread.close')}
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
       {position.status !== 'anchored' && (
         <p className="text-xs text-amber-600">
           {position.status === 'orphaned'
@@ -110,6 +121,13 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
               {t('comment.thread.reply_submit')}
             </Button>
           </div>
+        </div>
+      )}
+      {capabilities.canEditOwn && (
+        <div className="flex justify-end">
+          <Button type="button" variant="ghost" size="sm" onClick={onDeletePin}>
+            {t('comment.thread.delete_thread')}
+          </Button>
         </div>
       )}
     </div>

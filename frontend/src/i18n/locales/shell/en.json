@@ -17,6 +17,8 @@
   "comment.thread.reply_submit": "Reply",
   "comment.thread.edit": "Edit",
   "comment.thread.delete": "Delete",
+  "comment.thread.close": "Close",
+  "comment.thread.delete_thread": "Delete thread",
   "comment.thread.save": "Save",
   "comment.thread.cancel": "Cancel",
   "comment.thread.delete_confirm": "Delete this comment?",

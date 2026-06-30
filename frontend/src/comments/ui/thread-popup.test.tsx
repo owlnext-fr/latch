@@ -72,4 +72,23 @@ describe('ThreadPopup', () => {
     renderThread({ position: { ...position, status: 'approximate' } })
     expect(screen.getByText('This element may have moved')).toBeInTheDocument()
   })
+
+  it('fires onClose from the close button', async () => {
+    const onClose = vi.fn()
+    renderThread({ onClose })
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('fires onDeletePin from the delete-thread button', async () => {
+    const onDeletePin = vi.fn()
+    renderThread({ onDeletePin })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete thread' }))
+    expect(onDeletePin).toHaveBeenCalledOnce()
+  })
+
+  it('shows exactly one per-message Delete on the editable message', () => {
+    renderThread()
+    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
+  })
 })

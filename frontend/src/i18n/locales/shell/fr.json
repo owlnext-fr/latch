@@ -17,6 +17,8 @@
   "comment.thread.reply_submit": "Répondre",
   "comment.thread.edit": "Modifier",
   "comment.thread.delete": "Supprimer",
+  "comment.thread.close": "Fermer",
+  "comment.thread.delete_thread": "Supprimer le fil",
   "comment.thread.save": "Enregistrer",
   "comment.thread.cancel": "Annuler",
   "comment.thread.delete_confirm": "Supprimer ce commentaire ?",
