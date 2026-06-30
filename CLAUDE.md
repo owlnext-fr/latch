@@ -48,8 +48,10 @@ pas la dernière publiée.
 | Data-fetching + cache SPA | `@tanstack/react-query` | Invalidation + stale-while-revalidate |
 | Composants UI admin | `shadcn/ui` (Radix) | Base stone oklch, preset bJfDPe2y |
 | Formulaires SPA | `react-hook-form` / `zod` | Schémas de validation |
-| i18n SPA | `react-i18next` | FR + EN, défaut EN |
+| i18n SPA | `react-i18next` / `i18next` | FR + EN, défaut EN ; **pluriels CLDR `_one`/`_other`** (PAS `_plural`) depuis i18next v26 |
 | Client API typé | `openapi-fetch` / `openapi-typescript` | Généré depuis `openapi.json` → `schema.d.ts` |
+| Sélecteur CSS d'ancrage (commentaires) | `@medv/finder` | Génère un sélecteur unique stable pour un élément du proto |
+| Positionnement popups (commentaires) | `@floating-ui/dom` | `computePosition` contre un `VirtualElement` (rect suivi) ; retombe en (0,0) sans layout (jsdom) |
 | Cookie signé (déverrouillage client) | `axum-extra` (SignedCookieJar) / `cookie` | Détails de signature/scoping |
 
 ## Carte des chantiers — où vit quoi
@@ -92,7 +94,12 @@ humaine, surtout si la branche/`main` est déjà poussée).
 Une tâche n'est terminée que si **tout** ce qui suit est vrai :
 - `cargo fmt` et `cargo clippy` (warnings = erreurs) passent ;
 - les tests verts à chaque couche concernée : unit (cœur), intégration (Loco +
-  SQLite de test), MCP (gate token), frontend (Vitest + Testing Library / MSW), e2e (Playwright) ;
+  SQLite de test), MCP (gate token), frontend (`pnpm lint` + `pnpm typecheck` + Vitest /
+  Testing Library / MSW), e2e (Playwright) ;
+  > **Frontend : `pnpm lint` ET `pnpm typecheck` font partie de « terminé »**, pas seulement
+  > Vitest. `eslint-plugin-react-hooks` v7 est strict (ex. `react-hooks/refs`,
+  > `set-state-in-effect`) et `tsconfig` a `erasableSyntaxOnly` — ces erreurs **passent à
+  > travers Vitest** mais cassent la CI. Cf. `docs/QUIRKS.md`.
 - tests **substantiels** — la gate SonarCloud `new_coverage ≥ 80%` sur le code neuf est bloquante (CI) et fait partie de « terminé » ; vérifiable en local via le scan Sonar (cf. `docs/ENVIRONMENT.md §Scan local`) ;
 - les critères de sortie de la phase ROADMAP sont remplis ;
 - la doc reste cohérente avec le code (si une décision a changé, le contrat est mis à jour) ;

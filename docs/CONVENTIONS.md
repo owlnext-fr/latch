@@ -1229,51 +1229,57 @@ versions + `count_comments_by_version` + `to_detail`. Extraits notamment pour pa
 
 Pattern pour une feature front chargée en contexte multiple (visiteur / admin) :
 
-- **Seam `Picker`** : interface avec une seule implémentation concrète (`SameOriginPicker`) exposée dans l'index du module. Le code consommateur ne dépend que de l'interface — facile à mocker en test.
-- **Adaptateur de données** : objet passé au composant racine, portant les fonctions de lecture/écriture (query/mutate). Pas de couplage au transport : les hooks React Query sont dans l'adaptateur, pas dans l'UI.
-- **Objet `capabilities`** (`canAuthor / canEditOwn / canModerate`) : détermine ce que l'UI affiche. L'autorisation réelle est au backend — `capabilities` sert uniquement à masquer des boutons non pertinents.
+- **Seam `Picker`** : interface `src/comments/picker/picker.ts` avec une seule impl concrète `SameOriginPicker` (`picker/same-origin-picker.ts`). Interne au module ; le consommateur ne voit que `CommentsApp`. Facile à mocker en test (un `FrameRef` factice suffit). Une future impl cross-origin (`PostMessagePicker`) se brancherait sans toucher au reste.
+- **Adaptateur de données** (`data/adapter.ts` : interface `CommentsAdapter` + `Capabilities`) : objet passé au composant racine, portant lecture/écritures (`list/createPin/addReply/editMessage/deleteMessage/deletePin`). Pas de couplage au transport. Impl visiteur = `data/visitor-adapter.ts` (`createVisitorAdapter(slug)`).
+- **Objet `capabilities`** (`canAuthor / canEditOwn / canModerate`) : détermine ce que l'UI affiche. L'autorisation réelle est au backend — `capabilities` sert uniquement à masquer des affordances non pertinentes (visiteur = `{canAuthor:true, canEditOwn:true, canModerate:false}`).
 
 ```ts
-// src/comments/index.ts
-export type { Picker } from './picker'
-export { SameOriginPicker } from './picker-same-origin'
-export type { CommentAdapter } from './adapter'
-export type { Capabilities } from './capabilities'
-export { CommentsRoot } from './root'
+// src/comments/index.ts — point d'entrée du import() dynamique (lazy)
+export { CommentsApp as default } from './comments-app'
+// CommentsApp({ slug, frame }) : crée son propre QueryClient (useMemo) puis monte
+// picker + useFollow + overlay + popups + ActionBar, câblés à createVisitorAdapter(slug).
 ```
+
+Arborescence réelle : `anchor/` (descriptor, describe, similarity, resolve), `picker/`, `follow/` (controller, use-follow), `data/` (adapter, visitor-adapter, use-comments), `state/pick-machine`, `ui/` (overlay-layer, pin-badge, compose-popup, thread-popup, action-bar, use-floating-rect, name-prompt), `comments-app.tsx`, `index.ts`.
 
 ## Hooks React Query paramétrés par un `adapter` — clé `commentsKey(slug)` (Plan 2, 2026-06-30)
 
-Les hooks de commentaires (`useCommentPins`, `useAddComment`, etc.) reçoivent un `adapter: CommentAdapter` au lieu d'importer directement `openapi-fetch`. Avantage : testable sans MSW, réutilisable en contexte admin.
+Les hooks de commentaires (`useCommentList`, `useCreatePin`, `useAddReply`, `useEditMessage`, `useDeleteMessage`, `useDeletePin`) reçoivent `(slug, adapter: CommentsAdapter)` au lieu d'importer directement `openapi-fetch`. Avantage : testable sans MSW (adapter factice), réutilisable en contexte admin. Chaque mutation invalide `commentsKey(slug)` au succès.
 
 ```ts
-const commentsKey = (slug: string) => ['comments', slug] as const
+// src/comments/data/use-comments.ts
+export function commentsKey(slug: string): unknown[] {
+  return ['comments', slug]
+}
 
-export function useCommentPins(slug: string, adapter: CommentAdapter) {
-  return useQuery({ queryKey: commentsKey(slug), queryFn: () => adapter.listPins(slug) })
+export function useCommentList(slug: string, adapter: CommentsAdapter) {
+  return useQuery({ queryKey: commentsKey(slug), queryFn: () => adapter.list() })
 }
 ```
 
 ## Module lazy avec son propre `QueryClient` (React Query confiné au chunk) (Plan 2, 2026-06-30)
 
-Quand un module est chargé en `React.lazy`, il peut avoir son propre `QueryClientProvider` pour confiner le cache. Cela évite de contaminer le `QueryClient` du shell (ou de ne pas en avoir du tout).
+Quand un module est chargé en `React.lazy`, il porte son propre `QueryClientProvider` pour confiner le cache. Le bundle shell (`src/shell/main.tsx`) **n'importe pas** React Query — il n'entre que par le `import('@/comments')` dynamique. Vérifié au niveau bundle (revue finale Plan 2).
 
 ```tsx
-// src/comments/root.tsx
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-export function CommentsRoot({ slug, adapter, capabilities }: Props) {
+// src/comments/comments-app.tsx
+export function CommentsApp({ slug, frame }: Readonly<CommentsAppProps>) {
+  const client = useMemo(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    [],
+  )
   return (
-    <QueryClientProvider client={queryClient}>
-      <CommentsApp slug={slug} adapter={adapter} capabilities={capabilities} />
+    <QueryClientProvider client={client}>
+      <CommentsInner slug={slug} frame={frame} />
     </QueryClientProvider>
   )
 }
 ```
 
 **Règles :**
-- Le `QueryClient` du chunk est créé **une seule fois** (module-level), pas dans le render.
+- Le `QueryClient` du chunk est créé via `useMemo(…, [])` (une fois par montage), pas inline à chaque render.
 - Le shell ne voit jamais le cache commentaires.
+- Le chargement est déclenché par `src/shell/comments-mount.tsx` (`lazy(() => import('@/comments'))` sous `Suspense`), monté seulement si `PublicMeta.comments_enabled` et l'iframe présente ; un `key`-bump sur l'event `load` de l'iframe reconstruit l'app (nouvelle scène proto).
 
 ## En-tête `X-Comment-Client` sur les writes commentaire (Plan 2, 2026-06-30)
 

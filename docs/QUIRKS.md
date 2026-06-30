@@ -50,7 +50,7 @@ Erreur classique : utiliser `el.getBoundingClientRect()` côté proto (espace if
 
 ## `resolve()` byTextQuote — TreeWalker peut renvoyer un conteneur (2026-06-30)
 
-Dans `src/comments/engine/resolve.ts`, la branche `byTextQuote` utilise un `TreeWalker` en mode `SHOW_ELEMENT`. Ce mode visite les nœuds ancêtres **avant** les feuilles texte → il peut renvoyer un élément conteneur (ex. `<p>`, `<div>`) au lieu du nœud texte direct. Filtrer sur `nodeType === Node.TEXT_NODE` ou utiliser `SHOW_TEXT` selon le besoin.
+Dans `src/comments/anchor/resolve.ts`, la branche `byTextQuote` utilise un `TreeWalker` en mode `SHOW_ELEMENT`. Ce mode visite les nœuds ancêtres **avant** les feuilles → il peut renvoyer un élément conteneur (ex. `<p>`, `<div>`) au lieu de l'élément feuille le plus spécifique. C'est le **dernier palier de la cascade** (`approximate`), donc l'impact est limité ; durcissement possible : préférer le candidat au `textContent` le plus court. La branche multi-match (`direct.length > 1`, gate STRONG ≥ 0.9) n'a pas de test dédié — à ajouter si elle dérive.
 
 ## `LATCH_STORAGE_ROOT` relatif → HTML écrits sur la couche éphémère du conteneur (2026-06-29)
 **Symptôme** : en prod, après un redéploiement (`docker compose up -d`, hotfix, restart), **toutes les
