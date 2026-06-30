@@ -8,17 +8,10 @@ const protoV1 = readFileSync(path.resolve(__dirname, 'fixtures/proto.html'), 'ut
 const protoV2 = readFileSync(path.resolve(__dirname, 'fixtures/proto-v2.html'), 'utf8')
 
 // Connexion admin via l'API (le cookie de session reste dans le contexte `request`).
-// Retry jusqu'à 6× sur 429 (rate-limiter login : burst=5, 2/s) — 800ms suffit pour 1 token.
+// Le webServer e2e pose LATCH_LOGIN_RL_BURST=100000 → jamais de 429 en tests.
 async function apiLogin(request: APIRequestContext): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const res = await request.post('/api/login', { data: { user: 'admin', pass: 'secret' } })
-    if (res.status() !== 429) {
-      expect(res.ok()).toBeTruthy()
-      return
-    }
-    await new Promise((r) => setTimeout(r, 800))
-  }
-  throw new Error('apiLogin: still 429 after retries (login rate-limit not recovering)')
+  const res = await request.post('/api/login', { data: { user: 'admin', pass: 'secret' } })
+  expect(res.ok()).toBeTruthy()
 }
 
 // Crée un projet via l'API. `Origin` requis (garde same-origin sur les mutations).

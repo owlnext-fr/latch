@@ -22,38 +22,20 @@ const PROTO_HTML =
 
 // --- Helpers (repris de serve-unlock.spec.ts / comments.spec.ts) --------------
 
-// Retry jusqu'à 6× sur 429 (rate-limiter login : burst=5, 2/s) — 800ms suffit pour 1 token.
+// Le webServer e2e pose LATCH_LOGIN_RL_BURST=100000 → jamais de 429 en tests.
 async function apiLogin(request: APIRequestContext): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const res = await request.post('/api/login', { data: { user: 'admin', pass: 'secret' } })
-    if (res.status() !== 429) {
-      expect(res.ok()).toBeTruthy()
-      return
-    }
-    await new Promise((r) => setTimeout(r, 800))
-  }
-  throw new Error('apiLogin: still 429 after retries (login rate-limit not recovering)')
+  const res = await request.post('/api/login', { data: { user: 'admin', pass: 'secret' } })
+  expect(res.ok()).toBeTruthy()
 }
 
-/** Login via le formulaire de la SPA admin (pour les tests qui naviguent dans le browser).
- * Retry jusqu'à 6× si la redirection post-login échoue (rate-limit ou erreur transitoire).
- */
+/** Login via le formulaire de la SPA admin (pour les tests qui naviguent dans le browser). */
 async function pageLogin(page: Page): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    await page.goto('/admin/login')
-    await page.getByLabel('Username').fill('admin')
-    await page.getByLabel('Password').fill('secret')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-    // Attendre que la page de liste se charge (preuve que l'auth a réussi)
-    const appeared = await page
-      .getByText('+ New project')
-      .waitFor({ timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false)
-    if (appeared) return
-    await new Promise((r) => setTimeout(r, 800))
-  }
-  throw new Error('pageLogin: still failing after retries (rate-limit or credentials issue)')
+  await page.goto('/admin/login')
+  await page.getByLabel('Username').fill('admin')
+  await page.getByLabel('Password').fill('secret')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  // Attendre que la page de liste se charge (preuve que l'auth a réussi)
+  await expect(page.getByText('+ New project')).toBeVisible()
 }
 
 async function createProject(

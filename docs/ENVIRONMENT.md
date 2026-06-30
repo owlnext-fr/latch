@@ -15,6 +15,8 @@
 - `LATCH_UNLOCK_RL_IP_PER_SECOND` — governor IP : taux de remplissage (req/s). Défaut : 1.
 - `LATCH_UNLOCK_RL_SLUG_BURST` — governor slug-global : burst. Défaut : 20.
 - `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` — governor slug-global : période de remplissage (secondes). Défaut : 3.
+- `LATCH_LOGIN_RL_BURST` — rate-limit `POST /api/login` (par IP, governor in-memory) : burst (nombre de jetons initiaux). Défaut sécurisé : **5** — load-bearing pour le test `login_is_rate_limited` (cargo nextest). Le webServer e2e Playwright pose `100000` pour désarmer le throttle sans modifier le défaut de prod.
+- `LATCH_LOGIN_RL_PER_SECOND` — rate-limit `POST /api/login` : période de remplissage en secondes (un jeton toutes les N secondes). Défaut : **2** (un login toutes les 2s après épuisement du burst).
 - `SESSION_SECRET` — clé HMAC de signature du cookie de session admin (≥ 64 bytes). En dev : clé de secours déterministe (voir `web/mod.rs`). **Obligatoire en prod.**
 - `LATCH_STORAGE_ROOT` — racine du volume HTML des versions. Défaut : `data`. En prod : `/data` (volume Docker). Utilisé par `storage_from_ctx`.
 - `LATCH_SPA_DIST` — racine des assets buildés de la SPA React (Vite `dist/`). Défaut dev (CWD `backend/`) : `../frontend/dist`. Prod (image) : `/app/frontend/dist` (posé par le Dockerfile). Lu par `web::spa_dist_dir()`. **Note** : `unlock.html` (page de déverrouillage client) est servie depuis cette même racine (`dist/unlock.html`) — c'est la 2ᵉ entrée Vite build (Phase 4) ; depuis la refonte assets (base Vite `'/'`), les deux bundles référencent `/assets/...` (sans préfixe `/admin/`), servis par le mount `nest_service("/assets", ServeDir::new(dist.join("assets")))` dans `after_routes`.

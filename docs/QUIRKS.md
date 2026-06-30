@@ -29,11 +29,11 @@ La cause profonde : `axum_session` utilise un mécanisme de session côté serve
 
 Règle : **tout nouveau consommateur du module partagé doit fusionner ce glob** (`import.meta.glob('.../locales/comments/*.json')`), sinon il affiche les clés brutes. Les tests e2e admin assertent désormais le texte traduit réel.
 
-## e2e : rate-limit `/api/login` (429) — retry obligatoire (2026-06-30)
+## e2e : rate-limit `/api/login` (429) — résolu par cran env (2026-07-01)
 
-`backend/src/controllers/auth.rs` applique `burst_size=5/per_second=2` par IP sur `POST /api/login`. La suite e2e enchaîne les logins depuis `127.0.0.1` → 429 quand plusieurs specs se suivent dans la même session Playwright.
+`backend/src/controllers/auth.rs` applique `burst_size=5/per_second=2` par IP sur `POST /api/login` (défauts load-bearing : le test `login_is_rate_limited` sous `cargo nextest` en dépend — NE PAS changer les défauts). La suite e2e enchaîne les logins depuis `127.0.0.1` → 429 quand plusieurs specs se suivent dans la même session Playwright.
 
-**Contournement** : les helpers `apiLogin` et `pageLogin` font un **retry-on-429** (≤6 tentatives, 800 ms de délai entre chaque). Ne PAS baisser le rate-limit prod pour les tests — c'est une mesure de sécurité non-négociable. Résolu en Task L3 (commit `b2a05c8`).
+**Fix** : le rate-limit est réglable via `LATCH_LOGIN_RL_BURST` / `LATCH_LOGIN_RL_PER_SECOND`. Le `webServer.command` de `frontend/playwright.config.ts` pose `LATCH_LOGIN_RL_BURST=100000`, ce qui rend le throttle login inopérant en e2e sans toucher le défaut de prod. Les helpers `apiLogin`/`pageLogin` ont été simplifiés (plus de retry-on-429). **Ne PAS remettre le retry** : si un 429 réapparaît en e2e, vérifier que la var est bien transmise au processus serveur (logs webServer).
 
 ## Shims jsdom requis pour la couche commentaire (2026-06-30)
 

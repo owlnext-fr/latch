@@ -11,6 +11,7 @@ use tower_governor::{
     governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor, GovernorLayer,
 };
 
+use crate::controllers::serve::{env_u32, env_u64};
 use crate::dto::{LoginReq, OkResponse};
 use crate::services::security::secure_compare;
 use crate::web::AdminSession;
@@ -88,9 +89,14 @@ async fn logout(session: AdminSession) -> Result<Response> {
 
 pub fn routes() -> Routes {
     // Rate-limit sur le login uniquement (contrat §9.5 : charge-bearing).
-    // Limites : 1 jeton réapprovisionné / 2s (per_second(2) = période de 2s, pas
-    // 2 req/s), burst de 5. SmartIpKeyExtractor lit X-Forwarded-For
-    // (posé par Caddy en façade) avant de tomber sur l'IP peer.
+    // Défauts : 1 jeton réapprovisionné / 2s (per_second = 2s de période, pas 2 req/s),
+    // burst de 5. Réglables via LATCH_LOGIN_RL_PER_SECOND / LATCH_LOGIN_RL_BURST.
+    // SmartIpKeyExtractor lit X-Forwarded-For (posé par Caddy en façade) avant de tomber
+    // sur l'IP peer. Le webServer e2e Playwright pose LATCH_LOGIN_RL_BURST=100000
+    // pour désarmer le throttle en tests — le défaut reste load-bearing pour
+    // le test `login_is_rate_limited` (cargo nextest).
+    let login_burst: u32 = env_u32("LATCH_LOGIN_RL_BURST", 5);
+    let login_per_sec: u64 = env_u64("LATCH_LOGIN_RL_PER_SECOND", 2);
     let login_governor = {
         // Init de boot : une config governor invalide = bug de programmation (burst ou période
         // hors-bornes). Panique au démarrage est acceptable — l'app ne peut pas fonctionner
@@ -98,8 +104,8 @@ pub fn routes() -> Routes {
         #[allow(clippy::expect_used)]
         let config = Arc::new(
             GovernorConfigBuilder::default()
-                .per_second(2)
-                .burst_size(5)
+                .per_second(login_per_sec)
+                .burst_size(login_burst)
                 .key_extractor(SmartIpKeyExtractor)
                 .finish()
                 .expect("governor config valide"),

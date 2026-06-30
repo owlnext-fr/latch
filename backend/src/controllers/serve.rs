@@ -645,14 +645,14 @@ pub(crate) async fn delete_comment_pin(
     comments_json_response(crate::dto::OkResponse::ok())
 }
 
-fn env_u32(name: &str, default: u32) -> u32 {
+pub(crate) fn env_u32(name: &str, default: u32) -> u32 {
     std::env::var(name)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(default)
 }
 
-fn env_u64(name: &str, default: u64) -> u64 {
+pub(crate) fn env_u64(name: &str, default: u64) -> u64 {
     std::env::var(name)
         .ok()
         .and_then(|v| v.parse().ok())
