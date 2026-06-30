@@ -511,6 +511,18 @@ fn require_owner(ctx: &AppContext, headers: &HeaderMap) -> Result<String> {
         .ok_or_else(|| loco_rs::Error::Unauthorized("no identity".to_string()))
 }
 
+/// Gate + identité pour les handlers d'écriture de commentaires.
+/// Retourne `Ok(owner_token)` si le projet est accessible et l'appelant est identifié,
+/// sinon `Err(réponse prête)` (403/404/401 selon le cas).
+async fn comment_write_owner(
+    ctx: &AppContext,
+    headers: &HeaderMap,
+    slug: &str,
+) -> std::result::Result<String, Response> {
+    comments_gate(ctx, headers, slug).await?;
+    require_owner(ctx, headers).map_err(|e| e.into_response())
+}
+
 /// POST /c/{slug}/comments/pins/{pin}/replies — ajoute un message à un pin existant.
 #[utoipa::path(
     post, path = "/c/{slug}/comments/pins/{pin}/replies", tag = "serving",
@@ -528,10 +540,10 @@ pub(crate) async fn reply_comment(
     headers: HeaderMap,
     Json(body): Json<crate::dto::ReplyReq>,
 ) -> Result<Response> {
-    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
-        return Ok(resp);
-    }
-    let token = require_owner(&ctx, &headers)?;
+    let token = match comment_write_owner(&ctx, &headers, &slug).await {
+        Ok(t) => t,
+        Err(resp) => return Ok(resp),
+    };
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let msg = svc
         .add_reply(pin, &token, &body.author_name, &body.body)
@@ -564,10 +576,10 @@ pub(crate) async fn edit_comment(
     headers: HeaderMap,
     Json(body): Json<crate::dto::EditMessageReq>,
 ) -> Result<Response> {
-    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
-        return Ok(resp);
-    }
-    let token = require_owner(&ctx, &headers)?;
+    let token = match comment_write_owner(&ctx, &headers, &slug).await {
+        Ok(t) => t,
+        Err(resp) => return Ok(resp),
+    };
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let msg = svc
         .edit_message(id, &token, &body.body)
@@ -598,10 +610,10 @@ pub(crate) async fn delete_comment(
     Path((slug, id)): Path<(String, i32)>,
     headers: HeaderMap,
 ) -> Result<Response> {
-    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
-        return Ok(resp);
-    }
-    let token = require_owner(&ctx, &headers)?;
+    let token = match comment_write_owner(&ctx, &headers, &slug).await {
+        Ok(t) => t,
+        Err(resp) => return Ok(resp),
+    };
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     svc.delete_message(id, &token)
         .await
@@ -624,10 +636,10 @@ pub(crate) async fn delete_comment_pin(
     Path((slug, pin)): Path<(String, i32)>,
     headers: HeaderMap,
 ) -> Result<Response> {
-    if let Err(resp) = comments_gate(&ctx, &headers, &slug).await {
-        return Ok(resp);
-    }
-    let token = require_owner(&ctx, &headers)?;
+    let token = match comment_write_owner(&ctx, &headers, &slug).await {
+        Ok(t) => t,
+        Err(resp) => return Ok(resp),
+    };
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     svc.delete_pin(pin, &token).await.map_err(into_response)?;
     comments_json_response(crate::dto::OkResponse::ok())

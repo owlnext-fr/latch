@@ -335,6 +335,17 @@ pub struct AdminCommentList {
     pub pins: Vec<AdminCommentPin>,
 }
 
+/// Champs communs à `CommentMessage` et `AdminCommentMessage` : `(id, author_name, body, created_at, updated_at)`.
+fn message_base_fields(m: &comments::Model) -> (i32, String, String, String, String) {
+    (
+        m.id,
+        m.author_name.clone(),
+        m.body.clone(),
+        m.created_at.to_rfc3339(),
+        m.updated_at.to_rfc3339(),
+    )
+}
+
 /// Pin + messages → DTO visiteur. `editable` = l'appelant est l'auteur du message.
 pub fn to_comment_pin(
     pin: &comment_pins::Model,
@@ -347,13 +358,16 @@ pub fn to_comment_pin(
         created_at: pin.created_at.to_rfc3339(),
         messages: messages
             .iter()
-            .map(|m| CommentMessage {
-                id: m.id,
-                author_name: m.author_name.clone(),
-                body: m.body.clone(),
-                created_at: m.created_at.to_rfc3339(),
-                updated_at: m.updated_at.to_rfc3339(),
-                editable: m.owner_token == caller_owner_token,
+            .map(|m| {
+                let (id, author_name, body, created_at, updated_at) = message_base_fields(m);
+                CommentMessage {
+                    id,
+                    author_name,
+                    body,
+                    created_at,
+                    updated_at,
+                    editable: m.owner_token == caller_owner_token,
+                }
             })
             .collect(),
     }
@@ -370,12 +384,15 @@ pub fn to_admin_comment_pin(
         created_at: pin.created_at.to_rfc3339(),
         messages: messages
             .iter()
-            .map(|m| AdminCommentMessage {
-                id: m.id,
-                author_name: m.author_name.clone(),
-                body: m.body.clone(),
-                created_at: m.created_at.to_rfc3339(),
-                updated_at: m.updated_at.to_rfc3339(),
+            .map(|m| {
+                let (id, author_name, body, created_at, updated_at) = message_base_fields(m);
+                AdminCommentMessage {
+                    id,
+                    author_name,
+                    body,
+                    created_at,
+                    updated_at,
+                }
             })
             .collect(),
     }

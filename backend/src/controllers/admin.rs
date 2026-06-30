@@ -16,9 +16,42 @@ use crate::dto::{
     ActivateResponse, AdminCommentList, CreateProjectReq, DeployReq, DeployResponse, OkResponse,
     ProjectDetail, ProjectListItem, SetCodeReq, UpdateProjectReq,
 };
-use crate::models::_entities::versions;
+use crate::models::_entities::{projects, versions};
 use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
+
+/// Charge les versions d'un projet + compte de commentaires et renvoie le détail JSON complet.
+/// Partagé par `detail` et `update` (toute handler retournant `ProjectDetail` avec versions).
+async fn project_detail_json(
+    ctx: &AppContext,
+    project: projects::Model,
+    id: i32,
+) -> Result<Response> {
+    let vers = versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .order_by_desc(versions::Column::N)
+        .all(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let version_ids: Vec<i32> = vers.iter().map(|v| v.id).collect();
+    let counts = svc
+        .count_comments_by_version(&version_ids)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_detail(project, vers, &counts))
+}
+
+/// Charge une version par `(project_id, n)` → `loco_rs::Error::NotFound` si absente.
+async fn find_version(ctx: &AppContext, id: i32, n: i32) -> Result<versions::Model> {
+    versions::Entity::find()
+        .filter(versions::Column::ProjectId.eq(id))
+        .filter(versions::Column::N.eq(n))
+        .one(&ctx.db)
+        .await
+        .map_err(|e| into_response(e.into()))?
+        .ok_or(loco_rs::Error::NotFound)
+}
 
 /// GET /api/projects — liste tous les projets (sans PIN, invariant §9.2).
 #[utoipa::path(
@@ -51,28 +84,13 @@ async fn detail(
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
 ) -> Result<Response> {
-    use crate::models::_entities::projects;
-
     let project = projects::Entity::find_by_id(id)
         .one(&ctx.db)
         .await
         .map_err(|e| into_response(e.into()))?
         .ok_or(loco_rs::Error::NotFound)?;
 
-    let vers = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .order_by_desc(versions::Column::N)
-        .all(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?;
-
-    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
-    let version_ids: Vec<i32> = vers.iter().map(|v| v.id).collect();
-    let counts = svc
-        .count_comments_by_version(&version_ids)
-        .await
-        .map_err(into_response)?;
-    format::json(crate::dto::to_detail(project, vers, &counts))
+    project_detail_json(&ctx, project, id).await
 }
 
 /// POST /api/projects — crée un nouveau projet.
@@ -132,8 +150,6 @@ async fn update(
     Path(id): Path<i32>,
     Json(body): Json<UpdateProjectReq>,
 ) -> Result<Response> {
-    use crate::models::_entities::projects;
-
     let model = projects::Entity::find_by_id(id)
         .one(&ctx.db)
         .await
@@ -162,21 +178,7 @@ async fn update(
         .await
         .map_err(|e| into_response(e.into()))?;
 
-    // Charge les versions du projet pour renvoyer un détail complet (comme GET /detail).
-    let vers = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .order_by_desc(versions::Column::N)
-        .all(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?;
-
-    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
-    let version_ids: Vec<i32> = vers.iter().map(|v| v.id).collect();
-    let counts = svc
-        .count_comments_by_version(&version_ids)
-        .await
-        .map_err(into_response)?;
-    format::json(crate::dto::to_detail(saved, vers, &counts))
+    project_detail_json(&ctx, saved, id).await
 }
 
 /// DELETE /api/projects/{id} — supprime un projet et ses versions.
@@ -195,8 +197,6 @@ async fn delete(
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
 ) -> Result<Response> {
-    use crate::models::_entities::projects;
-
     let txn = ctx.db.begin().await.map_err(|e| into_response(e.into()))?;
 
     // Supprimer toutes les versions du projet AVANT le projet lui-même (FK non enforced).
@@ -316,15 +316,7 @@ async fn activate_version(
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
 ) -> Result<Response> {
-    use crate::models::_entities::projects;
-
-    let version = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .filter(versions::Column::N.eq(n))
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let version = find_version(&ctx, id, n).await?;
 
     let project = projects::Entity::find_by_id(id)
         .one(&ctx.db)
@@ -367,15 +359,7 @@ async fn delete_version(
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
 ) -> Result<Response> {
-    use crate::models::_entities::projects;
-
-    let version = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .filter(versions::Column::N.eq(n))
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let version = find_version(&ctx, id, n).await?;
 
     let project = projects::Entity::find_by_id(id)
         .one(&ctx.db)
@@ -417,13 +401,7 @@ async fn preview_version(
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
 ) -> Result<Response> {
-    let version = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .filter(versions::Column::N.eq(n))
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let version = find_version(&ctx, id, n).await?;
 
     let storage = crate::web::storage_from_ctx(&ctx);
     let html = storage
@@ -464,13 +442,7 @@ async fn list_version_comments(
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
 ) -> Result<Response> {
-    let version = versions::Entity::find()
-        .filter(versions::Column::ProjectId.eq(id))
-        .filter(versions::Column::N.eq(n))
-        .one(&ctx.db)
-        .await
-        .map_err(|e| into_response(e.into()))?
-        .ok_or(loco_rs::Error::NotFound)?;
+    let version = find_version(&ctx, id, n).await?;
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let rows = svc
         .list_for_version(version.id)
