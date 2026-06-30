@@ -223,3 +223,13 @@ SQLite n'enforce pas les FK (pas de PRAGMA) → supprimer un projet/version lais
 404 avant). Même posture que les fichiers HTML orphelins sur `delete_version`. Amélioration
 future : purge explicite en transaction dans `delete_project`/`delete_version`.
 
+
+## Commentaires : 401 dans l'OpenAPI des write-routes + cleanup mineurs (revue finale 2026-06-30)
+- Les routes commentaires d'écriture (`reply`/`edit`/`delete`/`delete_pin`) peuvent renvoyer **401**
+  (`require_owner` : pas de cookie d'identité) mais leurs `#[utoipa::path]` ne listent que 200/403/404.
+  Ajouter `(status = 401, ...)` pour l'exactitude du contrat (puis regen openapi.json + schema.d.ts).
+- Cleanup cosmétiques (non bloquants, revue finale) : `.filter(DeletedAt.is_null())` défensif sur le
+  lookup pin de `moderate_delete_message` ; retirer `version_ids.to_vec()` (clone superflu) ; retirer la
+  garde inatteignable `if !messages.is_empty()` dans `list_pins` ; durcir quelques tests (assertion DB sur
+  `delete_pin`, re-query sur edit). Aucun n'affecte la correction.
+- **Nettoyage orphelins** (déjà noté) : confirmé bénin (AUTOINCREMENT SQLite → pas de réutilisation d'id).
