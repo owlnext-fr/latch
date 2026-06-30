@@ -217,3 +217,24 @@ pipeline `deploy-docs` vert + le site accessible à l'URL Pages (charger une pag
 **Sortie** : login aligné sur le sélecteur de langue unifié ; pages de doc corrigées ; images
 agrandissables sur docs et landing ; `.env.example` propre et homogène, **toutes les variables de chemin
 auditées (relatif vs absolu)** et le couplage env ↔ volume documenté.
+
+## Phase 10 — Commentaires ancrés sur les prototypes [EN COURS]
+
+> Spec : `docs/superpowers/specs/2026-06-30-prototype-comments-design.md`
+> Plan backend : `docs/superpowers/plans/2026-06-30-prototype-comments-backend.md`
+> Branche : `feat/prototype-comments` (non mergée — choix humain).
+
+Commentaires type Figma ancrés à des éléments du DOM, sur la surface visiteur `/c/<slug>` (visibilité
+**privée** par relecteur), avec lecture + modération côté admin. Découpé en 3 plans :
+
+- **Plan 1 — Backend** ✅ **LIVRÉ** (2026-06-30) : schéma `comment_pins`/`comments` + `comments_enabled`,
+  `CommentsService`, identité visiteur (cookie signé), endpoints publics + admin, OpenAPI régénéré,
+  invariants. **Revue finale opus = YES ; gate Sonar PASSED** (couverture 97.7 %, duplication 2.1 %, A/A/A).
+- **Plan 2 — Frontend (module partagé + shell visiteur)** [À FAIRE] : `src/comments/` (interface `Picker`
+  same-origin, échelle d'ancrage W3C, contrôleur de suivi, overlay + popup `@floating-ui/dom`, barre
+  d'action, adaptateur de données), chargé en lazy dans le shell.
+- **Plan 3 — Frontend admin + docs** [À FAIRE] : toggle `comments_enabled` dans `ProjectForm`, vue Review
+  admin (montant le même module via l'adaptateur admin), passe `public_docs`.
+
+**Sortie** : commentaires bout-en-bout (visiteur desktop + admin), gate verte par couche. Hors v1 :
+collaboratif, statut « résolu », tactile/mobile, report inter-versions, authoring admin (cf. spec §BACKLOG).

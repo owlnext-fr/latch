@@ -70,9 +70,11 @@ pas la dernière publiée.
 ## Réflexe de sécurité (à chaque endpoint, à chaque réponse)
 
 Avant de renvoyer quoi que ce soit depuis un adaptateur (web, MCP), vérifier :
-**aucune réponse ne contient de hash**, et le **PIN en clair n'apparaît que sur le
-détail d'un projet**, jamais dans une liste, jamais via MCP. C'est un invariant du
-contrat, pas une option. Il est couvert par un test qui casse le build s'il est violé.
+**aucune réponse ne contient de hash**, le **PIN en clair n'apparaît que sur le
+détail d'un projet** (jamais dans une liste, jamais via MCP), et l'**`owner_token`
+d'un commentaire n'est JAMAIS sérialisé** (ni réponse publique ni admin — on renvoie
+un booléen `editable` à la place). Ce sont des invariants du contrat (§9), pas des
+options. Ils sont couverts par des tests qui cassent le build s'ils sont violés.
 
 ## Confidentialité — jamais de nom de client (NON-NÉGOCIABLE)
 

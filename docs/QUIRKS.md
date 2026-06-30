@@ -624,3 +624,45 @@ préservées. Script de conversion : `scratchpad/oklch2hsl.mjs` (implémente okl
 gère l'alpha en compositant sur le fond). Cas particuliers : `destructive-foreground` absent de
 l'export shadcn récent → quasi-blanc ; bordures/inputs dark = blanc 10%/15% **compositionné** sur
 le fond sombre (l'usage `hsl(var(--color-border))` est opaque, pas d'alpha possible dans le triplet).
+
+## Sonar analyse les `#[cfg(test)]` inline des `src/` pour la duplication, pas `backend/tests/` (2026-06-30)
+SonarCloud calcule `new_duplicated_lines_density` sur tout fichier `src/`, **modules `#[cfg(test)]` inline
+compris**. Des fixtures de test répétées (construire le même `Model { … }` dans 3 tests) comptent comme
+duplication et peuvent faire échouer la gate (< 3 %). Les tests d'intégration sous `backend/tests/` ne sont
+**pas** analysés en duplication (l'API `duplications/show` renvoie 404 dessus). **Fix** : factoriser les
+fixtures inline en helpers (`fn sample_pin(owner) -> …`). La branche commentaires partait à **7,0 %** de
+duplication ; deux passes de helpers (helpers de prod + fixtures de test) → **2,1 %**. Le résidu (blocs
+`#[utoipa::path]` des handlers DELETE) est de la duplication déclarative irréductible, laissée sous le seuil.
+
+## Loco : un module entité a besoin du wrapper `models/<x>.rs` en plus de `_entities/<x>.rs` (2026-06-30)
+Les structs sous `models/_entities/<x>.rs` (générées par sea-orm-cli) **n'implémentent pas**
+`ActiveModelBehavior`. Il faut un wrapper `backend/src/models/<x>.rs` (`impl ActiveModelBehavior for
+ActiveModel {}`, calqué sur `models/versions.rs`) + le déclarer dans `models/mod.rs`. `cargo check` le
+signale immédiatement si oublié (erreur sur l'`ActiveModel`).
+
+## utoipa dérive l'`operationId` du nom de fonction → collision silencieuse (2026-06-30)
+Deux handlers de même nom dans des modules différents (`serve::list_comments` + `admin::list_comments`)
+produisent **le même `operationId`** dans `openapi.json` (violation OpenAPI 3 : doit être unique). Pire,
+`openapi-typescript` génère deux clés identiques dans l'interface `operations` → TS fusionne **sans erreur**
+et le client typé résout le **mauvais type** pour l'un des endpoints. **`pnpm typecheck` reste vert (faux-vert).**
+**Fix** : noms de fonctions distincts (ici `admin::list_version_comments`) ou `operation_id = "…"` dans
+`#[utoipa::path]`, puis regen. Vérif : `grep -c '"operationId": "x"' openapi.json` doit valoir 1.
+
+## Gate de statut HTTP : `Result<_, Response>`, pas `loco_rs::Error` (sinon 403→401) (2026-06-30)
+`loco_rs::Error::Unauthorized` mappe vers **401**. Pour renvoyer un **403** exact (projet verrouillé) ou un
+404 précis depuis un handler, utiliser le pattern `Result<Model, Response>` (comme `resolve_project_html`)
+qui renvoie `StatusCode::FORBIDDEN.into_response()` directement, consommé par `match { Ok=>_,
+Err(resp)=>return Ok(resp) }`. C'est ce que fait `comments_gate`.
+
+## axum 0.8 : chaîner `.layer()` sur un MethodRouter avec `GovernorLayer` casse l'inférence (2026-06-30)
+Empiler plusieurs `.layer()` (governor + `from_fn`) directement sur un `MethodRouter` échoue à l'inférence
+de type. **Fix** : bundler via `ServiceBuilder::new().layer(...).layer(...)` puis appliquer le stack. Le
+middleware `require_comment_client` doit aussi renvoyer `Result<Response>` (loco, `Ok(FORBIDDEN.into_response())`),
+pas `Result<_, StatusCode>`, pour s'aligner sur `require_same_origin` dans la même stack.
+
+## SQLite n'enforce pas les FK sans PRAGMA → orphelins sur hard-delete (mais bénins) (2026-06-30)
+Les FK `ON DELETE CASCADE` déclarées au schéma **ne cascadent pas** en SQLite (pas de `PRAGMA
+foreign_keys=ON`). Supprimer un projet/version laisse des `comment_pins`/`comments` orphelins. **Bénin** :
+sea-query émet `AUTOINCREMENT` pour les PK SQLite → un `versions.id` n'est jamais réutilisé → l'orphelin ne
+refait jamais surface sous une future version (confirmé en revue finale opus). Posture identique aux fichiers
+HTML orphelins sur `delete_version`. Nettoyage explicite en tx = BACKLOG.

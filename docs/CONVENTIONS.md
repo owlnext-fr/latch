@@ -1190,3 +1190,37 @@ export default i18n
 - N'importer **aucun** code admin (pas de router/Query/openapi-fetch).
 - La clé `localStorage['latch:seen:<slug>']` vaut le dernier numéro de version `n` vu (entier ou
   chaîne). Comparer avec `String(n)` pour être robuste aux deux types.
+
+## Service cœur `CommentsService` — soft-delete + owner-check (Plan 1 commentaires, 2026-06-30)
+Même moule que les autres services (struct `db`, `new`, méthodes `async -> Result<_, CoreError>`, sans
+axum/loco). Spécificités du domaine :
+- **Owner-check** : un edit/delete/reply charge la ligne et compare `secure_compare(&row.owner_token, token)` ;
+  non-correspondance → `CoreError::NotFound` (pas d'oracle d'existence, pas de fuite).
+- **Soft-delete** : `deleted_at = Some(now)` ; toutes les lectures filtrent `deleted_at IS NULL` ; supprimer
+  le dernier message vivant d'un pin tombstone le pin (`soft_delete_pin_if_empty`).
+- **Pas de N+1** : `list_pins`/`count_comments_by_version` = 2 requêtes (pins, puis `is_in(pin_ids)`) +
+  group-by mémoire. Ne JAMAIS reboucler une requête par pin (Sonar/perf).
+- **Modération admin** : `moderate_delete_message(project_id, comment_id)` walk message→pin→version→projet
+  AVANT toute mutation.
+
+## Adaptateur public commentaires — gate + identité (serve.rs, 2026-06-30)
+- `comments_gate(ctx, headers, slug) -> Result<projects::Model, Response>` : 404 (slug inconnu /
+  `comments_enabled=false`), 403 (verrouillé). Pattern `Result<_, Response>` (statuts exacts, cf. QUIRKS).
+- `comment_write_owner(ctx, headers, slug) -> Result<String, Response>` : gate + `require_owner` (cookie →
+  token, sinon 401), partagé par tous les handlers d'écriture.
+- Identité : `mint_owner_token()` (ULID), `read_owner_token`/`comment_identity_cookie` réutilisent
+  `crate::web::unlock_key` (clé `UNLOCK_COOKIE_SECRET`) — **pas de nouveau secret**. Cookie `latch_comment`
+  `HttpOnly`/`Secure`/`SameSite=Lax`/`Path=/c/{slug}`, posé seulement si frais.
+- Anti-CSRF des écritures : `require_same_origin` + middleware `require_comment_client` (403 si header
+  `X-Comment-Client` absent) + couches Governor `LATCH_COMMENT_RL_*`, bundlées via `ServiceBuilder`.
+
+## DTOs commentaires — `owner_token` jamais sérialisé, `editable` calculé (dto/mod.rs, 2026-06-30)
+Les DTOs de réponse n'ont **structurellement pas** de champ `owner_token` (ni public ni admin). Les
+conversions `to_comment_pin(pin, msgs, caller)` (public, `editable = m.owner_token == caller`) et
+`to_admin_comment_pin` (admin, sans `editable`) ne le copient jamais ; helper privé `message_base_fields`
+partagé. Invariant testé sur 3 surfaces (POST + GET visiteur + GET admin) dans `security_invariants.rs`.
+
+## Helpers de lookup admin réutilisables (admin.rs, 2026-06-30)
+`find_version(ctx, id, n)` et `find_project(ctx, id)` factorisent les lookups `find_by_id().ok_or(NotFound)`
+répétés (detail/update/activate/delete/preview/comments). `project_detail_json(ctx, project, id)` factorise
+versions + `count_comments_by_version` + `to_detail`. Extraits notamment pour passer la gate Sonar duplication.

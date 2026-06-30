@@ -20,11 +20,12 @@ Livré (backend) :
 - **Admin** : `GET /api/projects/{id}/versions/{n}/comments` (`list_version_comments`) + `DELETE …/comments/messages/{cid}` (modération, walk projet), `comment_count` live.
 - **DTOs + OpenAPI** régénérés (`openapi.json` + `schema.d.ts`), drift GREEN. Contrat `docs/contrat-deploy.md` amendé (§3/§6.4/§7/§9 invariant 7).
 - **Invariant** : `owner_token` JAMAIS sérialisé (structurel + test 3 surfaces).
-- **Gate finale verte** : `cargo fmt`/`clippy` clean, `nextest` **181 passed**, `openapi_drift` green, `cargo-deny` PASS, `pnpm typecheck` clean.
+- **Gate finale verte** : `cargo fmt`/`clippy` clean, `nextest` **181 passed**, `openapi_drift` green, `cargo-deny` PASS, `pnpm typecheck` clean. **Revue finale opus = Ready to merge YES.** **Gate SonarCloud PASSED** (new_coverage **97.7 %**, new_duplicated_lines_density **2.1 %** après 2 passes de dédup, ratings A/A/A).
 
 ### Trucs en suspens
-- **Branche `feat/prototype-comments` NON mergée** : décision humaine (merge/PR) via finishing-a-development-branch.
-- **Plans 2 et 3 (frontend) à écrire puis exécuter** — c'est là que vit toute l'UX (picker, ancrage, suivi, overlay, barre d'action, vue Review admin). Le backend les attend.
+- **Branche `feat/prototype-comments` CONSERVÉE telle quelle** (décision : on enchaîne Plans 2-3 dessus, pas de merge/PR pour l'instant). HEAD `0634108`, ~20 commits devant `main`.
+- **Plans 2 et 3 (frontend) à écrire puis exécuter SUR CETTE BRANCHE** — c'est là que vit toute l'UX (picker, ancrage, suivi, overlay, barre d'action, vue Review admin). Le backend les attend.
+- Avant de coder le Plan 2 : faire une **recon frontend** (shell/Vite/entrées, React Query, shadcn, bundles unlock/shell isolés) pour un plan sans placeholder — comme la recon backend du Plan 1.
 - Minors non bloquants consignés dans le ledger SDD (`.superpowers/sdd/progress.md`) pour la revue finale : filtre `DeletedAt.is_null()` défensif sur le lookup pin de `moderate_delete_message` ; quelques tests à durcir ; formatage.
 
 ### Prochaine chose à creuser

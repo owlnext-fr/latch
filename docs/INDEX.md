@@ -219,3 +219,16 @@
 - [x] Phase 5 — endpoint MCP + panneau Settings — 2026-06-25
 - [x] Phase 6 — e2e, durcissement, packaging (robots.txt + X-Robots-Tag, e2e MCP HTTP ×6, e2e /c + unlock ×3, captures Playwright, CHANGELOG git-cliff, README refonte + badges) — 2026-06-25
 - [x] Phase 7 ✅ LIVRÉE (2026-06-26) — Lot 1: Fondations i18n/thème (auto-découverte, ThemeProvider, anti-FOUC, mémoire) ; Lot 2: Panneau Settings unifié (Select radix, language/theme toggles, MCP section, lazy fetch, mémoire) ; Lot 3: Identité visuelle (Logo favicon SVG + topbar + login + unlock, titres de page dynamiques, largeur admin max-w-6xl, lien GitHub + bouton ? doc, inline GitHub SVG, mémoire) ; Lot 4: Page d'erreur serving /c (3ᵉ entrée Vite, serve_error_page + fallback, logs 500, page générique, mémoire)
+
+## Phase 10 — Commentaires ancrés (Plan 1 Backend, branche feat/prototype-comments)
+- [x] Schéma `comment_pins` + `comments` (FK CASCADE, soft-delete `deleted_at`) + `projects.comments_enabled` (backfill = `code_enabled`) — Plan 1 T2 — 2026-06-30
+- [x] `CommentsService` cœur (create_pin/add_reply/list/count/edit/delete/delete_pin/moderate ; owner-check `secure_compare`→NotFound ; validation 2000/80 ; plafond 200 pins) — Plan 1 T3-4 — 2026-06-30
+- [x] Toggle `comments_enabled` par projet (service + DTO + admin, défaut sécurité-aware) — Plan 1 T5 — 2026-06-30
+- [x] Identité visiteur : cookie signé `latch_comment` (ULID, réutilise `UNLOCK_COOKIE_SECRET`) + garde `X-Comment-Client` — Plan 1 T6 — 2026-06-30
+- [x] DTOs commentaires (`owner_token` **jamais sérialisé**, `editable`) + `comment_count` — Plan 1 T7 — 2026-06-30
+- [x] Endpoints publics `/c/{slug}/comments` (GET/POST/replies/PUT/DELETE), gated `unlock_ok`+`comments_enabled`, rate-limit `LATCH_COMMENT_RL_*`, Origin + `X-Comment-Client` — Plan 1 T8-9 — 2026-06-30
+- [x] Endpoints admin : `GET .../versions/{n}/comments` (`list_version_comments`) + `DELETE .../comments/messages/{cid}` (modération, walk projet) — Plan 1 T10 — 2026-06-30
+- [x] Contrat amendé (§3/§6.4/§7/§9 invariant `owner_token`) + OpenAPI/`schema.d.ts` régénérés + invariants build-breaking (`owner_token` 3 surfaces, gate verrouillé 403) — Plan 1 T1,10,11 — 2026-06-30
+- [x] Gate complète : 181 nextest, drift green, clippy/fmt/cargo-deny clean, **revue finale opus = YES**, **SonarCloud PASSED** (97.7 % couverture, 2.1 % duplication) — Plan 1 — 2026-06-30
+- [ ] **Plan 2** (frontend module `src/comments/` + shell visiteur) — à faire
+- [ ] **Plan 3** (frontend admin Review + passe `public_docs`) — à faire

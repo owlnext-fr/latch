@@ -154,3 +154,14 @@ Wiring déduit de la doc rmcp + architecture Phase 5 (non encore validé en prod
 - **Lien depuis le produit** : `frontend/src/lib/links.ts` `DOCS_URL` = `https://owlnext-fr.github.io/latch/docs`.
 - **Captures** : `public_docs/public/img/{admin-list,unlock}.png` (réutilisées de `docs/assets/`, Phase 6).
 - **Contenu** : EN, **uniquement** sous `public_docs/content/docs/` — jamais le `docs/` interne.
+
+## Variables d'environnement — commentaires ancrés (Plan 1, 2026-06-30)
+- `LATCH_COMMENT_RL_IP_BURST` — rate-limit écriture commentaires, par-IP : burst. Défaut : **10**.
+- `LATCH_COMMENT_RL_IP_PER_SECOND` — par-IP : taux de remplissage (req/s). Défaut : **1**.
+- `LATCH_COMMENT_RL_SLUG_BURST` — par-slug global : burst. Défaut : **60**.
+- `LATCH_COMMENT_RL_SLUG_PERIOD_SECS` — par-slug : période de remplissage (s). Défaut : **1**.
+- **Cookie d'identité visiteur** (`latch_comment`, ULID opaque, TTL 365 j, `Path=/c/<slug>`) : signé avec la
+  clé **`UNLOCK_COOKIE_SECRET` réutilisée** — **aucun nouveau secret à provisionner**.
+- Dépendance Cargo ajoutée au backend : **`ulid`** (1.x) — génération des `owner_token`.
+- Scan Sonar local (rappel recette §Scan local) : la branche commentaires a validé la gate
+  (couverture 97.7 %, duplication 2.1 % après 2 passes de dédup).
