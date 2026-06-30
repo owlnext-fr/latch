@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from '@/lib/markdown'
+import { CommentsMount } from './comments-mount'
 
 /** Slug courant extrait de `/c/<slug>` (1er segment après `/c/`). */
 function currentSlug(): string {
@@ -21,6 +22,23 @@ export function ShellPage() {
   const { t } = useTranslation()
   const slug = currentSlug()
   const [notes, setNotes] = useState<Notes | null>(null)
+  const [iframeEl, setIframeEl] = useState<HTMLIFrameElement | null>(null)
+  const [commentsEnabled, setCommentsEnabled] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/public/${slug}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((meta: { comments_enabled?: boolean } | null) => {
+        if (!cancelled && meta?.comments_enabled) setCommentsEnabled(true)
+      })
+      .catch(() => {
+        /* best-effort : un échec meta ne doit jamais masquer le proto */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
 
   useEffect(() => {
     let cancelled = false
@@ -52,6 +70,7 @@ export function ShellPage() {
       <iframe
         title="prototype"
         src={`/c/${slug}/raw`}
+        ref={setIframeEl}
         className="h-full w-full border-0"
       />
       {notes && (
@@ -69,6 +88,7 @@ export function ShellPage() {
           </div>
         </div>
       )}
+      {commentsEnabled && iframeEl && <CommentsMount slug={slug} frame={iframeEl} />}
     </div>
   )
 }
