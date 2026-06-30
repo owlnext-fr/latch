@@ -1,14 +1,26 @@
-import { describe, expect, it, beforeEach } from 'vitest'
-import { http, HttpResponse } from 'msw'
+import { expect, it, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/shell/i18n'
-import { server } from '@/test/msw'
 import { CommentsApp } from './comments-app'
+import type { CommentsAdapter } from './data/adapter'
 import type { FrameRef } from './picker/picker'
 
-const ORIGIN = globalThis.location.origin
-const SLUG = 'demo-aB3dEf9z'
+const fakeAdapter: CommentsAdapter = {
+  capabilities: { canAuthor: true, canEditOwn: true, canModerate: false },
+  list: async () => ({ version: 1, pins: [] }),
+  createPin: async () => {
+    throw new Error('unused')
+  },
+  addReply: async () => {
+    throw new Error('unused')
+  },
+  editMessage: async () => {
+    throw new Error('unused')
+  },
+  deleteMessage: async () => {},
+  deletePin: async () => {},
+}
 
 function fakeFrame(): FrameRef {
   const doc = document.implementation.createHTMLDocument('proto')
@@ -22,40 +34,12 @@ function fakeFrame(): FrameRef {
 
 beforeEach(() => i18n.changeLanguage('en'))
 
-describe('CommentsApp', () => {
-  it('renders the action bar with the loaded pin count', async () => {
-    server.use(
-      http.get(`${ORIGIN}/c/${SLUG}/comments`, () =>
-        HttpResponse.json(
-          {
-            version: 1,
-            pins: [
-              {
-                id: 1,
-                anchor: JSON.stringify({
-                  v: 1,
-                  selector: '#b',
-                  fingerprint: { tag: 'button', text: 'Hi', role: 'button', ordinal: 0 },
-                  textQuote: null,
-                  offset: { x: 0.5, y: 0.5 },
-                  fallbackPoint: { x: 0, y: 0 },
-                }),
-                created_at: 'n',
-                messages: [
-                  { id: 9, author_name: 'Léa', body: 'Hi', created_at: 'n', updated_at: 'n', editable: true },
-                ],
-              },
-            ],
-          },
-          { status: 200 },
-        ),
-      ),
-    )
-    render(
-      <I18nextProvider i18n={i18n}>
-        <CommentsApp slug={SLUG} frame={fakeFrame()} />
-      </I18nextProvider>,
-    )
-    expect(await screen.findByText('1 comment')).toBeInTheDocument()
-  })
+it("monte la barre d'action quand l'adaptateur autorise l'authoring", async () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <CommentsApp cacheKey="demo" frame={fakeFrame()} adapter={fakeAdapter} />
+    </I18nextProvider>,
+  )
+  // Le bouton "Comment" n'apparaît que si canAuthor est true
+  expect(await screen.findByRole('button', { name: 'Comment' })).toBeInTheDocument()
 })

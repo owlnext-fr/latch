@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { createVisitorAdapter } from '@/comments/data/visitor-adapter'
 
 const CommentsApp = lazy(() => import('@/comments'))
 
@@ -14,6 +15,7 @@ interface CommentsMountProps {
  */
 export function CommentsMount({ slug, frame }: Readonly<CommentsMountProps>) {
   const [reloadKey, setReloadKey] = useState(0)
+  const adapter = useMemo(() => createVisitorAdapter(slug), [slug])
 
   useEffect(() => {
     const bump = () => setReloadKey((k) => k + 1)
@@ -24,7 +26,7 @@ export function CommentsMount({ slug, frame }: Readonly<CommentsMountProps>) {
   return (
     <div data-testid="comments-mount">
       <Suspense fallback={null}>
-        <CommentsApp key={reloadKey} slug={slug} frame={frame} />
+        <CommentsApp key={reloadKey} cacheKey={slug} frame={frame} adapter={adapter} />
       </Suspense>
     </div>
   )

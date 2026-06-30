@@ -7,7 +7,6 @@ import { parseAnchor, serializeAnchor } from './anchor/descriptor'
 import type { ShellRect } from './picker/picker'
 import { useFollow } from './follow/use-follow'
 import type { PinInput } from './follow/controller'
-import { createVisitorAdapter } from './data/visitor-adapter'
 import {
   useCommentList,
   useCreatePin,
@@ -16,7 +15,7 @@ import {
   useDeleteMessage,
   useDeletePin,
 } from './data/use-comments'
-import type { CommentPin } from './data/adapter'
+import type { CommentsAdapter, CommentPin } from './data/adapter'
 import { initialPickState, pickReducer } from './state/pick-machine'
 import { OverlayLayer } from './ui/overlay-layer'
 import { ComposePopup } from './ui/compose-popup'
@@ -25,8 +24,9 @@ import { ActionBar } from './ui/action-bar'
 import { getStoredName } from './ui/name-prompt'
 
 interface CommentsAppProps {
-  slug: string
+  cacheKey: string
   frame: FrameRef
+  adapter: CommentsAdapter
 }
 
 /** Dernier auteur du fil (fallback pour le nom de réponse). */
@@ -35,16 +35,15 @@ function lastAuthor(pin: CommentPin): string {
 }
 
 /** Composant interne : suppose le QueryClientProvider déjà monté. */
-function CommentsInner({ slug, frame }: Readonly<CommentsAppProps>) {
+function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>) {
   const picker = useMemo(() => new SameOriginPicker(frame), [frame])
-  const adapter = useMemo(() => createVisitorAdapter(slug), [slug])
 
-  const list = useCommentList(slug, adapter)
-  const createPin = useCreatePin(slug, adapter)
-  const addReply = useAddReply(slug, adapter)
-  const editMessage = useEditMessage(slug, adapter)
-  const deleteMessage = useDeleteMessage(slug, adapter)
-  const deletePin = useDeletePin(slug, adapter)
+  const list = useCommentList(cacheKey, adapter)
+  const createPin = useCreatePin(cacheKey, adapter)
+  const addReply = useAddReply(cacheKey, adapter)
+  const editMessage = useEditMessage(cacheKey, adapter)
+  const deleteMessage = useDeleteMessage(cacheKey, adapter)
+  const deletePin = useDeletePin(cacheKey, adapter)
 
   const pins = useMemo(() => list.data?.pins ?? [], [list.data])
   const pinInputs: PinInput[] = useMemo(
