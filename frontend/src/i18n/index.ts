@@ -1,11 +1,13 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
-import { parseLocales } from './available-locales'
+import { parseLocales, mergeFragmentGlob } from './available-locales'
 
 const { resources, locales } = parseLocales(
   import.meta.glob('./locales/admin/*.json', { eager: true }),
 )
+
+mergeFragmentGlob(resources, import.meta.glob('./locales/comments/*.json', { eager: true }))
 
 export { locales }
 

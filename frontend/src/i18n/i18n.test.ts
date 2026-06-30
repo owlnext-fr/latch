@@ -30,4 +30,13 @@ describe('admin i18n', () => {
   it('does not expose _meta as a translation key', () => {
     expect(i18n.t('_meta')).toBe('_meta')
   })
+
+  it('resolves comment.thread.delete from merged comments fragment', () => {
+    expect(i18n.t('comment.thread.delete')).toBe('Delete')
+  })
+
+  it('resolves comment.thread.delete in French from merged comments fragment', async () => {
+    await i18n.changeLanguage('fr')
+    expect(i18n.t('comment.thread.delete')).toBe('Supprimer')
+  })
 })

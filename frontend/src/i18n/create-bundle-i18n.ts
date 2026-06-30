@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
-import { parseLocales } from './available-locales'
+import { parseLocales, mergeFragmentGlob } from './available-locales'
 
 type GlobModule = { default: Record<string, unknown> }
 
@@ -9,9 +9,18 @@ type GlobModule = { default: Record<string, unknown> }
  * Factory pour les bundles i18n isolés (shell, unlock, error).
  * Chaque bundle crée sa propre instance i18next (pas de partage de state).
  * Le glob est résolu par l'appelant (Vite exige un littéral statique par module).
+ *
+ * @param glob - glob principal du bundle (doit contenir _meta → parseLocales)
+ * @param fragmentGlob - glob optionnel de fragments à fusionner (pas de _meta, pas de locale)
  */
-export function createBundleI18n(glob: Record<string, GlobModule>) {
+export function createBundleI18n(
+  glob: Record<string, GlobModule>,
+  fragmentGlob?: Record<string, GlobModule>,
+) {
   const { resources, locales } = parseLocales(glob)
+  if (fragmentGlob) {
+    mergeFragmentGlob(resources, fragmentGlob)
+  }
   const instance = i18next.createInstance()
   instance
     .use(LanguageDetector)

@@ -138,9 +138,9 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
   await pinBadge.click()
 
   // 8. Le ThreadPopup s'ouvre avec un bouton de suppression (canModerate = true).
-  //    La locale admin ne contient pas 'comment.thread.delete' → i18next retourne
-  //    la clé littérale comme texte. C'est la valeur attendue dans cet environnement.
-  const deleteBtn = page.getByRole('button', { name: 'comment.thread.delete' })
+  //    Les clés comment.* sont maintenant fusionnées dans l'admin via mergeFragmentGlob →
+  //    le bouton affiche le texte traduit "Delete" (EN), jamais la clé brute.
+  const deleteBtn = page.getByRole('button', { name: 'Delete' })
   await expect(deleteBtn).toBeVisible()
 
   // 9. Modérer : poser l'écouteur DELETE avant le clic

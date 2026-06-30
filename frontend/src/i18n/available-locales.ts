@@ -7,6 +7,26 @@ export type ParsedLocales = {
 
 type GlobModule = { default: Record<string, unknown> }
 
+/**
+ * Fusionne un glob de fragments (clés plates) dans des resources i18n existantes,
+ * par code de langue. Ignore _meta ; ne crée pas d'entrée de locale dans le
+ * sélecteur de langue (les fichiers fragments n'ont pas de _meta).
+ * Utilisé pour partager locales/comments/* entre le bundle shell et l'admin singleton.
+ */
+export function mergeFragmentGlob(
+  resources: Record<string, { translation: Record<string, string> }>,
+  glob: Record<string, GlobModule>,
+): void {
+  for (const [path, mod] of Object.entries(glob)) {
+    const code = path.split('/').pop()!.replace(/\.json$/, '')
+    const fragment = Object.fromEntries(
+      Object.entries(mod.default).filter(([k]) => k !== '_meta'),
+    ) as Record<string, string>
+    if (!resources[code]) resources[code] = { translation: {} }
+    Object.assign(resources[code].translation, fragment)
+  }
+}
+
 function codeFromPath(filePath: string): string {
   // glob keys always contain a path separator, so pop() is always a string
   return filePath.split('/').pop()!.replace(/\.json$/, '')
