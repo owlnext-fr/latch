@@ -252,6 +252,128 @@ impl CommentsService {
         }
         Ok(pin)
     }
+
+    /// Édite le corps d'un message **possédé** par `owner_token`. Étranger/absent → NotFound.
+    pub async fn edit_message(
+        &self,
+        comment_id: i32,
+        owner_token: &str,
+        body: &str,
+    ) -> Result<comments::Model, CoreError> {
+        let body = validate_body(body)?;
+        let msg = self.owned_live_message(comment_id, owner_token).await?;
+        let mut active: comments::ActiveModel = msg.into();
+        active.body = Set(body);
+        active.updated_at = Set(chrono::Utc::now().into());
+        Ok(active.update(&self.db).await?)
+    }
+
+    /// Soft-delete d'un message possédé. Si c'était le dernier vivant du pin, soft-delete le pin.
+    pub async fn delete_message(
+        &self,
+        comment_id: i32,
+        owner_token: &str,
+    ) -> Result<(), CoreError> {
+        let msg = self.owned_live_message(comment_id, owner_token).await?;
+        let pin_id = msg.pin_id;
+        self.soft_delete_message(msg).await?;
+        self.soft_delete_pin_if_empty(pin_id).await
+    }
+
+    /// Soft-delete d'un pin possédé (et de ses messages).
+    pub async fn delete_pin(&self, pin_id: i32, owner_token: &str) -> Result<(), CoreError> {
+        let pin = self.owned_live_pin(pin_id, owner_token).await?;
+        self.soft_delete_pin(pin).await
+    }
+
+    /// Modération admin : supprime n'importe quel message **du projet `project_id`**.
+    /// Vérifie message → pin → version → projet avant de supprimer (NotFound sinon).
+    pub async fn moderate_delete_message(
+        &self,
+        project_id: i32,
+        comment_id: i32,
+    ) -> Result<(), CoreError> {
+        use crate::models::_entities::versions;
+        let msg = comments::Entity::find_by_id(comment_id)
+            .filter(comments::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        let pin = comment_pins::Entity::find_by_id(msg.pin_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        let version = versions::Entity::find_by_id(pin.version_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        if version.project_id != project_id {
+            return Err(CoreError::NotFound);
+        }
+        let pin_id = msg.pin_id;
+        self.soft_delete_message(msg).await?;
+        self.soft_delete_pin_if_empty(pin_id).await
+    }
+
+    async fn owned_live_message(
+        &self,
+        comment_id: i32,
+        owner_token: &str,
+    ) -> Result<comments::Model, CoreError> {
+        let msg = comments::Entity::find_by_id(comment_id)
+            .filter(comments::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        if !secure_compare(&msg.owner_token, owner_token) {
+            return Err(CoreError::NotFound);
+        }
+        Ok(msg)
+    }
+
+    async fn soft_delete_message(&self, msg: comments::Model) -> Result<(), CoreError> {
+        let mut active: comments::ActiveModel = msg.into();
+        active.deleted_at = Set(Some(chrono::Utc::now().into()));
+        active.update(&self.db).await?;
+        Ok(())
+    }
+
+    async fn soft_delete_pin(&self, pin: comment_pins::Model) -> Result<(), CoreError> {
+        let pin_id = pin.id;
+        let mut active: comment_pins::ActiveModel = pin.into();
+        active.deleted_at = Set(Some(chrono::Utc::now().into()));
+        active.update(&self.db).await?;
+        // Soft-delete des messages vivants du pin.
+        let live = comments::Entity::find()
+            .filter(comments::Column::PinId.eq(pin_id))
+            .filter(comments::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await?;
+        for m in live {
+            self.soft_delete_message(m).await?;
+        }
+        Ok(())
+    }
+
+    async fn soft_delete_pin_if_empty(&self, pin_id: i32) -> Result<(), CoreError> {
+        let remaining = comments::Entity::find()
+            .filter(comments::Column::PinId.eq(pin_id))
+            .filter(comments::Column::DeletedAt.is_null())
+            .count(&self.db)
+            .await?;
+        if remaining == 0 {
+            if let Some(pin) = comment_pins::Entity::find_by_id(pin_id)
+                .filter(comment_pins::Column::DeletedAt.is_null())
+                .one(&self.db)
+                .await?
+            {
+                let mut active: comment_pins::ActiveModel = pin.into();
+                active.deleted_at = Set(Some(chrono::Utc::now().into()));
+                active.update(&self.db).await?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -454,5 +576,142 @@ mod tests {
             matches!(err, CoreError::Validation(_)),
             "attendu Validation, obtenu {err:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn edit_message_updates_own_body() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "avant", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+
+        let edited = svc.edit_message(id, OWNER_A, "après").await.unwrap();
+        assert_eq!(edited.body, "après");
+    }
+
+    #[tokio::test]
+    async fn edit_message_of_other_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "x", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+        assert!(matches!(
+            svc.edit_message(id, OWNER_B, "hack").await.unwrap_err(),
+            CoreError::NotFound
+        ));
+    }
+
+    #[tokio::test]
+    async fn delete_last_message_soft_deletes_pin() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db.clone());
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "seul", "{}")
+            .await
+            .unwrap();
+
+        svc.delete_message(pwm.messages[0].id, OWNER_A)
+            .await
+            .unwrap();
+
+        // plus aucun pin vivant visible
+        let mine = svc.list_for_version_and_owner(v.id, OWNER_A).await.unwrap();
+        assert!(mine.is_empty());
+        // le pin porte un tombstone
+        use crate::models::_entities::comment_pins;
+        let pin = comment_pins::Entity::find_by_id(pwm.pin.id)
+            .one(&db)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(pin.deleted_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn delete_one_of_two_messages_keeps_pin() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un", "{}")
+            .await
+            .unwrap();
+        svc.add_reply(pwm.pin.id, OWNER_A, "Léa", "deux")
+            .await
+            .unwrap();
+
+        svc.delete_message(pwm.messages[0].id, OWNER_A)
+            .await
+            .unwrap();
+        let mine = svc.list_for_version_and_owner(v.id, OWNER_A).await.unwrap();
+        assert_eq!(mine.len(), 1);
+        assert_eq!(mine[0].messages.len(), 1);
+        assert_eq!(mine[0].messages[0].body, "deux");
+    }
+
+    #[tokio::test]
+    async fn delete_pin_hides_whole_thread() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un", "{}")
+            .await
+            .unwrap();
+        svc.add_reply(pwm.pin.id, OWNER_A, "Léa", "deux")
+            .await
+            .unwrap();
+
+        svc.delete_pin(pwm.pin.id, OWNER_A).await.unwrap();
+        assert!(svc
+            .list_for_version_and_owner(v.id, OWNER_A)
+            .await
+            .unwrap()
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn moderate_delete_checks_project_ownership() {
+        use crate::models::_entities::projects;
+        let db = test_db().await;
+        let v = version(&db).await; // project of v
+        let other = projects::ActiveModel {
+            slug: Set("demo-cccccccc".to_string()),
+            name: Set("Autre".to_string()),
+            code_enabled: Set(false),
+            comments_enabled: Set(true),
+            ..Default::default()
+        }
+        .insert(&db)
+        .await
+        .unwrap();
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "x", "{}")
+            .await
+            .unwrap();
+        let mid = pwm.messages[0].id;
+
+        // Mauvais projet → NotFound (ne supprime pas).
+        assert!(matches!(
+            svc.moderate_delete_message(other.id, mid)
+                .await
+                .unwrap_err(),
+            CoreError::NotFound
+        ));
+        // Bon projet → OK.
+        svc.moderate_delete_message(v.project_id, mid)
+            .await
+            .unwrap();
+        assert!(svc.list_for_version(v.id).await.unwrap().is_empty());
     }
 }
