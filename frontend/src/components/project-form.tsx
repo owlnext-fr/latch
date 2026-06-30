@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
@@ -53,6 +53,7 @@ interface FormValues {
   code_enabled: boolean
   pin: string
   brand_name: string
+  comments_enabled: boolean
 }
 
 export function ProjectForm({
@@ -73,6 +74,7 @@ export function ProjectForm({
       code_enabled: z.boolean(),
       pin: z.string(),
       brand_name: z.string(),
+      comments_enabled: z.boolean(),
     })
     .refine((data) => !data.code_enabled || /^\d{6}$/.test(data.pin), {
       message: t('form.err_pin'),
@@ -93,18 +95,23 @@ export function ProjectForm({
       code_enabled: true,
       pin: '',
       brand_name: '',
+      comments_enabled: true,
     },
   })
+
+  const commentsTouchedRef = useRef(false)
 
   // Reset all fields on each (re)open — create vs edit seed.
   useEffect(() => {
     if (!open) return
+    commentsTouchedRef.current = false
     if (mode === 'edit' && project) {
       reset({
         name: project.name,
         code_enabled: project.code_enabled,
         pin: project.pin ?? generatePin(),
         brand_name: project.brand_name ?? '',
+        comments_enabled: project.comments_enabled,
       })
     } else {
       reset({
@@ -112,6 +119,7 @@ export function ProjectForm({
         code_enabled: true,
         pin: generatePin(),
         brand_name: '',
+        comments_enabled: true,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,6 +127,14 @@ export function ProjectForm({
 
   const codeEnabled = useWatch({ control, name: 'code_enabled' }) ?? true
   const pin = useWatch({ control, name: 'pin' }) ?? ''
+  const commentsEnabled = useWatch({ control, name: 'comments_enabled' }) ?? true
+
+  // Smart default: in create mode, comments_enabled mirrors code_enabled until user touches it.
+  useEffect(() => {
+    if (mode === 'create' && !commentsTouchedRef.current) {
+      setValue('comments_enabled', codeEnabled)
+    }
+  }, [codeEnabled, mode, setValue])
 
   const onSubmit = handleSubmit((values) => {
     const trimmedBrand = values.brand_name.trim()
@@ -129,6 +145,7 @@ export function ProjectForm({
           code_enabled: values.code_enabled,
           pin: values.code_enabled ? values.pin : null,
           brand_name: trimmedBrand === '' ? null : trimmedBrand,
+          comments_enabled: values.comments_enabled,
         },
         { onSuccess: () => onOpenChange(false) },
       )
@@ -144,6 +161,7 @@ export function ProjectForm({
         body: {
           name: values.name.trim(),
           brand_name: trimmedBrand === '' ? null : trimmedBrand,
+          comments_enabled: values.comments_enabled,
         },
       },
       {
@@ -205,6 +223,27 @@ export function ProjectForm({
               />
             </div>
             <p className="text-muted-foreground text-xs">{t('form.code_help')}</p>
+          </div>
+
+          {/* Comments enabled */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="project-comments">{t('form.comments')}</Label>
+              <Switch
+                id="project-comments"
+                checked={commentsEnabled}
+                onCheckedChange={(checked) => {
+                  commentsTouchedRef.current = true
+                  setValue('comments_enabled', checked, { shouldValidate: true })
+                }}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">{t('form.comments_help')}</p>
+            {commentsEnabled && !codeEnabled && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                {t('form.comments_warn_code_off')}
+              </p>
+            )}
           </div>
 
           {/* PIN — always rendered, disabled when code off */}
