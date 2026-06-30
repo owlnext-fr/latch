@@ -91,6 +91,23 @@ latch/                 # workspace
 - `release_notes` (TEXT, nullable) — notes de version en markdown léger, stockées **brutes** (jamais converties en HTML côté serveur). Longueur max **10 000 caractères** (comptage `chars()`). Au-delà : erreur 400 `invalid_params` (admin et MCP). Périmètre autorisé au rendu : paragraphes, titres, gras, italique, listes (puces + numérotées), citation. **Interdits au rendu** : liens, images, code, HTML brut (rendu `react-markdown` restreint : `skipHtml + allowedElements`).
 - `created_at`
 
+**`projects`** gains `comments_enabled` (bool, NOT NULL). Défaut sécurité-aware posé à la
+création (code activé → `true`, libre → `false`) ; modifiable indépendamment ensuite.
+
+**`comment_pins`** — point d'ancrage d'un fil de commentaires, lié à une version.
+- `id` (PK) · `version_id` (FK → `versions.id`, ON DELETE CASCADE)
+- `owner_token` (opaque, **jamais sérialisé** en réponse) · `anchor` (TEXT, descripteur JSON)
+- `status` (TEXT, `open`/`resolved`, défaut `open`, réservé — pas d'UI v1)
+- `created_at` · `updated_at` · `deleted_at` (NULL, soft-delete)
+
+**`comments`** — message d'un fil.
+- `id` (PK) · `pin_id` (FK → `comment_pins.id`, ON DELETE CASCADE)
+- `owner_token` (opaque, jamais sérialisé) · `author_name` (≤ 80, auto-déclaré)
+- `body` (TEXT, texte brut, ≤ 2000 caractères) · `created_at` · `updated_at` · `deleted_at` (NULL)
+
+Le `anchor` est un descripteur JSON opaque côté serveur (jamais interprété) : `{ v, selector,
+fingerprint, textQuote, offset, fallbackPoint }`. Suppression = soft-delete (`deleted_at`).
+
 **`sessions`** — store de session admin (via `axum-session`).
 
 > Insertion : à chaque deploy on insère d'abord la ligne `versions`, **puis** on
@@ -270,6 +287,25 @@ cette version.
 `skipHtml + allowedElements`) — même périmètre que l'aperçu admin (§7). Jamais de
 HTML serveur pour les notes.
 
+### 6.4 Commentaires ancrés (`/c/<slug>/comments`)
+
+Toutes en `Cache-Control: no-store`, **gardées par `unlock_ok` + `comments_enabled`**
+(projet à code non déverrouillé → 403 ; commentaires désactivés → 404). Les **écritures**
+portent en plus : garde **Origin** same-origin, header **`X-Comment-Client`** exigé,
+cookie d'identité `latch_comment` (ULID opaque, signé, `HttpOnly`/`Secure`/`SameSite=Lax`,
+`Path=/c/<slug>`, secret = `UNLOCK_COOKIE_SECRET` réutilisé), et un rate-limit dédié
+(`LATCH_COMMENT_RL_*`).
+
+- `GET    /c/<slug>/comments` — mes pins+fils de la version active (filtré `owner_token`).
+- `POST   /c/<slug>/comments` — crée un pin + 1ᵉʳ message ; pose le cookie d'identité si absent.
+- `POST   /c/<slug>/comments/pins/<pin>/replies` — ajoute un message à mon pin.
+- `PUT    /c/<slug>/comments/messages/<id>` — édite mon message.
+- `DELETE /c/<slug>/comments/messages/<id>` — supprime mon message (soft ; si dernier → pin soft-deleted).
+- `DELETE /c/<slug>/comments/pins/<pin>` — supprime mon pin entier.
+
+Réponses : `owner_token` **jamais** présent ; chaque message porte `editable: bool` (calculé
+par appelant). MCP `deploy_prototype` inchangé (ne touche pas aux commentaires).
+
 ## 7. Admin — rails par page (contenu + comportement, pas layout)
 
 Le rendu fin est assuré par **shadcn/ui** (Radix, base stone, thème oklch `bJfDPe2y`).
@@ -307,6 +343,9 @@ persistée en localStorage.
   - *Déploiement* : upload manuel d'un HTML → `DeployPanel` (side-panel) → nouvelle
     version, case « activer immédiatement ». Même `services::deploy()` que le tool MCP.
     État vide : ce bloc passe au premier plan.
+- **Commentaires** : toggle `comments_enabled` par projet (défaut sécurité-aware) ; vue admin
+  par version (liste lecture seule `GET /api/projects/<id>/versions/<n>/comments` + modération
+  `DELETE /api/projects/<id>/comments/messages/<id>`, vérifie l'appartenance au projet).
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
   titre cliquable + **sélecteur de langue FR/EN** + logout. Compte unique → pas de menu utilisateur.
   L'UI est **internationalisée (FR + EN, défaut EN)** via `react-i18next` ; la langue est persistée
@@ -341,6 +380,8 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
 6. Cookie de déverrouillage **signé** et **scopé par projet** ; cookie admin
    `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin via
    `require_same_origin` (middleware `axum::from_fn`, 403 cross-origin).
+7. **`owner_token` jamais sérialisé** (réponse publique ou admin) — `editable: bool` à la place.
+   Le gate `unlock_ok` + `comments_enabled` couvre toutes les routes commentaires.
 
 ### Note (hors-invariants) — `GET /api/settings` et le `deploy_token`
 

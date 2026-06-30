@@ -217,3 +217,9 @@ le serveur loge tout pour l'observabilité. Cf. contrat §6 + CONVENTIONS.
 - ~~Favicon `/vite.svg` 404 sur `/admin`~~ — **corrigé** (lien favicon retiré d'`index.html` ;
   l'asset Vite par défaut n'était qu'un placeholder de scaffold).
 
+## Nettoyage des commentaires sur hard-delete projet/version (2026-06-30)
+SQLite n'enforce pas les FK (pas de PRAGMA) → supprimer un projet/version laisse des
+`comment_pins`/`comments` orphelins. Inoffensifs (inaccessibles : le lookup projet/version
+404 avant). Même posture que les fichiers HTML orphelins sur `delete_version`. Amélioration
+future : purge explicite en transaction dans `delete_project`/`delete_version`.
+
