@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/shell/i18n'
@@ -56,5 +56,15 @@ describe('ComposePopup', () => {
     renderPopup({ onCancel })
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onCancel).toHaveBeenCalledOnce()
+  })
+
+  it('blocks submit when body exceeds 2000 characters', async () => {
+    const onSubmit = vi.fn()
+    renderPopup({ onSubmit })
+    await userEvent.type(screen.getByLabelText('Your name'), 'Léa')
+    fireEvent.change(screen.getByLabelText('Comment'), { target: { value: 'x'.repeat(2001) } })
+    await userEvent.click(screen.getByRole('button', { name: 'Post' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('Comment is too long (max 2000 characters).')).toBeInTheDocument()
   })
 })

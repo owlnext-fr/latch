@@ -46,14 +46,14 @@ export function ComposePopup({ rect, submitting, onSubmit, onCancel }: Readonly<
           id="comment-name"
           value={name}
           placeholder={t('comment.compose.name_placeholder')}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { setName(e.target.value); setError(null) }}
         />
         <Label htmlFor="comment-body">{t('comment.compose.body_label')}</Label>
         <Textarea
           id="comment-body"
           value={body}
           placeholder={t('comment.compose.body_placeholder')}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => { setBody(e.target.value); setError(null) }}
         />
         {error && <p className="text-destructive text-xs">{error}</p>}
         <div className="flex justify-end gap-2">

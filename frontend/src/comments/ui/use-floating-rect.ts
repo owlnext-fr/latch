@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type RefCallback } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type RefCallback } from 'react'
 import { computePosition, flip, offset, shift } from '@floating-ui/dom'
 import type { ShellRect } from '../picker/picker'
 
@@ -39,8 +39,8 @@ export function useFloatingRect(rect: ShellRect | null): {
     })
   }, [rect])
 
-  const ref: RefCallback<HTMLElement> = (node) => {
+  const ref = useCallback<RefCallback<HTMLElement>>((node) => {
     elRef.current = node
-  }
+  }, [])
   return { ref, style }
 }
