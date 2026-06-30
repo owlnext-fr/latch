@@ -3,6 +3,28 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Session `axum_session` non partagée entre `request` et `page` en e2e (2026-06-30)
+
+Dans les tests Playwright, le cookie de session admin posé par `apiLogin(request)` (via `APIRequestContext`) **n'est pas automatiquement visible** dans le contexte navigateur (`page`). Les routes admin protégées par `AdminAuth` renvoient 401 quand navigué via `page.goto('/admin/...')` même après `apiLogin(request)`.
+
+**Contournement** : utiliser `pageLogin(page)` (formulaire `/admin/login` navigué dans le browser) pour tout test qui accède à l'admin SPA via `page`. `apiLogin(request)` reste utile pour les opérations API headless (créer projet, déployer, seed commentaire).
+
+```ts
+// ✅ pattern correct pour tests e2e admin
+await apiLogin(request)       // pour les API headless
+const project = await createProject(request, baseURL!, {...})
+await pageLogin(page)         // pour la navigation browser admin
+await page.goto(`/admin/projects/${project.id}/...`)
+```
+
+La cause profonde : `axum_session` utilise un mécanisme de session côté serveur avec deux cookies (`latch_admin` + `store`). Le cookie `store` contenant les données de session chiffrées semble ne pas être retransmis correctement entre les deux contextes Playwright dans ce setup.
+
+## Clés i18n `comment.*` absentes du bundle admin (2026-06-30)
+
+Le bundle admin ne charge que `src/i18n/locales/admin/*.json`. Les clés `comment.bar.*`, `comment.thread.*`, `comment.compose.*` viennent du locale `shell/` et sont **absentes du bundle admin**. Dans la page Review admin, ces clés sont donc affichées en texte littéral (comportement i18next par défaut pour les clés manquantes).
+
+Conséquence : le bouton Supprimer dans `ThreadPopup` affiche `comment.thread.delete` comme texte. Les tests e2e admin utilisent cette clé littérale pour les sélecteurs.
+
 ## Shims jsdom requis pour la couche commentaire (2026-06-30)
 
 Plusieurs APIs DOM manquent en jsdom et font planter les tests si non stubées :

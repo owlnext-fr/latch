@@ -4,6 +4,22 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Task L1 : **e2e admin Review + modération livré**
+
+### Dernière chose faite
+`frontend/e2e/comments-admin.spec.ts` créé et vert (2 passed, 5.7s). Stratégie B (API directe, Option B) retenue pour le seed du commentaire : POST `/c/{slug}/comments` avec un `AnchorDescriptor` v1 ciblant `#cta` (présent dans le proto HTML) → pin status `anchored` dans la Review iframe. Login admin dans la page via `pageLogin(page)` (formulaire `/admin/login`) car la session `axum_session` posée par `apiLogin(request)` n'est PAS partagée avec le contexte browser `page` (cf. QUIRKS). Deux bugs TypeScript de build bloquants corrigés au passage : `admin-adapter.test.ts` manquait les imports `vi/it/expect` vitest ; `version-comments-panel.tsx` utilisait `JSX.Element` (namespace non résolu avec `moduleDetection:force`). Commit `6fd346d`.
+
+### Trucs en suspens
+Plan 3 reste : toggle `comments_enabled` dans `ProjectForm` (K3), passe `public_docs` (K4/M). La gate passe (tsc/lint/vitest 189/e2e).
+
+### Prochaine chose à creuser
+Plan 3 Task K3 : connecter le champ `comments_enabled` dans `ProjectForm` (front) → `UpdateProjectReq` déjà has le champ, il reste à câbler le switch et les clés i18n dans le formulaire (le champ `comments_enabled` est déjà dans le form schema `project-form.tsx`, potentiellement complet).
+
+### Notes pour future Claude
+- `pageLogin(page)` est le helper à utiliser pour tous les tests e2e admin qui naviguent dans le SPA. `apiLogin(request)` seul ne suffit pas pour la navigation browser (voir QUIRKS).
+- Les clés `comment.thread.*` / `comment.bar.*` viennent du locale `shell`, absent du bundle admin. En Review admin, ces clés s'affichent en texte littéral. C'est connu et documenté dans `comments-admin.spec.ts`.
+- `delete_message` côté backend supprime aussi le pin si c'était le dernier message (`soft_delete_pin_if_empty`).
+
 ## 2026-06-30 — Task K2 : **Page Review admin livrée**
 
 ### Dernière chose faite
