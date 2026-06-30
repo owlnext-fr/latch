@@ -257,6 +257,7 @@ mod tests {
             active_version_id: None,
             created_at: chrono::Utc::now().into(),
             updated_at: chrono::Utc::now().into(),
+            comments_enabled: true,
         }
     }
 
