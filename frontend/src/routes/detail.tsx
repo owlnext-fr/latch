@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { useParams, useRouter } from '@tanstack/react-router'
+import { Link, useParams, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Zap, FileText, Eye, PanelRight, Trash2, CircleCheck, MessageSquare } from 'lucide-react'
+import { Zap, FileText, Eye, PanelRight, Trash2, CircleCheck, MessageSquare, MessagesSquare } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { PinField } from '@/components/pin-field'
@@ -270,6 +270,22 @@ export function DetailPage() {
                             onClick={() => setCommentsVersion(v)}
                           >
                             <MessageSquare />
+                          </Button>
+
+                          {/* Review (icon link) — navigates to review route */}
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t('detail.review_aria')}
+                            title={t('review.action')}
+                          >
+                            <Link
+                              to="/projects/$id/versions/$n/review"
+                              params={{ id: String(id), n: String(v.n) }}
+                            >
+                              <MessagesSquare />
+                            </Link>
                           </Button>
 
                           {/* Preview (icon link, new tab) */}

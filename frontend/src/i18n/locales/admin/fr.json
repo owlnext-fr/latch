@@ -153,5 +153,9 @@
   "version_comments.confirm_yes": "Supprimer",
   "version_comments.confirm_no": "Annuler",
   "version_comments.action": "Commentaires",
-  "detail.comments_aria": "Voir les commentaires de cette version"
+  "detail.comments_aria": "Voir les commentaires de cette version",
+  "review.title": "Review — {{name}}",
+  "review.action": "Review",
+  "review.back": "← Retour au projet",
+  "detail.review_aria": "Ouvrir le mode review de cette version"
 }
