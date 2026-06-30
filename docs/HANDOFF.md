@@ -4,6 +4,32 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Task 10 : endpoints admin commentaires + comment_count + OpenAPI
+
+### Dernière chose faite
+Implémentation complète des endpoints admin pour les commentaires (Task 10) :
+- `GET /api/projects/{id}/versions/{n}/comments` — liste tous les fils d'une version (admin, lecture seule, sans `owner_token`/`editable`).
+- `DELETE /api/projects/{id}/comments/messages/{cid}` — modération admin (supprime n'importe quel message du projet via `moderate_delete_message`).
+- `detail` et `update` handlers : `comment_count` désormais calculé en live via `count_comments_by_version` (plus de `HashMap::new()`).
+- `#[utoipa::path]` ajouté sur les 6 handlers commentaires publics de `serve.rs`.
+- `openapi.rs` : 8 nouveaux paths + 9 schémas commentaires enregistrés.
+- `openapi.json` + `schema.d.ts` régénérés — la regen a aussi exposé `comment_count` (dans `VersionItem`) et `comments_enabled` (dans `ProjectListItem`) qui manquaient dans le JSON commité.
+- 3 fixtures de tests frontend corrigées pour inclure les nouveaux champs requis.
+- 2 tests d'intégration admin : **2/2 PASS**. Suite complète : **178/178**.
+- **Commit** : `f4ae037` (`✨ feat(comments): endpoints admin + comment_count + openapi`).
+
+### Trucs en suspens
+Rien de bloquant. La Task 10 est terminée et toutes les gates passent.
+
+### Prochaine chose à creuser
+Phase suivante selon `docs/ROADMAP.md`.
+
+### Notes pour future Claude
+- `moderate_delete_comment` est protégé par `require_same_origin` (mutation) mais pas par `X-Comment-Client` (c'est un endpoint admin, pas visiteur).
+- La regen openapi.json a révélé que l'ancien fichier était périmé : `comment_count` et `comments_enabled` étaient dans le DTO Rust mais absents du JSON. Les tests TS ont été corrigés.
+
+---
+
 ## 2026-06-30 — Micro-feature : redirection `GET /` → `/admin`
 
 ### Dernière chose faite

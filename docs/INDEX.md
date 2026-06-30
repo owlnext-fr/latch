@@ -39,6 +39,7 @@
 - [x] Redirection racine `GET /` → `/admin` (307 temporaire, `root_redirect` dans `after_routes`) — remplace la page welcome Loco (dev) / 404 (prod) — micro-feature — 2026-06-30
 - [x] `LATCH_BODY_LIMIT` — taille max body configurable (Loco `limit_payload`, défaut 5 Mo, `disable` possible) + test de régression deploy > 2 Mo — Migration React Plan 3 (post-validation) — 2026-06-25
 - [x] `ProjectListItem` enrichi : `active_version_n` + `version_count` (retrait `active_version_id`), service `list_with_versions` (pas de N+1), `openapi.json`/`schema.d.ts` régénérés — Plan 2 (post-validation) — 2026-06-25
+- [x] Endpoints admin commentaires : `GET /api/projects/{id}/versions/{n}/comments` + `DELETE /api/projects/{id}/comments/messages/{cid}` (modération) ; `comment_count` réel dans `detail`/`update` ; `#[utoipa::path]` sur 6 handlers serve ; 9 schémas + 8 paths OpenAPI ; `openapi.json`/`schema.d.ts` régénérés — Task 10 — 2026-06-30
 
 ## Frontend (SPA Yew) — **SUPERSEDED** (migré vers React, Plans 1-3, 2026-06-25)
 
