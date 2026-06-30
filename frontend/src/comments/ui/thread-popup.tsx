@@ -83,7 +83,7 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
               ) : (
                 <>
                   <p className="whitespace-pre-wrap text-sm">{m.body}</p>
-                  {(canEditMsg || canDeleteMsg) && (
+                  {canDeleteMsg && (
                     <div className="flex gap-2">
                       {canEditMsg && (
                         <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(m)}>

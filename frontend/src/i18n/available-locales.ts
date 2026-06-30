@@ -18,12 +18,11 @@ export function mergeFragmentGlob(
   glob: Record<string, GlobModule>,
 ): void {
   for (const [path, mod] of Object.entries(glob)) {
-    const code = path.split('/').pop()!.replace(/\.json$/, '')
-    const fragment = Object.fromEntries(
-      Object.entries(mod.default).filter(([k]) => k !== '_meta'),
-    ) as Record<string, string>
+    const code = codeFromPath(path)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _meta, ...rest } = mod.default
     if (!resources[code]) resources[code] = { translation: {} }
-    Object.assign(resources[code].translation, fragment)
+    Object.assign(resources[code].translation, rest)
   }
 }
 

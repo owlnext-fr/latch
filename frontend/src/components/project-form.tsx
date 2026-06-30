@@ -130,6 +130,7 @@ export function ProjectForm({
   const commentsEnabled = useWatch({ control, name: 'comments_enabled' }) ?? true
 
   // Smart default: in create mode, comments_enabled mirrors code_enabled until user touches it.
+  // commentsTouchedRef is intentionally absent from deps — refs are stable and .current is not tracked by React.
   useEffect(() => {
     if (mode === 'create' && !commentsTouchedRef.current) {
       setValue('comments_enabled', codeEnabled)

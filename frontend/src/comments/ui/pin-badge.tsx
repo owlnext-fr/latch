@@ -15,6 +15,7 @@ export function PinBadge({ position, count, active, onClick }: Readonly<PinBadge
   return (
     <button
       type="button"
+      data-testid="pin-badge"
       data-status={status}
       onClick={onClick}
       style={{ left: `${left}px`, top: `${top}px`, pointerEvents: 'auto' }}

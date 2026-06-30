@@ -1,6 +1,5 @@
 {
   "comment.bar.pick": "Commenter",
-  "comment.bar.toggle_pins": "Afficher les commentaires",
   "comment.bar.list": "Mes commentaires",
   "comment.bar.count": "{{count}} commentaire",
   "comment.bar.count_one": "{{count}} commentaire",
@@ -19,13 +18,9 @@
   "comment.thread.delete_thread": "Supprimer le fil",
   "comment.thread.save": "Enregistrer",
   "comment.thread.cancel": "Annuler",
-  "comment.thread.delete_confirm": "Supprimer ce commentaire ?",
   "comment.thread.moved": "Cet élément a peut-être bougé",
   "comment.thread.orphaned": "Élément d'origine introuvable",
-  "comment.list.empty": "Vous n'avez pas encore de commentaire.",
-  "comment.list.title": "Mes commentaires",
   "comment.error.name_required": "Veuillez saisir votre nom.",
   "comment.error.body_required": "Le commentaire ne peut pas être vide.",
-  "comment.error.body_too_long": "Le commentaire est trop long (2000 caractères max).",
-  "comment.error.network": "Une erreur est survenue. Réessayez."
+  "comment.error.body_too_long": "Le commentaire est trop long (2000 caractères max)."
 }

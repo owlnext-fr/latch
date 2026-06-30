@@ -132,7 +132,7 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
   await commentsLoaded
 
   // 6. La pastille du pin doit apparaître sur l'overlay (pinsVisible = true par défaut)
-  const pinBadge = page.locator('[data-status]').first()
+  const pinBadge = page.locator('[data-testid="pin-badge"]').first()
   await expect(pinBadge).toBeVisible({ timeout: 10_000 })
 
   // 7. Ouvrir le fil en cliquant sur la pastille
@@ -155,7 +155,7 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
 
   // 10. Après suppression du dernier message, le pin est soft-deleté côté backend.
   //     La liste est refetchée → 0 pins → 0 pastilles + popup fermée.
-  await expect(page.locator('[data-status]')).toHaveCount(0, { timeout: 10_000 })
+  await expect(page.locator('[data-testid="pin-badge"]')).toHaveCount(0, { timeout: 10_000 })
 })
 
 test('ProjectForm : toggle commentaires suit code_enabled puis se découple', async ({
