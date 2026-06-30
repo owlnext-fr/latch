@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Zap, FileText, Eye, PanelRight, Trash2, CircleCheck } from 'lucide-react'
+import { Zap, FileText, Eye, PanelRight, Trash2, CircleCheck, MessageSquare } from 'lucide-react'
 import { Topbar } from '@/components/topbar'
 import { CopyButton } from '@/components/copy-button'
 import { PinField } from '@/components/pin-field'
@@ -11,6 +11,7 @@ import { DeployPanel } from '@/components/deploy-panel'
 import { DeleteProjectPanel } from '@/components/delete-project-panel'
 import { DeleteVersionPanel } from '@/components/delete-version-panel'
 import { VersionDetailPanel } from '@/components/version-detail-panel'
+import { VersionCommentsPanel } from '@/components/version-comments-panel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -49,6 +50,7 @@ export function DetailPage() {
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false)
   const [deleteVersion, setDeleteVersion] = useState<VersionItem | null>(null)
   const [detailVersion, setDetailVersion] = useState<VersionItem | null>(null)
+  const [commentsVersion, setCommentsVersion] = useState<VersionItem | null>(null)
 
   let mainContent: ReactNode
   if (isLoading) {
@@ -257,6 +259,19 @@ export function DetailPage() {
                             <PanelRight />
                           </Button>
 
+                          {/* Comments (icon) — opens the comments panel */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t('detail.comments_aria')}
+                            title={t('version_comments.action')}
+                            disabled={v.comment_count === 0}
+                            onClick={() => setCommentsVersion(v)}
+                          >
+                            <MessageSquare />
+                          </Button>
+
                           {/* Preview (icon link, new tab) */}
                           <Button
                             asChild
@@ -335,6 +350,17 @@ export function DetailPage() {
             open={detailVersion !== null}
             onOpenChange={(isOpen) => {
               if (!isOpen) setDetailVersion(null)
+            }}
+          />
+        )}
+
+        {commentsVersion && (
+          <VersionCommentsPanel
+            projectId={id}
+            version={commentsVersion.n}
+            open={commentsVersion !== null}
+            onOpenChange={(o) => {
+              if (!o) setCommentsVersion(null)
             }}
           />
         )}

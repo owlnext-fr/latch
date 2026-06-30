@@ -143,5 +143,15 @@
   "version_detail.title": "Version v{{n}}",
   "version_detail.date_label": "Deployed on",
   "version_detail.notes_label": "Release notes",
-  "version_detail.no_notes": "No release notes for this version."
+  "version_detail.no_notes": "No release notes for this version.",
+  "version_comments.title": "Comments — v{{n}}",
+  "version_comments.empty": "No comments on this version.",
+  "version_comments.loading": "Loading comments…",
+  "version_comments.anchor_label": "Anchor",
+  "version_comments.delete_aria": "Delete this message",
+  "version_comments.confirm_delete": "Delete this message?",
+  "version_comments.confirm_yes": "Delete",
+  "version_comments.confirm_no": "Cancel",
+  "version_comments.action": "Comments",
+  "detail.comments_aria": "View comments for this version"
 }

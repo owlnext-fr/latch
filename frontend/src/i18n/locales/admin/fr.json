@@ -143,5 +143,15 @@
   "version_detail.title": "Version v{{n}}",
   "version_detail.date_label": "Déployée le",
   "version_detail.notes_label": "Notes de version",
-  "version_detail.no_notes": "Aucune note pour cette version."
+  "version_detail.no_notes": "Aucune note pour cette version.",
+  "version_comments.title": "Commentaires — v{{n}}",
+  "version_comments.empty": "Aucun commentaire sur cette version.",
+  "version_comments.loading": "Chargement des commentaires…",
+  "version_comments.anchor_label": "Ancrage",
+  "version_comments.delete_aria": "Supprimer ce message",
+  "version_comments.confirm_delete": "Supprimer ce message ?",
+  "version_comments.confirm_yes": "Supprimer",
+  "version_comments.confirm_no": "Annuler",
+  "version_comments.action": "Commentaires",
+  "detail.comments_aria": "Voir les commentaires de cette version"
 }
