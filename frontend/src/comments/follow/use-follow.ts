@@ -5,15 +5,14 @@ import type { Picker } from '../picker/picker'
 export function useFollow(picker: Picker | null, pins: PinInput[]): PinPosition[] {
   const [positions, setPositions] = useState<PinPosition[]>([])
   const ctrlRef = useRef<FollowController | null>(null)
-  // Always holds the latest pins so Effect 1 can prime the controller before start().
-  const pinsRef = useRef<PinInput[]>(pins)
-  pinsRef.current = pins
 
+  // Effect 1: create/destroy the controller whenever picker or pins changes.
+  // pins is included in deps so the closure always has the latest value and the
+  // controller is primed before start() — this prevents a setState flip from [] to
+  // real positions that would cause an infinite render loop when the caller passes
+  // unstable picker/pins references (e.g. in tests).
   useEffect(() => {
-    if (!picker) {
-      setPositions([])
-      return
-    }
+    if (!picker) return
     const ctrl = new FollowController(picker)
     ctrlRef.current = ctrl
     const off = ctrl.onUpdate((next) =>
@@ -21,19 +20,14 @@ export function useFollow(picker: Picker | null, pins: PinInput[]): PinPosition[
         JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
       ),
     )
-    // Prime pins before start() so the first measurement is correct.
-    ctrl.setPins(pinsRef.current)
+    ctrl.setPins(pins)
     ctrl.start()
     return () => {
       off()
       ctrl.stop()
       ctrlRef.current = null
     }
-  }, [picker])
+  }, [picker, pins])
 
-  useEffect(() => {
-    ctrlRef.current?.setPins(pins)
-  }, [pins])
-
-  return positions
+  return picker ? positions : []
 }
