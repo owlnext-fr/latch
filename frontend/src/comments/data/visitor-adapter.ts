@@ -10,11 +10,11 @@ import type {
 /** En-tête anti-CSRF exigé par le backend sur tous les writes commentaires. */
 const WRITE_HEADERS = { 'X-Comment-Client': '1' }
 
-const VISITOR_CAPS: Capabilities = {
+const VISITOR_CAPS: Capabilities = Object.freeze({
   canAuthor: true,
   canEditOwn: true,
   canModerate: false,
-}
+})
 
 export function createVisitorAdapter(slug: string): CommentsAdapter {
   return {
