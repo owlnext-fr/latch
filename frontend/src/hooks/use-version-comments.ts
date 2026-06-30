@@ -2,6 +2,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api/client'
@@ -32,7 +33,7 @@ export function useVersionComments(
   })
 }
 
-export function useModerateComment(projectId: number, n: number) {
+export function useModerateComment(projectId: number, n: number): UseMutationResult<void, Error, number> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (messageId: number) => {
