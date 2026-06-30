@@ -4,29 +4,40 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
-## 2026-06-30 — Task 10 : endpoints admin commentaires + comment_count + OpenAPI
+## 2026-06-30 — Commentaires ancrés : **Plan 1 (Backend) LIVRÉ** (T1-T11), frontend à venir
 
 ### Dernière chose faite
-Implémentation complète des endpoints admin pour les commentaires (Task 10) :
-- `GET /api/projects/{id}/versions/{n}/comments` — liste tous les fils d'une version (admin, lecture seule, sans `owner_token`/`editable`).
-- `DELETE /api/projects/{id}/comments/messages/{cid}` — modération admin (supprime n'importe quel message du projet via `moderate_delete_message`).
-- `detail` et `update` handlers : `comment_count` désormais calculé en live via `count_comments_by_version` (plus de `HashMap::new()`).
-- `#[utoipa::path]` ajouté sur les 6 handlers commentaires publics de `serve.rs`.
-- `openapi.rs` : 8 nouveaux paths + 9 schémas commentaires enregistrés.
-- `openapi.json` + `schema.d.ts` régénérés — la regen a aussi exposé `comment_count` (dans `VersionItem`) et `comments_enabled` (dans `ProjectListItem`) qui manquaient dans le JSON commité.
-- 3 fixtures de tests frontend corrigées pour inclure les nouveaux champs requis.
-- 2 tests d'intégration admin : **2/2 PASS**. Suite complète : **178/178**.
-- **Commit** : `f4ae037` (`✨ feat(comments): endpoints admin + comment_count + openapi`).
+Backend complet de la feature **commentaires ancrés type Figma** sur les prototypes, exécuté en
+subagent-driven (11 tâches, branche `feat/prototype-comments`). **Périmètre = backend uniquement** ;
+les **Plans 2 (frontend module partagé + shell visiteur)** et **3 (admin Review + docs publiques)**
+ne sont PAS commencés — la feature N'EST PAS terminée bout-en-bout.
+
+Livré (backend) :
+- **Schéma** : tables `comment_pins` + `comments` (FK→versions/comment_pins CASCADE, soft-delete `deleted_at`) + colonne `projects.comments_enabled` (backfill = `code_enabled`).
+- **Cœur** `services/comments.rs` : `CommentsService` (create_pin/add_reply/list/count + edit/delete/delete_pin/moderate, owner-check via `secure_compare`→NotFound, validation 2000/80, plafond 200 pins).
+- **Identité visiteur** : cookie signé `latch_comment` (ULID opaque, réutilise `UNLOCK_COOKIE_SECRET`), garde `X-Comment-Client`.
+- **Endpoints publics** `/c/{slug}/comments` (GET + POST + replies + PUT edit + DELETE message/pin), gated `unlock_ok`+`comments_enabled` (403 verrouillé / 404 désactivé), rate-limit `LATCH_COMMENT_RL_*`, Origin guard.
+- **Admin** : `GET /api/projects/{id}/versions/{n}/comments` (`list_version_comments`) + `DELETE …/comments/messages/{cid}` (modération, walk projet), `comment_count` live.
+- **DTOs + OpenAPI** régénérés (`openapi.json` + `schema.d.ts`), drift GREEN. Contrat `docs/contrat-deploy.md` amendé (§3/§6.4/§7/§9 invariant 7).
+- **Invariant** : `owner_token` JAMAIS sérialisé (structurel + test 3 surfaces).
+- **Gate finale verte** : `cargo fmt`/`clippy` clean, `nextest` **181 passed**, `openapi_drift` green, `cargo-deny` PASS, `pnpm typecheck` clean.
 
 ### Trucs en suspens
-Rien de bloquant. La Task 10 est terminée et toutes les gates passent.
+- **Branche `feat/prototype-comments` NON mergée** : décision humaine (merge/PR) via finishing-a-development-branch.
+- **Plans 2 et 3 (frontend) à écrire puis exécuter** — c'est là que vit toute l'UX (picker, ancrage, suivi, overlay, barre d'action, vue Review admin). Le backend les attend.
+- Minors non bloquants consignés dans le ledger SDD (`.superpowers/sdd/progress.md`) pour la revue finale : filtre `DeletedAt.is_null()` défensif sur le lookup pin de `moderate_delete_message` ; quelques tests à durcir ; formatage.
 
 ### Prochaine chose à creuser
-Phase suivante selon `docs/ROADMAP.md`.
+Écrire le **Plan 2 (frontend)** : module `src/comments/` (interface `Picker` same-origin, échelle
+d'ancrage W3C, contrôleur de suivi, overlay/popup `@floating-ui/dom`, barre d'action, adaptateur de
+données) chargé en lazy dans le shell visiteur ; puis Plan 3 (toggle `ProjectForm`, vue Review admin
+montant le même module, passe `public_docs`). Spec : `docs/superpowers/specs/2026-06-30-prototype-comments-design.md`.
 
 ### Notes pour future Claude
-- `moderate_delete_comment` est protégé par `require_same_origin` (mutation) mais pas par `X-Comment-Client` (c'est un endpoint admin, pas visiteur).
-- La regen openapi.json a révélé que l'ancien fichier était périmé : `comment_count` et `comments_enabled` étaient dans le DTO Rust mais absents du JSON. Les tests TS ont été corrigés.
+- Le **corps des commentaires est en texte brut** (pas de markdown) — décision produit. Ne pas réintroduire de rendu HTML serveur.
+- `moderate_delete_comment` : `require_same_origin` (mutation) mais pas `X-Comment-Client` (endpoint admin, pas visiteur) — voulu.
+- `comments_gate` renvoie `Result<_, Response>` (statuts 403/404 exacts), PAS `loco_rs::Error` (qui transformerait 403→401).
+- Le frontend consommera les types depuis `schema.d.ts` régénéré (admin GET = `list_version_comments`, distinct du serve GET `list_comments`).
 
 ---
 
