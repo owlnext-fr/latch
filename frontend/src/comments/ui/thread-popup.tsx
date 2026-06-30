@@ -62,43 +62,51 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
         </p>
       )}
       <ul className="flex max-h-64 flex-col gap-3 overflow-y-auto">
-        {pin.messages.map((m) => (
-          <li key={m.id} className="flex flex-col gap-1">
-            <span className="text-xs font-semibold">{m.author_name}</span>
-            {editingId === m.id ? (
-              <div className="flex flex-col gap-1">
-                <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} />
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>
-                    {t('comment.thread.cancel')}
-                  </Button>
-                  <Button type="button" loading={busy} onClick={commitEdit}>
-                    {t('comment.thread.save')}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="whitespace-pre-wrap text-sm">{m.body}</p>
-                {m.editable && capabilities.canEditOwn && (
-                  <div className="flex gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(m)}>
-                      {t('comment.thread.edit')}
+        {pin.messages.map((m) => {
+          const canEditMsg = capabilities.canEditOwn && m.editable
+          const canDeleteMsg = canEditMsg || capabilities.canModerate
+          return (
+            <li key={m.id} className="flex flex-col gap-1">
+              <span className="text-xs font-semibold">{m.author_name}</span>
+              {editingId === m.id ? (
+                <div className="flex flex-col gap-1">
+                  <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>
+                      {t('comment.thread.cancel')}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDelete(m.id)}
-                    >
-                      {t('comment.thread.delete')}
+                    <Button type="button" loading={busy} onClick={commitEdit}>
+                      {t('comment.thread.save')}
                     </Button>
                   </div>
-                )}
-              </>
-            )}
-          </li>
-        ))}
+                </div>
+              ) : (
+                <>
+                  <p className="whitespace-pre-wrap text-sm">{m.body}</p>
+                  {(canEditMsg || canDeleteMsg) && (
+                    <div className="flex gap-2">
+                      {canEditMsg && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(m)}>
+                          {t('comment.thread.edit')}
+                        </Button>
+                      )}
+                      {canDeleteMsg && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(m.id)}
+                        >
+                          {t('comment.thread.delete')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </li>
+          )
+        })}
       </ul>
       {capabilities.canAuthor && (
         <div className="flex flex-col gap-1">

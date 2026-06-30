@@ -91,4 +91,34 @@ describe('ThreadPopup', () => {
     renderThread()
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
   })
+
+  it('affiche la corbeille de modération sur un message non-editable quand canModerate', () => {
+    const moderatorCaps = { canAuthor: false, canEditOwn: false, canModerate: true }
+    const singleMessagePin: CommentPin = {
+      id: 1,
+      anchor: '{}',
+      created_at: '',
+      messages: [
+        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false },
+      ],
+    }
+    renderThread({ pin: singleMessagePin, capabilities: moderatorCaps })
+    expect(screen.getByRole('button', { name: /delete/i })).toBeEnabled()
+    // pas de bouton "supprimer le fil" en modération
+    expect(screen.queryByRole('button', { name: /delete thread/i })).toBeNull()
+  })
+
+  it('ne montre PAS la suppression quand visiteur non-auteur (editable=false, canEditOwn)', () => {
+    const visitorCaps = { canAuthor: true, canEditOwn: true, canModerate: false }
+    const nonEditablePin: CommentPin = {
+      id: 1,
+      anchor: '{}',
+      created_at: '',
+      messages: [
+        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false },
+      ],
+    }
+    renderThread({ pin: nonEditablePin, capabilities: visitorCaps })
+    expect(screen.queryByRole('button', { name: /delete/i })).toBeNull()
+  })
 })
