@@ -11,6 +11,21 @@ if (!('ResizeObserver' in globalThis)) {
   }
 }
 
+// jsdom ne fournit pas IntersectionObserver (utilisé par le contrôleur de suivi des pins).
+if (!('IntersectionObserver' in globalThis)) {
+  globalThis.IntersectionObserver = class {
+    readonly root = null
+    readonly rootMargin = ''
+    readonly thresholds = []
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return []
+    }
+  } as unknown as typeof IntersectionObserver
+}
+
 // jsdom lacks document.elementFromPoint, which input-otp uses for caret positioning.
 if (!document.elementFromPoint) {
   document.elementFromPoint = () => null
