@@ -4,6 +4,22 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Task K2 : **Page Review admin livrée**
+
+### Dernière chose faite
+Route SPA `/admin/projects/$id/versions/$n/review` créée (`frontend/src/routes/review.tsx`). La page est full-screen : breadcrumb retour projet, iframe sur `previewUrl(id, n)` (same-origin, `frame-ancestors 'self'`), overlay lazy `CommentsApp` avec `createAdminAdapter` — même pattern reloadKey que `CommentsMount` (bump sur event `load` iframe, ref callback `useState<HTMLIFrameElement | null>`). Bouton « Review » (`MessagesSquare`, `Link` TanStack) ajouté dans `detail.tsx` (entre Comments et Preview). `reviewPath` helper dans `lib/utils.ts`. Clés i18n `review.*` + `detail.review_aria` EN+FR. Route câblée dans `router.tsx`. Test Vitest `review.test.tsx` vert (stub `@/comments` via `vi.mock`). Gate : lint 0 err, typecheck 0 err, 26 tests verts. Commit `6bb8275`.
+
+### Trucs en suspens
+Plan 3 reste : toggle `comments_enabled` dans `ProjectForm` (§10.1), passe `public_docs` (§13). La feature n'est pas terminée bout-en-bout (l'admin peut naviguer en Review mais ne peut pas activer/désactiver les commentaires depuis le formulaire projet).
+
+### Prochaine chose à creuser
+Toggle `comments_enabled` dans `ProjectForm` : champ boolean à ajouter + clé i18n `form.comments`/`form.comments_help` déjà dans en.json/fr.json — à câbler via `UpdateProjectReq`. Puis passe docs publiques.
+
+### Notes pour future Claude
+- Le pattern `useState<HTMLIFrameElement | null>(null)` + `ref={setFrameEl}` est documenté dans `docs/CONVENTIONS.md` (section shell) ; ne pas utiliser `useRef` pour éviter les re-renders manquants.
+- `createAdminAdapter` a `canModerate: true`, `canAuthor/canEditOwn: false` — c'est l'adaptateur modération uniquement.
+- La page Review n'a pas de Topbar (plein écran intentionnel, breadcrumb minimal).
+
 ## 2026-06-30 — Commentaires ancrés : **Plan 2 (FRONTEND VISITEUR) LIVRÉ**
 
 ### Dernière chose faite

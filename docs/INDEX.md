@@ -234,4 +234,5 @@
 - [x] Couche commentaires visiteur — module partagé `frontend/src/comments/` (seam Picker + SameOriginPicker, moteur d'ancrage describe/resolve/similarité, contrôleur de suivi rAF, adaptateur visiteur + hooks React Query confinés, overlay/pastilles/popups @floating-ui, barre d'action, machine pick) — Plan 2 commentaires — 2026-06-30
 - [x] Montage shell visiteur : `/c/<slug>` lit `PublicMeta.comments_enabled` et charge le module en lazy (React.lazy, 1er du repo ; React Query confiné au chunk) — Plan 2 commentaires — 2026-06-30
 - [x] e2e Playwright visiteur (cibler→écrire→pin ancré→persistance reload) — Plan 2 commentaires — 2026-06-30
-- [ ] **Plan 3** (frontend admin Review + passe `public_docs`) — à faire
+- [x] **Task K2** — route SPA `/admin/projects/$id/versions/$n/review` : `ReviewPage` (iframe `previewUrl` + overlay lazy `CommentsApp` admin, reloadKey sur `load`, `createAdminAdapter`, breadcrumb retour) ; bouton « Review » (`MessagesSquare`, `Link`) dans `detail.tsx` ; `reviewPath` dans `lib/utils.ts` ; clés i18n `review.*` + `detail.review_aria` EN+FR ; route câblée dans `router.tsx` — Task K2 — 2026-06-30
+- [ ] **Plan 3 reste** (toggle `comments_enabled` dans `ProjectForm`, passe `public_docs`) — à faire
