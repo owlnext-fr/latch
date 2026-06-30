@@ -1294,3 +1294,41 @@ client.POST('/c/{slug}/comments', {
   body: { ... },
 })
 ```
+
+## `CommentsApp` — adaptateur injecté (Plan 3, 2026-06-30)
+
+`CommentsApp` reçoit trois props : `cacheKey` (clé React Query opaque), `frame` (ref iframe), `adapter` (objet implémentant `CommentsAdapter`).
+
+- **Visiteur** : `createVisitorAdapter(slug)` + `cacheKey=slug`.
+- **Admin** : `createAdminAdapter(projectId, n)` + `cacheKey=\`admin:${id}:${n}\``.
+
+```tsx
+// shell visiteur (src/shell/comments-mount.tsx)
+<CommentsApp cacheKey={slug} frame={frameRef} adapter={createVisitorAdapter(slug)} />
+
+// Review admin (src/routes/review.tsx)
+<CommentsApp cacheKey={`admin:${id}:${n}`} frame={frameRef} adapter={createAdminAdapter(id, n)} />
+```
+
+`createAdminAdapter` mappe `AdminCommentMessage`→`CommentMessage` avec `editable:false` (l'admin ne possède pas les commentaires des visiteurs) ; `canModerate:true` seul. Les méthodes `createPin`/`addReply`/`editMessage`/`deletePin` lèvent une erreur (l'admin ne peut qu'observer et modérer).
+
+## i18n d'un module partagé entre bundles (Plan 3, 2026-06-30)
+
+Quand un module React est partagé entre plusieurs bundles Vite (ex. `src/comments/` utilisé dans le shell et dans le bundle admin), ses clés i18n vivent dans une source unique `src/i18n/locales/comments/{en,fr}.json`.
+
+**Fusion côté admin (singleton)** — dans `src/i18n/index.ts` :
+```ts
+import { mergeFragmentGlob } from './merge-fragment-glob'
+const commentResources = import.meta.glob('./locales/comments/*.json', { eager: true })
+// après init i18next :
+mergeFragmentGlob(i18n, commentResources)
+```
+
+**Fusion côté shell (multi-instance)** — via `createBundleI18n` :
+```ts
+const shellResources = import.meta.glob('./locales/shell/*.json', { eager: true })
+const commentResources = import.meta.glob('../i18n/locales/comments/*.json', { eager: true })
+createBundleI18n(shellResources, commentResources)
+```
+
+**Règle** : tout nouveau consommateur du module partagé DOIT fusionner le glob `locales/comments/`. Oublier cette étape → clés affichées en texte brut (cf. QUIRKS "RÉSOLU par L2").

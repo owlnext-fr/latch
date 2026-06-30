@@ -4,6 +4,39 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-06-30 — Task N1 : **Plan 3 (admin Review + toggle + docs) LIVRÉ — feature commentaires TERMINÉE bout-en-bout**
+
+### Dernière chose faite
+Gate complète validée + Sonar local passé + mémoire consolidée (Task N1, clôture Plan 3). Gate finale :
+- Frontend : lint 0 err, typecheck 0 err, vitest **195 passed**, playwright **8 passed / 0 failed / 2 skipped**.
+- Backend : `cargo fmt` clean, `clippy` 0 warning, `cargo nextest` **181 passed**.
+- Sonar local : `QUALITY GATE STATUS: PASSED` (scan Docker `sonarsource/sonar-scanner-cli`, branche `feat/prototype-comments`).
+- Couverture locale proxy : frontend 82.22% (statements), backend via `cargo llvm-cov` 181/181.
+
+La feature commentaires ancrés est **terminée bout-en-bout** : backend (Plan 1) + frontend visiteur (Plan 2) + admin (Plan 3). Livrés dans Plan 3 : `createAdminAdapter` + modération `ThreadPopup`, toggle `comments_enabled` dans `ProjectForm`, hooks `useVersionComments`/`useModerateComment` + `VersionCommentsPanel`, page Review `/admin/projects/{id}/versions/{n}/review`, `frame-ancestors 'self'` sur preview, i18n partagé `locales/comments/` + `mergeFragmentGlob`, e2e admin déterministe (retry-on-429), docs Fumadocs `admin/comments`.
+
+> **Note sur les entrées précédentes K2/L1** : elles affirmaient que la page Review affichait les clés `comment.*` en texte littéral. C'était vrai jusqu'à L2 — **corrigé par le commit `49dc0f2`** (partage i18n via `mergeFragmentGlob`). Voir QUIRKS "RÉSOLU par L2".
+
+### Trucs en suspens
+- Décision merge/PR → `main` à prendre par l'humain (branche `feat/prototype-comments` en avance sur `main`).
+- **Minors différés** (non bloquants, à corriger avant ou après merge) :
+  - G1 : return type `JSX.Element` manquant sur `CommentsApp`.
+  - G2 : garde externe redondante `(canEditMsg||canDeleteMsg)` ≡ `canDeleteMsg` (thread-popup.tsx).
+  - I1 : warning aussi en mode create (UX) ; assertion intermédiaire redondante test2 ; commentaire ref-dep manquant.
+  - J2 : `open={x!==null}` redondant ; pas de `onError` sur `moderate.mutate` ; `toLocaleDateString` sans locale.
+  - L2 : `mergeFragmentGlob` filter+cast vs destructure ; test2 `apiLogin` deadweight ; `codeFromPath` dupliqué inline.
+- Gate SonarCloud CI reste l'autorité finale (cette session a validé le scan local Docker — les résultats CI après push seront les vrais chiffres de référence).
+
+### Prochaine chose à creuser
+- Créer la PR `feat/prototype-comments` → `main` + surveiller la CI SonarCloud.
+- Corriger les Minors si désirés avant merge.
+
+### Notes pour future Claude
+- `mergeFragmentGlob(resources, glob)` est la clé pour partager des clés i18n entre bundles — voir CONVENTIONS et QUIRKS (entrée RÉSOLU).
+- `pageLogin(page)` obligatoire pour tout e2e admin browser (cf. QUIRKS "session request ≠ page").
+- Les helpers login font retry-on-429 (≤6×, 800 ms) — ne pas toucher au rate-limit prod.
+- La feature est terminée. Le prochain chantier est le merge + éventuellement une release taggée.
+
 ## 2026-06-30 — Task L1 : **e2e admin Review + modération livré**
 
 ### Dernière chose faite

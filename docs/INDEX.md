@@ -236,4 +236,11 @@
 - [x] e2e Playwright visiteur (cibler→écrire→pin ancré→persistance reload) — Plan 2 commentaires — 2026-06-30
 - [x] **Task K2** — route SPA `/admin/projects/$id/versions/$n/review` : `ReviewPage` (iframe `previewUrl` + overlay lazy `CommentsApp` admin, reloadKey sur `load`, `createAdminAdapter`, breadcrumb retour) ; bouton « Review » (`MessagesSquare`, `Link`) dans `detail.tsx` ; `reviewPath` dans `lib/utils.ts` ; clés i18n `review.*` + `detail.review_aria` EN+FR ; route câblée dans `router.tsx` — Task K2 — 2026-06-30
 - [x] **Task L1** — e2e Playwright admin (`frontend/e2e/comments-admin.spec.ts`) : 2 tests (Review pin visible + modération supprime pin ; toggle `comments_enabled` dans `ProjectForm`) — stratégie seed Option B (API directe, `#cta` anchor) ; `pageLogin(page)` pour session browser admin — commit `6fd346d` — 2026-06-30
-- [ ] **Plan 3 reste** (toggle `comments_enabled` dans `ProjectForm`, passe `public_docs`) — à faire
+- [x] Adaptateur injectable `CommentsApp({ cacheKey, frame, adapter })` + `createAdminAdapter` (maps `AdminCommentMessage`→`CommentMessage`, `canModerate:true`) + modération dans `ThreadPopup` — Plan 3 commentaires — 2026-06-30
+- [x] Toggle `comments_enabled` dans `ProjectForm` (smart default via `useRef` + warning i18n) — Plan 3 commentaires — 2026-06-30
+- [x] Hooks `useVersionComments` / `useModerateComment` + composant `VersionCommentsPanel` (liste + modération) — Plan 3 commentaires — 2026-06-30
+- [x] Page Review admin `/admin/projects/{id}/versions/{n}/review` (`ReviewPage`, iframe `previewUrl`, overlay lazy `CommentsApp` admin) + `frame-ancestors 'self'` sur `preview_version` — Plan 3 commentaires — 2026-06-30
+- [x] i18n module partagé entre bundles (`src/i18n/locales/comments/{en,fr}.json` + `mergeFragmentGlob` dans admin singleton + `createBundleI18n` fragmentGlob param dans shell) — Plan 3 commentaires — 2026-06-30
+- [x] e2e admin (`frontend/e2e/comments-admin.spec.ts`) déterministe : retry-on-429 dans `apiLogin`/`pageLogin`, 8 passed/0 failed/2 skipped — Plan 3 commentaires — 2026-06-30
+- [x] Docs publiques Fumadocs : page `admin/comments` + passes architecture/security-model/projects/versions — Plan 3 commentaires (Task M1) — 2026-06-30
+- [x] **Plan 3 (admin Review + toggle + docs) LIVRÉ** — gate verte (vitest 195, e2e 8, lint/typecheck clean, nextest 181, clippy/fmt clean) ; Sonar local PASSED — 2026-06-30

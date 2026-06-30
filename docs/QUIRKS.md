@@ -19,11 +19,21 @@ await page.goto(`/admin/projects/${project.id}/...`)
 
 La cause profonde : `axum_session` utilise un mécanisme de session côté serveur avec deux cookies (`latch_admin` + `store`). Le cookie `store` contenant les données de session chiffrées semble ne pas être retransmis correctement entre les deux contextes Playwright dans ce setup.
 
-## Clés i18n `comment.*` absentes du bundle admin (2026-06-30)
+## ~~Clés i18n `comment.*` absentes du bundle admin~~ — **RÉSOLU par L2 (`mergeFragmentGlob`, 2026-06-30)**
 
-Le bundle admin ne charge que `src/i18n/locales/admin/*.json`. Les clés `comment.bar.*`, `comment.thread.*`, `comment.compose.*` viennent du locale `shell/` et sont **absentes du bundle admin**. Dans la page Review admin, ces clés sont donc affichées en texte littéral (comportement i18next par défaut pour les clés manquantes).
+> **Entrée L1 (maintenant FAUSSE) :** le bundle admin ne chargeait que `src/i18n/locales/admin/*.json` ; les clés `comment.*` s'affichaient en texte littéral dans la page Review.
 
-Conséquence : le bouton Supprimer dans `ThreadPopup` affiche `comment.thread.delete` comme texte. Les tests e2e admin utilisent cette clé littérale pour les sélecteurs.
+**Corrigé en L2 (commit `49dc0f2`)** : le module partagé `src/comments/` possède ses clés i18n dans `src/i18n/locales/comments/{en,fr}.json`. Ces fichiers sont fusionnés :
+- dans l'**instance admin** (singleton `src/i18n/index.ts`) via `mergeFragmentGlob(resources, glob)` ;
+- dans les **bundles `createBundleI18n`** (shell) via le paramètre optionnel `fragmentGlob?`.
+
+Règle : **tout nouveau consommateur du module partagé doit fusionner ce glob** (`import.meta.glob('.../locales/comments/*.json')`), sinon il affiche les clés brutes. Les tests e2e admin assertent désormais le texte traduit réel.
+
+## e2e : rate-limit `/api/login` (429) — retry obligatoire (2026-06-30)
+
+`backend/src/controllers/auth.rs` applique `burst_size=5/per_second=2` par IP sur `POST /api/login`. La suite e2e enchaîne les logins depuis `127.0.0.1` → 429 quand plusieurs specs se suivent dans la même session Playwright.
+
+**Contournement** : les helpers `apiLogin` et `pageLogin` font un **retry-on-429** (≤6 tentatives, 800 ms de délai entre chaque). Ne PAS baisser le rate-limit prod pour les tests — c'est une mesure de sécurité non-négociable. Résolu en Task L3 (commit `b2a05c8`).
 
 ## Shims jsdom requis pour la couche commentaire (2026-06-30)
 

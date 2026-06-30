@@ -343,9 +343,12 @@ persistée en localStorage.
   - *Déploiement* : upload manuel d'un HTML → `DeployPanel` (side-panel) → nouvelle
     version, case « activer immédiatement ». Même `services::deploy()` que le tool MCP.
     État vide : ce bloc passe au premier plan.
-- **Commentaires** : toggle `comments_enabled` par projet (défaut sécurité-aware) ; vue admin
-  par version (liste lecture seule `GET /api/projects/<id>/versions/<n>/comments` + modération
-  `DELETE /api/projects/<id>/comments/messages/<id>`, vérifie l'appartenance au projet).
+- **Commentaires** : toggle `comments_enabled` par projet dans `ProjectForm` (défaut sécurité-aware) ;
+  **page Review** `/admin/projects/<id>/versions/<n>/review` : iframe plein-écran (`previewUrl`, `frame-ancestors 'self'`)
+  avec overlay lazy `CommentsApp` en mode admin (`createAdminAdapter` : lecture + modération) ;
+  `VersionCommentsPanel` accessible depuis le détail projet (liste lecture seule
+  `GET /api/projects/<id>/versions/<n>/comments` + modération `DELETE /api/projects/<id>/comments/messages/<id>`,
+  vérifie l'appartenance au projet).
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
   titre cliquable + **sélecteur de langue FR/EN** + logout. Compte unique → pas de menu utilisateur.
   L'UI est **internationalisée (FR + EN, défaut EN)** via `react-i18next` ; la langue est persistée

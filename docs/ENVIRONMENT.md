@@ -116,6 +116,8 @@ Cf. QUIRKS pour le détail du piège chemin absolu/`/usr/src`.
   URL complète : `<LATCH_PUBLIC_BASE_URL>/mcp` (ex. `https://latch.owlnext.fr/mcp`).
   `allowed_hosts` = autorité de `LATCH_PUBLIC_BASE_URL` (ex. `latch.owlnext.fr`) — dérivé automatiquement.
 - Path admin : `/admin` (SPA React statique + API JSON sous `/api/*`).
+  Routes SPA notables : `/admin` (liste), `/admin/projects/{id}` (détail),
+  `/admin/projects/{id}/versions/{n}/review` (page Review commentaires, full-screen, créée en Plan 3).
 - Path serving client : `/c/<slug>` (page de déverrouillage ou proto HTML actif).
 
 ## Box de déploiement
