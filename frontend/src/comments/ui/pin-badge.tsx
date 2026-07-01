@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { PinPosition } from '../follow/controller'
 import { COMMENT_FLUO } from './colors'
+import { anchorPoint } from './anchor-point'
 
 interface PinBadgeProps {
   position: PinPosition
@@ -11,8 +12,7 @@ interface PinBadgeProps {
 
 export function PinBadge({ position, label, active, onClick }: Readonly<PinBadgeProps>) {
   const { rect, offset, status } = position
-  const left = rect.x + offset.x * rect.width
-  const top = rect.y + offset.y * rect.height
+  const { x: left, y: top } = anchorPoint(rect, offset)
   const anchored = status === 'anchored'
   return (
     <button
