@@ -1,11 +1,21 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v1.4.0] — 2026-07-01
+
+### Ajouts
+
+- Tool pull_prototype (protocole de pull) (#17)
+
+### Interne
+
+- Traite les 13 maintainability issues Sonar (#16)
 ## [v1.3.1] — 2026-07-01
 
 ### Documentation
 
 - Board GitHub = source de suivi, BACKLOG en icebox, ROADMAP en journal
+- Régénère pour v1.3.1 (gate CI docs/docker)
 
 ### Interne
 
