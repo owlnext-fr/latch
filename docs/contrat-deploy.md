@@ -182,9 +182,12 @@ fingerprint, textQuote, offset, fallbackPoint }`. Suppression = soft-delete (`de
   connecte sans OAuth). L'auth est **dans l'argument** : chaque tool exige un
   `deploy_token` validé contre l'env (`DEPLOY_TOKEN`) via comparaison à temps constant
   (`secure_compare`) — **premier geste, avant tout appel service**.
-- **Surface minimale** : `deploy_prototype(slug, html, deploy_token, activate?)`
-  et `list_projects(deploy_token)`. La config des codes, la bascule de version, la
-  suppression → **uniquement sur l'admin**, jamais exposées en MCP.
+- **Surface minimale** : `deploy_prototype(slug, html, deploy_token, activate?)`,
+  `list_projects(deploy_token)` et `pull_prototype(slug, version?, deploy_token)`
+  — lecture seule : renvoie le HTML d'une version + tous ses fils de commentaires
+  (visiteurs + admin), pour itérer côté Claude. Gardé par le token comme les autres.
+  La config des codes, la bascule de version, la suppression → **uniquement sur
+  l'admin**, jamais exposées en MCP.
 - **Token sur TOUS les tools, lecture comprise** : un tool MCP est public tant qu'il
   ne valide pas le token ; gater `list_projects` évite de fuiter la liste des clients.
 
@@ -209,6 +212,22 @@ fingerprint, textQuote, offset, fallbackPoint }`. Suppression = soft-delete (`de
   a un schéma JSON de type `array` à la racine (MCP exige `object`) → enveloppe obligatoire.
 - Chaque entrée : `ProjectSummary { slug, name, code_protected, active_version: Option<i32> }`.
   **Jamais de hash, jamais de PIN, jamais de `id` DB.**
+
+**`pull_prototype(slug, version?, deploy_token)`**
+- `slug` doit **préexister** en base. `version` optionnel : omis → version active du projet
+  (`get_active_version`) ; fourni → cette version précise (`get_version`). Slug inconnu, version
+  inconnue, ou aucune version active → erreur.
+- Token validé EN PREMIER (`secure_compare`) — avant toute lecture en base.
+- Lecture seule : ne modifie ni ne crée rien. Ne gate pas sur `comments_enabled` (informationnel
+  uniquement : les threads sont renvoyés même si les commentaires sont désactivés sur le projet).
+  Renvoie **tous** les fils non supprimés (visiteurs + admin).
+- Réponse : `PullResult { slug, version: <n>, url, comments_enabled: <bool>, release_notes: <string|null>, html, threads: [...] }`.
+  Le champ `url` utilise `LATCH_PUBLIC_BASE_URL` comme source de vérité, comme pour `deploy_prototype`.
+  - `PullThread { anchor, messages: [...] }` : `anchor` est le descripteur d'ancrage JSON **brut**,
+    passé tel quel (jamais interprété ni réinterprété côté serveur).
+  - `PullMessage { author_name, is_admin: <bool>, body, created_at }` : `is_admin` est **dérivé**
+    (comparaison à `ADMIN_OWNER_TOKEN`), jamais le token lui-même.
+  - **Jamais** `owner_token`, jamais de PIN, jamais de hash, jamais de `id` DB.
 
 ## 6. Surface `/c/<slug>` — shell + iframe, unlock, notes de version
 

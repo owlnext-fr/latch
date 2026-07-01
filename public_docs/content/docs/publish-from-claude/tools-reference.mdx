@@ -1,10 +1,10 @@
 ---
 title: Tools reference
-description: The two MCP tools — deploy_prototype and list_projects.
+description: The three MCP tools — deploy_prototype, list_projects and pull_prototype.
 ---
 
-`latch` exposes exactly two MCP tools. Both validate the `deploy_token` **first**, before any
-database access. Neither ever returns a hash or a PIN.
+`latch` exposes three MCP tools. All three validate the `deploy_token` **first**, before any
+database access. None of them ever returns a hash or a PIN.
 
 ## `deploy_prototype`
 
@@ -86,3 +86,52 @@ no database id.**
 Configuring access codes, switching the active version, and deleting are **admin-only** — they are
 intentionally never exposed over MCP. See the [admin guide](/docs/admin/projects).
 </Callout>
+
+## `pull_prototype`
+
+Read-only: fetches a version's raw HTML plus all its comment threads, so you can bring a prototype
+and its feedback back into the conversation and iterate — this is what powers a `/latch-pull`
+style prompt.
+
+```text
+pull_prototype(slug, version?, deploy_token)
+```
+
+| Argument | Notes |
+| --- | --- |
+| `slug` | Must reference an **existing** project. An unknown slug is an error. |
+| `version` | Optional version number. Omitted → the project's **active version**. An unknown version number is an error. |
+| `deploy_token` | Validated first, in constant time. |
+
+It never modifies anything, and it returns **every** non-deleted comment thread — from visitors and
+from the admin alike — regardless of whether comments are currently enabled on the project.
+
+On success it returns:
+
+```json
+{
+  "slug": "my-project-k7Qp2maZ",
+  "version": 2,
+  "url": "https://latch.example.com/c/my-project-k7Qp2maZ",
+  "comments_enabled": true,
+  "release_notes": "## What's new in v2\n\n- Fixed contrast on dark mode",
+  "html": "<!doctype html>...",
+  "threads": [
+    {
+      "anchor": "{\"selector\":\"...\"}",
+      "messages": [
+        {
+          "author_name": "Jane",
+          "is_admin": false,
+          "body": "This button feels too small on mobile.",
+          "created_at": "2026-06-30T10:15:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`anchor` is the raw anchor descriptor produced by the commenting UI — it is passed through as-is,
+never interpreted on the server. `is_admin` is a derived boolean, never the underlying token.
+**No PIN, no hash, no database id, and no `owner_token`** is ever included.

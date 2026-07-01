@@ -143,6 +143,7 @@
 - [x] Route `/settings`, icône Settings dans la topbar, i18n `settings.*` (EN+FR) — Phase 5 — 2026-06-25
 - [x] `LATCH_PUBLIC_BASE_URL` (nouvelle variable runtime, fail-secure, source hôte public + `allowed_hosts`) — Phase 5 — 2026-06-25
 - [x] Tests Phase 5 : 127 backend (dont gate token, deploy_prototype, slug inconnu, invariants sécu, settings 401), 54 frontend. Clippy `--all-features` clean. SonarCloud gate PASSED (~94.8% new_coverage) — Phase 5 — 2026-06-25
+- [x] Tool `pull_prototype(slug, version?, deploy_token)` : lecture seule, gate token FIRST, retourne `PullResult { slug, version, url, comments_enabled, release_notes?, html, threads[] }` (HTML de la version + tous les fils de commentaires, visiteurs + admin) ; `anchor` brut, `is_admin` dérivé, jamais `owner_token`/PIN/hash/`id` DB — Issue #2 — 2026-07-01
 
 ## Phase 6 — E2E, durcissement, packaging
 
