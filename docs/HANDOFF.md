@@ -13,7 +13,9 @@ Ajustements UX demandés pendant la validation (commit `e86999c`) :
   variante **`destructive`** (rouge). Tests via `data-variant="destructive"` (robuste).
 - **Listes** (drawer `/c` + `/admin` Review, panneau admin `VersionCommentsPanel`) : passage du temps
   relatif à une **date absolue AVEC heure** — nouveau helper pur `comments/ui/format-datetime.ts`
-  (`formatDateTime(iso, locale)` = `toLocaleString {dateStyle:'short', timeStyle:'short'}`). Le helper
+  (`formatDateTime(iso, locale)`). Format retenu (choix humain) : **mois en lettres + jour/heure
+  zéro-paddés** (`toLocaleString {day:'2-digit', month:'long', year:'numeric', hour:'2-digit',
+  minute:'2-digit'}`) → « 05 mars 2026 à 08:03 » / « March 05, 2026 at 08:03 AM ». Le helper
   `timeAgo` (+ test) a été **retiré** (plus aucun consommateur).
 Gate : vitest **227**, lint/typecheck clean, `dist/` rebuild → serveur validation `:5150` à jour.
 
