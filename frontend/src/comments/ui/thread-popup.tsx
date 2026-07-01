@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { Capabilities, CommentMessage, CommentPin } from '../data/adapter'
 import type { PinPosition } from '../follow/controller'
-import { useFloatingRect } from './use-floating-rect'
+import { anchorPoint } from './anchor-point'
+import { useFloatingPoint } from './use-floating-point'
 
 interface ThreadPopupProps {
   pin: CommentPin
@@ -22,7 +23,7 @@ interface ThreadPopupProps {
 export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
   const { pin, position, capabilities, busy, onReply, onEdit, onDelete, onDeletePin, onClose } = props
   const { t } = useTranslation()
-  const { ref, style } = useFloatingRect(position.rect)
+  const { ref, style } = useFloatingPoint(anchorPoint(position.rect, position.offset))
   const [reply, setReply] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editBody, setEditBody] = useState('')

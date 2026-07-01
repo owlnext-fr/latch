@@ -4,22 +4,21 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { ShellRect } from '../picker/picker'
 import { getStoredName, setStoredName } from './name-prompt'
-import { useFloatingRect } from './use-floating-rect'
+import { useFloatingPoint } from './use-floating-point'
 
 const MAX_BODY = 2000
 
 interface ComposePopupProps {
-  rect: ShellRect
+  point: { x: number; y: number }
   submitting: boolean
   onSubmit: (v: { author_name: string; body: string }) => void
   onCancel: () => void
 }
 
-export function ComposePopup({ rect, submitting, onSubmit, onCancel }: Readonly<ComposePopupProps>) {
+export function ComposePopup({ point, submitting, onSubmit, onCancel }: Readonly<ComposePopupProps>) {
   const { t } = useTranslation()
-  const { ref, style } = useFloatingRect(rect)
+  const { ref, style } = useFloatingPoint(point)
   const [name, setName] = useState(getStoredName())
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)

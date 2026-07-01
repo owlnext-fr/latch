@@ -5,13 +5,13 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '@/shell/i18n'
 import { ComposePopup } from './compose-popup'
 
-const rect = { x: 10, y: 10, width: 20, height: 20 }
+const point = { x: 20, y: 20 }
 
 function renderPopup(props: Partial<Parameters<typeof ComposePopup>[0]> = {}) {
   return render(
     <I18nextProvider i18n={i18n}>
       <ComposePopup
-        rect={rect}
+        point={point}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}

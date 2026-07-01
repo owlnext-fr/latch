@@ -1,16 +1,22 @@
 import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type RefCallback } from 'react'
 import { computePosition, flip, limitShift, offset, shift, size, type Middleware } from '@floating-ui/dom'
-import type { ShellRect } from '../picker/picker'
+
+/** Rayon du pin (PinBadge = `size-7` → 28px de diamètre). */
+export const PIN_RADIUS = 14
+/** Écart visible entre le bord du pin et le popup. */
+export const GAP = 8
+/** Distance floating-ui (perpendiculaire au placement) qui dégage le pin → pin visible à côté. */
+export const POPUP_OFFSET = PIN_RADIUS + GAP
 
 /**
  * Pipeline de positionnement : garde le popup DANS le viewport, y compris quand la
- * référence est près d'un bord (le `shift` par défaut ne borne que l'axe d'alignement
- * en `right-start` ; on active `crossAxis` + `limitShift` pour l'axe horizontal, et
- * `size` borne la hauteur des longs threads).
+ * référence est près d'un bord (`shift` avec `crossAxis`+`limitShift` pour l'axe
+ * horizontal, `size` borne la hauteur des longs threads). `offset(POPUP_OFFSET)`
+ * dégage le pin quel que soit le côté après `flip`.
  */
 export function floatingMiddleware(): Middleware[] {
   return [
-    offset(8),
+    offset(POPUP_OFFSET),
     flip({ fallbackAxisSideDirection: 'end' }),
     shift({ crossAxis: true, padding: 8, limiter: limitShift() }),
     size({
@@ -25,8 +31,12 @@ export function floatingMiddleware(): Middleware[] {
   ]
 }
 
-/** Positionne un élément flottant contre un rect de l'espace shell (VirtualElement). */
-export function useFloatingRect(rect: ShellRect | null): {
+/**
+ * Positionne un élément flottant contre un POINT de l'espace shell (viewport) via un
+ * VirtualElement de taille nulle. Le popup s'ouvre donc collé au pin (Figma-like),
+ * indépendamment de la taille de l'élément ancré.
+ */
+export function useFloatingPoint(point: { x: number; y: number } | null): {
   ref: RefCallback<HTMLElement>
   style: CSSProperties
 } {
@@ -40,18 +50,18 @@ export function useFloatingRect(rect: ShellRect | null): {
 
   useLayoutEffect(() => {
     const floating = elRef.current
-    if (!floating || !rect) return
+    if (!floating || !point) return
     const reference = {
       getBoundingClientRect: () =>
         ({
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
-          top: rect.y,
-          left: rect.x,
-          right: rect.x + rect.width,
-          bottom: rect.y + rect.height,
+          x: point.x,
+          y: point.y,
+          width: 0,
+          height: 0,
+          top: point.y,
+          left: point.x,
+          right: point.x,
+          bottom: point.y,
         }) as DOMRect,
     }
     void computePosition(reference, floating, {
@@ -60,7 +70,7 @@ export function useFloatingRect(rect: ShellRect | null): {
     }).then(({ x, y }) => {
       setStyle({ position: 'fixed', left: `${x}px`, top: `${y}px`, pointerEvents: 'auto' })
     })
-  }, [rect])
+  }, [point])
 
   const ref = useCallback<RefCallback<HTMLElement>>((node) => {
     elRef.current = node

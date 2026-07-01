@@ -19,6 +19,7 @@ import type { CommentsAdapter, CommentPin } from './data/adapter'
 import { initialPickState, pickReducer } from './state/pick-machine'
 import { OverlayLayer } from './ui/overlay-layer'
 import { firstLetter } from './ui/pin-label'
+import { anchorPoint } from './ui/anchor-point'
 import { ComposePopup } from './ui/compose-popup'
 import { ThreadPopup } from './ui/thread-popup'
 import { ActionBar } from './ui/action-bar'
@@ -102,7 +103,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
       />
       {pick.mode === 'compose' && (
         <ComposePopup
-          rect={pick.rect}
+          point={anchorPoint(pick.rect, pick.anchor.offset)}
           submitting={createPin.isPending}
           onSubmit={submitNewComment}
           onCancel={() => dispatch({ type: 'CANCEL' })}
