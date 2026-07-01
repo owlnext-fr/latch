@@ -28,6 +28,7 @@
   "comment.drawer.close": "Fermer la liste des commentaires",
   "comment.drawer.empty": "Aucun commentaire",
   "comment.drawer.orphaned": "orphelin",
+  "comment.drawer.moved": "déplacé",
   "comment.drawer.replies_one": "{{count}} réponse",
   "comment.drawer.replies_other": "{{count}} réponses"
 }

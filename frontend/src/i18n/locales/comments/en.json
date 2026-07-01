@@ -28,6 +28,7 @@
   "comment.drawer.close": "Close comments list",
   "comment.drawer.empty": "No comments yet",
   "comment.drawer.orphaned": "orphaned",
+  "comment.drawer.moved": "moved",
   "comment.drawer.replies_one": "{{count}} reply",
   "comment.drawer.replies_other": "{{count}} replies"
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/shell/i18n'
@@ -13,18 +13,43 @@ function pin(id: number, author: string, created: string): CommentPin {
     anchor: '{}',
     created_at: created,
     messages: [
-      { id: id * 10, author_name: author, body: `Body ${id}`, created_at: created, updated_at: created, editable: false },
+      {
+        id: id * 10,
+        author_name: author,
+        body: `Body ${id}`,
+        created_at: created,
+        updated_at: created,
+        editable: false,
+      },
     ],
   }
 }
 
-const pins = [pin(1, 'Alice', '2026-07-01T09:00:00Z'), pin(2, 'Max', '2026-07-01T11:00:00Z'), pin(3, 'Jo', '2026-07-01T08:00:00Z')]
-const statusOf = (id: number): AnchorStatus | undefined => (id === 3 ? 'orphaned' : 'anchored')
+const pins = [
+  pin(1, 'Alice', '2026-07-01T09:00:00Z'),
+  pin(2, 'Max', '2026-07-01T11:00:00Z'),
+  pin(3, 'Jo', '2026-07-01T08:00:00Z'),
+  pin(4, 'Sam', '2026-07-01T07:00:00Z'),
+]
+const statusOf = (id: number): AnchorStatus | undefined => {
+  if (id === 3) return 'orphaned'
+  if (id === 4) return 'approximate'
+  return 'anchored'
+}
 
-function renderDrawer(over: Partial<Parameters<typeof CommentsDrawer>[0]> = {}) {
+function renderDrawer(
+  over: Partial<Parameters<typeof CommentsDrawer>[0]> = {},
+) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <CommentsDrawer open pins={pins} statusOf={statusOf} onClose={vi.fn()} onSelect={vi.fn()} {...over} />
+      <CommentsDrawer
+        open
+        pins={pins}
+        statusOf={statusOf}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        {...over}
+      />
     </I18nextProvider>,
   )
 }
@@ -32,16 +57,17 @@ function renderDrawer(over: Partial<Parameters<typeof CommentsDrawer>[0]> = {}) 
 beforeEach(() => i18n.changeLanguage('en'))
 
 describe('sortPins', () => {
-  it('met les orphelins en bas, sains par récence desc', () => {
+  it('met orphelins et déplacés en bas, sains par récence desc', () => {
     const ids = sortPins(pins, statusOf).map((p) => p.id)
-    expect(ids).toEqual([2, 1, 3]) // 2 (11h) > 1 (9h) sains ; 3 orphelin en dernier
+    // 2 (11h) > 1 (9h) sains ; puis 3 orphelin (8h) > 4 déplacé (7h), récence desc dans chaque groupe
+    expect(ids).toEqual([2, 1, 3, 4])
   })
 })
 
 describe('CommentsDrawer', () => {
   it('rend une ligne par pin', () => {
     renderDrawer()
-    expect(screen.getAllByTestId('drawer-row')).toHaveLength(3)
+    expect(screen.getAllByTestId('drawer-row')).toHaveLength(4)
     expect(screen.getByText('orphaned')).toBeInTheDocument()
   })
 
@@ -52,6 +78,17 @@ describe('CommentsDrawer', () => {
     expect(onSelect).toHaveBeenCalledWith(2) // première ligne = plus récente
   })
 
+  it('affiche le badge "moved" (pas "orphaned") et un avatar ambre pour un pin approximate', () => {
+    renderDrawer()
+    const movedBadge = screen.getByText('moved')
+    expect(movedBadge).toBeInTheDocument()
+    const row = movedBadge.closest('button[data-testid="drawer-row"]')
+    expect(row).not.toBeNull()
+    expect(within(row as HTMLElement).queryByText('orphaned')).toBeNull()
+    const avatar = row?.querySelector('span.rounded-full.border-2')
+    expect(avatar).toHaveStyle({ background: 'rgb(245, 158, 11)' })
+  })
+
   it('affiche l’état vide', () => {
     renderDrawer({ pins: [] })
     expect(screen.getByText('No comments yet')).toBeInTheDocument()
@@ -60,6 +97,8 @@ describe('CommentsDrawer', () => {
 
   it('ne rend rien si fermé', () => {
     const { container } = renderDrawer({ open: false })
-    expect(container.querySelector('[data-testid="comments-drawer"]')).toBeNull()
+    expect(
+      container.querySelector('[data-testid="comments-drawer"]'),
+    ).toBeNull()
   })
 })
