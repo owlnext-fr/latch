@@ -4,6 +4,34 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (quater) — Issue #1 : publication doc GitHub Pages APRÈS le push Docker (CI)
+
+### Dernière chose faite
+Fix mécanique CI (`.github/workflows/ci.yml`) : le job `deploy-docs` (déploiement GitHub Pages)
+passe de `needs: [docs]` à `needs: [docs, docker]`. Avant, la doc se publiait dès que son build
+(`docs`) était vert, indépendamment du reste — donc une doc pouvait partir en prod alors que le
+`docker build`/push échouait ensuite. Maintenant la publication est gatée par le job `docker`, qui
+dépend lui-même de toute la gate (`fmt-clippy`, `test-backend`, `supply-chain`, `frontend`,
+`supply-chain-front`, `e2e`, `e2e-vite`, `sonar`) → la doc n'est publiée que si l'intégralité de la
+CI, build d'image compris, est verte. Le job `docs` (build/validation à chaque push/PR) est
+**inchangé**. Commentaire YAML réécrit (il vantait le « couplage faible » de la Phase 8 §6.2, décision
+désormais inversée par l'issue #1). Branche `fix/1-deploy-docs-after-docker`.
+
+### Trucs en suspens
+- QA/gate = la CI elle-même (pas de QA locale possible sur un changement de workflow). À vérifier au
+  merge : sur un push `main`, `deploy-docs` attend bien `docker` puis se déclenche (ordre visible dans
+  l'onglet Actions).
+- **Effet de bord assumé** : la doc est désormais couplée aux jobs Rust/e2e. Un échec e2e flaky sans
+  rapport avec la doc bloquera aussi sa publication — c'est le compromis explicitement demandé par #1
+  (on préfère ne pas publier que publier une doc « orpheline » d'une release cassée).
+
+### Notes pour future Claude
+- `deploy-docs` ne tourne que sur push `main` (`if: github.event_name == 'push' && ref == main`) ;
+  sur PR il est skippé, donc ce changement n'affecte pas le feedback PR (le build `docs` valide
+  toujours à chaque PR). Sur un tag `v*`, `deploy-docs` ne tourne pas non plus (l'`if` exige `main`).
+- Un `needs:` non satisfait **skippe** le job (ne le met pas en échec) : si `docker` casse, Pages
+  n'est simplement pas redéployé (l'ancienne doc reste en ligne).
+
 ## 2026-07-01 (ter) — Fix-wave revue finale commentaires admin (DRY, doc, tests durcis)
 
 ### Dernière chose faite
