@@ -123,6 +123,19 @@ describe('DetailPage', () => {
     expect(screen.getByLabelText('Copy the URL')).toBeInTheDocument()
   })
 
+  it('renders the comments status in the Configuration card (mirrors code status)', async () => {
+    mockProjectDetail(PROJECT_DETAIL)
+    renderDetailPage(1)
+
+    await waitFor(() => {
+      expect(screen.getByText('Configuration')).toBeInTheDocument()
+    })
+
+    // fixture comments_enabled = false → labelled row shows the "disabled" status
+    expect(screen.getByText('Comments')).toBeInTheDocument()
+    expect(screen.getByText('disabled')).toBeInTheDocument()
+  })
+
   it('renders PIN masked (••••••) and revealable when code_enabled=true', async () => {
     mockProjectDetail(PROJECT_DETAIL)
     renderDetailPage(1)

@@ -165,6 +165,16 @@ export function DetailPage() {
                     : t('detail.code_off')}
                 </p>
               </div>
+              <div>
+                <p className="mb-0.5 text-xs font-medium text-muted-foreground">
+                  {t('detail.comments_label')}
+                </p>
+                <p className="text-sm">
+                  {project.comments_enabled
+                    ? t('detail.comments_on')
+                    : t('detail.comments_off')}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
