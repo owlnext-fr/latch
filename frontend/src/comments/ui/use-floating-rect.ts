@@ -18,6 +18,7 @@ export function floatingMiddleware(): Middleware[] {
       apply({ availableHeight, elements }) {
         Object.assign(elements.floating.style, {
           maxHeight: `${Math.max(160, availableHeight)}px`,
+          overflowY: 'auto',
         })
       },
     }),

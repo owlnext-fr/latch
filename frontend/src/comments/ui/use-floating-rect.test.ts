@@ -6,4 +6,9 @@ describe('floatingMiddleware', () => {
     const names = floatingMiddleware().map((m) => m.name)
     expect(names).toEqual(['offset', 'flip', 'shift', 'size'])
   })
+
+  it("borne aussi l'axe horizontal (crossAxis) avec un padding viewport", () => {
+    const shift = floatingMiddleware().find((m) => m.name === 'shift')!
+    expect(shift.options).toMatchObject({ crossAxis: true, padding: 8 })
+  })
 })
