@@ -204,9 +204,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   # 9. Build de l'image (push GHCR public seulement sur main / tag)
+  # Ne tourne QUE sur un `push` (branche `main` ou tag `v*`) : sur une PR, le build
+  # d'image ne servait qu'à valider le Dockerfile sans jamais pousser (`push: false`),
+  # au prix du job le plus lent de la CI. On l'économise sur les PR ; un Dockerfile
+  # cassé sera vu au merge sur `main` (job rouge, aucune image poussée — fail-secure).
   docker:
     name: docker build
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: [fmt-clippy, test-backend, supply-chain, frontend, supply-chain-front, e2e, e2e-vite, sonar]
     permissions:
       contents: read

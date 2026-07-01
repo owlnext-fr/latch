@@ -110,6 +110,7 @@
 - [x] Images GHCR versionnées (`metadata-action` : semver+latest+sha) + pin déploiement (`LATCH_IMAGE_TAG`) — Phase 0 — 2026-06-24
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24
 - [x] `deploy-docs` (GitHub Pages) gaté par `needs: [docs, docker]` : la doc n'est publiée qu'après un push Docker réussi (toute la gate verte) — inverse le couplage faible Phase 8 §6.2 — Issue #1 — 2026-07-01
+- [x] Job `docker` gaté `if: github.event_name == 'push'` : ne build plus sur les PR (build image = job le plus lent, ne poussait déjà rien sur PR) ; couvre push branche + tag (release image toujours poussée) — 2026-07-01
 
 ## Phase 4 — Serving `/c/<slug>`
 - [x] `services/unlock_cookie.rs` : `issue_token` / `verify_token` — cœur pur (sans axum/loco), empreinte HMAC du PIN, TTL — Phase 4 Task 1 — 2026-06-25

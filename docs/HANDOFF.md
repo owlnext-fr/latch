@@ -4,6 +4,25 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (quinquies) — Gate `docker` push-only + release v1.3.1
+
+### Dernière chose faite
+1. **CI** (`.github/workflows/ci.yml`) : le job `docker` gagne `if: github.event_name == 'push'`
+   → il ne tourne plus sur les PR. Rappel : sur PR il ne poussait déjà rien (`push: false`), il ne
+   faisait que builder l'image (job le plus lent) pour valider le Dockerfile. On économise ça sur les
+   PR ; un Dockerfile cassé sera vu au merge sur `main` (job rouge, aucune image poussée). L'`if`
+   couvre push branche ET tag → la release image est toujours poussée au tag. `docs` (build Fumadocs)
+   reste sur PR (attrape les casses MDX). Mergé via PR (fix/ci-docker-build-push-only).
+2. **Release v1.3.1** : CHANGELOG régénéré (git-cliff `--tag v1.3.1`), tag poussé → CI sur le tag
+   pousse l'image `1.3.1` + `1.3` + `latest` + `sha-` sur GHCR. Contenu de v1.3.1 : fix #1 (deploy-docs
+   après docker) + ce gate docker push-only.
+
+### Notes pour future Claude
+- **Job skippé dans un `needs`** : si `docker` est skippé (PR), ses dépendants (`deploy-docs`) le sont
+  aussi — sans conséquence ici car `deploy-docs` a de toute façon son propre `if` push+main.
+- Prochaine release : `git cliff --tag vX.Y.Z --output CHANGELOG.md` → commit direct sur `main` (c'est
+  la convention, cf. commits `📝 docs(changelog)`) → `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+
 ## 2026-07-01 (quater) — Issue #1 : publication doc GitHub Pages APRÈS le push Docker (CI)
 
 ### Dernière chose faite
