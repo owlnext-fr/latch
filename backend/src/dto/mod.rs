@@ -282,6 +282,19 @@ pub struct EditMessageReq {
     pub body: String,
 }
 
+/// Corps de `POST /api/projects/{id}/versions/{n}/comments` (fil propre de l'admin).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct AdminCreatePinReq {
+    pub anchor: String,
+    pub body: String,
+}
+
+/// Corps de `POST /api/projects/{id}/comments/pins/{pin}/replies` (réponse admin).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct AdminReplyReq {
+    pub body: String,
+}
+
 /// Message d'un fil, vu par le visiteur (jamais d'`owner_token`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct CommentMessage {
@@ -292,6 +305,9 @@ pub struct CommentMessage {
     pub updated_at: String,
     /// `true` si l'appelant courant est l'auteur (peut éditer/supprimer).
     pub editable: bool,
+    /// `true` si le message a été écrit par l'admin (identité sentinelle). Booléen dérivé —
+    /// l'`owner_token` n'est jamais sérialisé (invariant §9).
+    pub is_admin: bool,
 }
 
 /// Pin + son fil, vu par le visiteur.
@@ -318,6 +334,8 @@ pub struct AdminCommentMessage {
     pub body: String,
     pub created_at: String,
     pub updated_at: String,
+    /// `true` si le message est celui de l'admin (ses propres messages, éditables/supprimables).
+    pub is_admin: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -367,9 +385,23 @@ pub fn to_comment_pin(
                     created_at,
                     updated_at,
                     editable: m.owner_token == caller_owner_token,
+                    is_admin: m.owner_token == crate::services::comments::ADMIN_OWNER_TOKEN,
                 }
             })
             .collect(),
+    }
+}
+
+/// `comments::Model` → `AdminCommentMessage` (avec `is_admin` dérivé).
+pub fn to_admin_comment_message(m: &comments::Model) -> AdminCommentMessage {
+    let (id, author_name, body, created_at, updated_at) = message_base_fields(m);
+    AdminCommentMessage {
+        id,
+        author_name,
+        body,
+        created_at,
+        updated_at,
+        is_admin: m.owner_token == crate::services::comments::ADMIN_OWNER_TOKEN,
     }
 }
 
@@ -382,19 +414,7 @@ pub fn to_admin_comment_pin(
         id: pin.id,
         anchor: pin.anchor.clone(),
         created_at: pin.created_at.to_rfc3339(),
-        messages: messages
-            .iter()
-            .map(|m| {
-                let (id, author_name, body, created_at, updated_at) = message_base_fields(m);
-                AdminCommentMessage {
-                    id,
-                    author_name,
-                    body,
-                    created_at,
-                    updated_at,
-                }
-            })
-            .collect(),
+        messages: messages.iter().map(to_admin_comment_message).collect(),
     }
 }
 
@@ -571,5 +591,26 @@ mod tests {
         let json = serde_json::to_string(&to_admin_comment_pin(&pin, &[msg])).unwrap();
         assert!(!json.contains("SECRET") && !json.contains("owner_token"));
         assert!(!json.contains("editable"), "pas d'editable côté admin");
+    }
+
+    fn sample_message_with_owner(owner: &str) -> crate::models::_entities::comments::Model {
+        sample_msg(owner, "someone")
+    }
+
+    #[test]
+    fn is_admin_true_only_for_sentinel_owner() {
+        use crate::services::comments::ADMIN_OWNER_TOKEN;
+        let pin = sample_pin("01OWNERAAAAAAAAAAAAAAAAAAA");
+        let admin_msg = sample_message_with_owner(ADMIN_OWNER_TOKEN);
+        let visitor_msg = sample_message_with_owner("01OWNERAAAAAAAAAAAAAAAAAAA");
+
+        let dto_admin = to_comment_pin(&pin, std::slice::from_ref(&admin_msg), "someone");
+        assert!(dto_admin.messages[0].is_admin);
+
+        let dto_visitor = to_comment_pin(&pin, std::slice::from_ref(&visitor_msg), "someone");
+        assert!(!dto_visitor.messages[0].is_admin);
+
+        let admin_dto = to_admin_comment_pin(&pin, std::slice::from_ref(&admin_msg));
+        assert!(admin_dto.messages[0].is_admin);
     }
 }

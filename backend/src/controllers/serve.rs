@@ -556,6 +556,7 @@ pub(crate) async fn reply_comment(
         created_at: msg.created_at.to_rfc3339(),
         updated_at: msg.updated_at.to_rfc3339(),
         editable: true,
+        is_admin: false,
     })
 }
 
@@ -592,6 +593,7 @@ pub(crate) async fn edit_comment(
         created_at: msg.created_at.to_rfc3339(),
         updated_at: msg.updated_at.to_rfc3339(),
         editable: true,
+        is_admin: false,
     })
 }
 

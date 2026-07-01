@@ -1054,7 +1054,8 @@
           "author_name",
           "body",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "is_admin"
         ],
         "properties": {
           "author_name": {
@@ -1069,6 +1070,10 @@
           "id": {
             "type": "integer",
             "format": "int32"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "description": "`true` si le message est celui de l'admin (ses propres messages, éditables/supprimables)."
           },
           "updated_at": {
             "type": "string"
@@ -1131,7 +1136,8 @@
           "body",
           "created_at",
           "updated_at",
-          "editable"
+          "editable",
+          "is_admin"
         ],
         "properties": {
           "author_name": {
@@ -1150,6 +1156,10 @@
           "id": {
             "type": "integer",
             "format": "int32"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "description": "`true` si le message a été écrit par l'admin (identité sentinelle). Booléen dérivé —\nl'`owner_token` n'est jamais sérialisé (invariant §9)."
           },
           "updated_at": {
             "type": "string"
