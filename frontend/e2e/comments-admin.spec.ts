@@ -91,6 +91,27 @@ async function seedComment(
   expect(res.ok()).toBeTruthy()
 }
 
+/**
+ * Seed complet réutilisable : projet + version déployée + un commentaire
+ * visiteur ancré sur #cta (via apiLogin(request) + createProject + deploy +
+ * seedComment). Extrait des tests de modération pour éviter la duplication
+ * (DRY) — chaque test appelant ce helper doit avoir sa propre session
+ * `request` déjà authentifiée (apiLogin) car createProject/deploy en ont besoin.
+ */
+async function seedProjectWithVisitorComment(
+  request: APIRequestContext,
+  baseURL: string,
+): Promise<{ id: number; slug: string; n: number }> {
+  const project = await createProject(request, baseURL, {
+    name: 'ACME',
+    code_enabled: false,
+    comments_enabled: true,
+  })
+  const version = await deploy(request, baseURL, project.id, PROTO_HTML)
+  await seedComment(request, baseURL, project.slug)
+  return { id: project.id, slug: project.slug, n: version.n }
+}
+
 // --- Tests -------------------------------------------------------------------
 
 test('admin : page Review affiche le pin, la modération depuis le fil le supprime', async ({
@@ -100,13 +121,7 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
 }) => {
   // 1. Setup : projet + version + commentaire seedé via API (session admin request)
   await apiLogin(request)
-  const project = await createProject(request, baseURL!, {
-    name: 'ACME',
-    code_enabled: false,
-    comments_enabled: true,
-  })
-  const version = await deploy(request, baseURL!, project.id, PROTO_HTML)
-  await seedComment(request, baseURL!, project.slug)
+  const { id: projectId, n: versionN } = await seedProjectWithVisitorComment(request, baseURL!)
 
   // Login admin via le formulaire de la SPA (session browser indépendante de request)
   await pageLogin(page)
@@ -115,13 +130,13 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
   //    (à poser AVANT la navigation pour ne pas manquer la requête).
   const commentsLoaded = page.waitForResponse(
     (r) =>
-      r.url().includes(`/api/projects/${project.id}/versions/${version.n}/comments`) &&
+      r.url().includes(`/api/projects/${projectId}/versions/${versionN}/comments`) &&
       r.status() === 200,
     { timeout: 15_000 },
   )
 
   // 3. Naviguer sur la page Review admin
-  await page.goto(`/admin/projects/${project.id}/versions/${version.n}/review`)
+  await page.goto(`/admin/projects/${projectId}/versions/${versionN}/review`)
 
   // 4. Attendre que l'iframe charge le proto (preuve que le picker a un DOM à traverser)
   await expect(
@@ -167,6 +182,59 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
   // 10. Après suppression du dernier message, le pin est soft-deleté côté backend.
   //     La liste est refetchée → 0 pins → 0 pastilles + popup fermée.
   await expect(page.locator('[data-testid="pin-badge"]')).toHaveCount(0, { timeout: 10_000 })
+})
+
+test('admin répond à un fil visiteur depuis la Review', async ({ page, request, baseURL }) => {
+  // 1. Setup déterministe : projet + version + commentaire visiteur seedé via API.
+  await apiLogin(request)
+  const { id: projectId, n: versionN } = await seedProjectWithVisitorComment(request, baseURL!)
+
+  // 2. Login admin via le formulaire de la SPA (session browser indépendante de request)
+  await pageLogin(page)
+
+  const commentsLoaded = page.waitForResponse(
+    (r) =>
+      r.url().includes(`/api/projects/${projectId}/versions/${versionN}/comments`) &&
+      r.status() === 200,
+    { timeout: 15_000 },
+  )
+
+  // 3. Naviguer sur la page Review admin
+  await page.goto(`/admin/projects/${projectId}/versions/${versionN}/review`)
+
+  // 4. Attendre que l'iframe charge le proto, puis que le fil ait chargé.
+  await expect(
+    page.frameLocator('iframe[title="Prototype preview"]').locator('#cta'),
+  ).toBeVisible({ timeout: 15_000 })
+  await commentsLoaded
+
+  // 5. Ouvrir le fil visiteur en cliquant sur la pastille du pin.
+  const pinBadge = page.locator('[data-testid="pin-badge"]').first()
+  await expect(pinBadge).toBeVisible({ timeout: 10_000 })
+  await pinBadge.click()
+
+  // 6. Composer du ThreadPopup : pas de champ nom (identité "Admin" forcée côté
+  //    serveur, cf. comments-app.tsx). Textarea reconnue par son placeholder
+  //    traduit ("Reply…", clé comment.thread.reply_placeholder), bouton par son
+  //    libellé traduit ("Reply", clé comment.thread.reply_submit).
+  const replyBox = page.getByPlaceholder('Reply…')
+  await expect(replyBox).toBeVisible()
+  await replyBox.fill('Réponse de l’équipe')
+
+  const replyPosted = page.waitForResponse(
+    (r) => r.url().includes('/replies') && r.request().method() === 'POST',
+    { timeout: 10_000 },
+  )
+  await page.getByRole('button', { name: 'Reply' }).click()
+  await replyPosted
+
+  // 7. La réponse apparaît dans le fil, attribuée à "Admin" (nom d'auteur +
+  //    badge, tous deux littéralement "Admin" — cf. clés comment.admin_author /
+  //    comment.admin_badge). On scope au message qui contient notre texte pour
+  //    éviter toute ambiguïté avec l'existant commentaire visiteur de Léa.
+  const replyMessage = page.locator('li', { hasText: 'Réponse de l’équipe' })
+  await expect(replyMessage).toBeVisible()
+  await expect(replyMessage.getByText('Admin').first()).toBeVisible()
 })
 
 test('ProjectForm : toggle commentaires suit code_enabled puis se découple', async ({
