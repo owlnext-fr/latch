@@ -101,10 +101,45 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** PUT /api/projects/{id}/comments/messages/{cid} — l'admin édite un de SES messages. */
+        put: operations["admin_edit_comment"];
         post?: never;
         /** DELETE /api/projects/{id}/comments/messages/{cid} — modération (vérifie l'appartenance au projet). */
         delete: operations["moderate_delete_comment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/comments/pins/{pin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** DELETE /api/projects/{id}/comments/pins/{pin} — l'admin supprime un de SES fils. */
+        delete: operations["admin_delete_pin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/comments/pins/{pin}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /api/projects/{id}/comments/pins/{pin}/replies — l'admin répond à un fil (visiteur ou sien). */
+        post: operations["admin_reply"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -171,7 +206,8 @@ export interface paths {
         /** GET /api/projects/{id}/versions/{n}/comments — tous les fils de la version (lecture seule). */
         get: operations["list_version_comments"];
         put?: never;
-        post?: never;
+        /** POST /api/projects/{id}/versions/{n}/comments — l'admin démarre son propre fil (note privée). */
+        post: operations["admin_create_pin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -325,6 +361,8 @@ export interface components {
             created_at: string;
             /** Format: int32 */
             id: number;
+            /** @description `true` si le message est celui de l'admin (ses propres messages, éditables/supprimables). */
+            is_admin: boolean;
             updated_at: string;
         };
         AdminCommentPin: {
@@ -333,6 +371,15 @@ export interface components {
             /** Format: int32 */
             id: number;
             messages: components["schemas"]["AdminCommentMessage"][];
+        };
+        /** @description Corps de `POST /api/projects/{id}/versions/{n}/comments` (fil propre de l'admin). */
+        AdminCreatePinReq: {
+            anchor: string;
+            body: string;
+        };
+        /** @description Corps de `POST /api/projects/{id}/comments/pins/{pin}/replies` (réponse admin). */
+        AdminReplyReq: {
+            body: string;
         };
         /** @description Réponse de `GET /c/{slug}/comments`. */
         CommentList: {
@@ -349,6 +396,11 @@ export interface components {
             editable: boolean;
             /** Format: int32 */
             id: number;
+            /**
+             * @description `true` si le message a été écrit par l'admin (identité sentinelle). Booléen dérivé —
+             *     l'`owner_token` n'est jamais sérialisé (invariant §9).
+             */
+            is_admin: boolean;
             updated_at: string;
         };
         /** @description Pin + son fil, vu par le visiteur. */
@@ -833,6 +885,56 @@ export interface operations {
             };
         };
     };
+    admin_edit_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Identifiant du message */
+                cid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditMessageReq"];
+            };
+        };
+        responses: {
+            /** @description Message modifié */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCommentMessage"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin invalide (CSRF) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Message étranger ou inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     moderate_delete_comment: {
         parameters: {
             query?: never;
@@ -871,6 +973,102 @@ export interface operations {
                 content?: never;
             };
             /** @description Message hors projet ou inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_delete_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Identifiant du pin */
+                pin: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fil supprimé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin invalide (CSRF) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pin étranger ou inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Identifiant du pin */
+                pin: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminReplyReq"];
+            };
+        };
+        responses: {
+            /** @description Réponse ajoutée */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCommentMessage"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin invalide (CSRF) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pin hors projet ou inconnu */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1044,6 +1242,56 @@ export interface operations {
             };
             /** @description Non authentifié */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version inconnue */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_create_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du projet */
+                id: number;
+                /** @description Numéro de version */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCreatePinReq"];
+            };
+        };
+        responses: {
+            /** @description Fil créé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCommentPin"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin invalide (CSRF) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
