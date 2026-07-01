@@ -91,6 +91,23 @@ describe('OverlayLayer', () => {
     fireEvent.click(screen.getByRole('button'))
     expect(onPinClick).toHaveBeenCalledWith(5)
   })
+
+  it("ancre l'overlay au viewport (fixed) pour ignorer l'offset du conteneur (topbar admin)", () => {
+    const { container } = render(
+      <OverlayLayer
+        picker={fakePicker()}
+        positions={[]}
+        pickMode={false}
+        onPick={vi.fn()}
+        onPinClick={vi.fn()}
+        activePinId={null}
+        labelOf={() => 'A'}
+      />,
+    )
+    const root = container.firstElementChild as HTMLElement
+    expect(root.className).toContain('fixed')
+    expect(root.className).not.toContain('absolute')
+  })
 })
 
 describe('ciblage DOM (glow)', () => {

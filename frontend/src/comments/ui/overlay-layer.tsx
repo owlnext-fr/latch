@@ -55,7 +55,7 @@ export function OverlayLayer({
 
   return (
     <div
-      className="absolute inset-0 z-50"
+      className="fixed inset-0 z-50"
       style={{ pointerEvents: pickMode ? 'auto' : 'none' }}
     >
       {pickMode && (
