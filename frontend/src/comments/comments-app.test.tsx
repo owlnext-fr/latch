@@ -1,5 +1,6 @@
 import { expect, it, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/shell/i18n'
 import { CommentsApp } from './comments-app'
@@ -42,4 +43,15 @@ it("monte la barre d'action quand l'adaptateur autorise l'authoring", async () =
   )
   // Le bouton "Comment" n'apparaît que si canAuthor est true
   expect(await screen.findByRole('button', { name: 'Comment' })).toBeInTheDocument()
+})
+
+it('ouvre le drawer via le bouton « My comments »', async () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <CommentsApp cacheKey="demo" frame={fakeFrame()} adapter={fakeAdapter} />
+    </I18nextProvider>,
+  )
+  const listBtn = await screen.findByRole('button', { name: 'My comments' })
+  await userEvent.click(listBtn)
+  expect(await screen.findByTestId('comments-drawer')).toBeInTheDocument()
 })

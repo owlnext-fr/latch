@@ -22,6 +22,7 @@ import { firstLetter } from './ui/pin-label'
 import { ComposePopup } from './ui/compose-popup'
 import { ThreadPopup } from './ui/thread-popup'
 import { ActionBar } from './ui/action-bar'
+import { CommentsDrawer } from './ui/comments-drawer'
 import { getStoredName } from './ui/name-prompt'
 
 interface CommentsAppProps {
@@ -62,6 +63,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
   const [pick, dispatch] = useReducer(pickReducer, initialPickState)
   const [pinsVisible, setPinsVisible] = useState(true)
   const [activePinId, setActivePinId] = useState<number | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const activePin = pins.find((p) => p.id === activePinId) ?? null
   const activePosition = positions.find((p) => p.id === activePinId) ?? null
@@ -76,6 +78,15 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
       { anchor: serializeAnchor(pick.anchor), author_name: v.author_name, body: v.body },
       { onSuccess: () => dispatch({ type: 'SUBMITTED' }) },
     )
+  }
+
+  function focusPinFromList(pinId: number) {
+    const pin = pins.find((p) => p.id === pinId)
+    const anchor = pin ? parseAnchor(pin.anchor) : null
+    const el = anchor ? picker.resolve(anchor).element : null
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setActivePinId(pinId)
+    setDrawerOpen(false)
   }
 
   return (
@@ -119,6 +130,13 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
           onClose={() => setActivePinId(null)}
         />
       )}
+      <CommentsDrawer
+        open={drawerOpen}
+        pins={pins}
+        statusOf={(id) => positions.find((p) => p.id === id)?.status}
+        onClose={() => setDrawerOpen(false)}
+        onSelect={focusPinFromList}
+      />
       <ActionBar
         capabilities={adapter.capabilities}
         pinCount={pins.length}
@@ -128,7 +146,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
           dispatch(pick.mode === 'pick' ? { type: 'CANCEL' } : { type: 'ENTER_PICK' })
         }
         onToggleVisible={() => setPinsVisible((v) => !v)}
-        onOpenList={() => setPinsVisible(true)}
+        onOpenList={() => setDrawerOpen((o) => !o)}
       />
     </>
   )
