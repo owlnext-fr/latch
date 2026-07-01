@@ -4,6 +4,28 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Task P3 : **smoke e2e Vite dev-server (:5173) — couvre proxy CSRF + assets MIME**
+
+### Dernière chose faite
+Gate complète validée (commit `125ba08`) :
+- `frontend/playwright.vite.config.ts` : config Playwright dédiée, 2 webServers (backend :5150 + Vite :5173), baseURL :5173.
+- `frontend/e2e-vite/vite-smoke.spec.ts` : 1 test couvrant login UI (CSRF) + création projet UI (CSRF) + déploiement via `page.request` (CSRF) + page visiteur `/c/<slug>` (MIME assets).
+- `pnpm test:vite` → **1 passed / 0 failed** (serveurs dev réutilisés).
+- Preuve de morsure sur :5199 cassé : `/assets/unlock-*.js` → `text/html` ; `POST /api/projects` avec `Origin: :5199` → `403`. Réparé via :5173 : `text/javascript` + `200`.
+- CI : job `e2e-vite` ajouté, `docker` needs mis à jour.
+- `pnpm lint` + `pnpm typecheck` : 0 erreur.
+
+### Trucs en suspens
+- La suite par défaut (`pnpm exec playwright test`) montre des failures en **local dev** (rate-limit non désarmé sur le backend partagé + données obsolètes). C'est une contrainte pré-existante du dev local, pas un régressif : en CI (backend frais + LATCH_LOGIN_RL_BURST=100000) → 8/0/2. Cf. QUIRKS "rate-limit /api/login".
+
+### Prochaine chose à creuser
+Merge `feat/prototype-comments` → `main` + 1ᵉʳ déploiement en prod.
+
+### Notes pour future Claude
+- `page.request` partage les cookies du navigateur (après `pageLogin`), résout par rapport à baseURL (:5173) → traverse le proxy Vite. Contrairement au fixture `request` (APIRequestContext isolé).
+- Le smoke Vite échouerait si : (a) le proxy `/assets` est retiré de `vite.config.ts` → `#pin` absent ; (b) `changeOrigin`/`setHeader origin` est retiré → toast "Project created." absent (403 silencieux).
+- `vite.config.broken.mjs` est temporaire (repro isolée preuve de morsure) et NE doit PAS être commité.
+
 ## 2026-07-01 — Task P1 : **rate-limit login tunable par env + désarmement e2e (retire retry-429)**
 
 ### Dernière chose faite
