@@ -47,30 +47,32 @@ export function useFloatingPoint(point: { x: number; y: number } | null): {
     pointerEvents: 'auto',
   })
   const elRef = useRef<HTMLElement | null>(null)
+  const x = point?.x ?? null
+  const y = point?.y ?? null
 
   useLayoutEffect(() => {
     const floating = elRef.current
-    if (!floating || !point) return
+    if (!floating || x === null || y === null) return
     const reference = {
       getBoundingClientRect: () =>
         ({
-          x: point.x,
-          y: point.y,
+          x,
+          y,
           width: 0,
           height: 0,
-          top: point.y,
-          left: point.x,
-          right: point.x,
-          bottom: point.y,
+          top: y,
+          left: x,
+          right: x,
+          bottom: y,
         }) as DOMRect,
     }
     void computePosition(reference, floating, {
       placement: 'right-start',
       middleware: floatingMiddleware(),
-    }).then(({ x, y }) => {
-      setStyle({ position: 'fixed', left: `${x}px`, top: `${y}px`, pointerEvents: 'auto' })
+    }).then(({ x: left, y: top }) => {
+      setStyle({ position: 'fixed', left: `${left}px`, top: `${top}px`, pointerEvents: 'auto' })
     })
-  }, [point])
+  }, [x, y])
 
   const ref = useCallback<RefCallback<HTMLElement>>((node) => {
     elRef.current = node
