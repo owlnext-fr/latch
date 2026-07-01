@@ -321,13 +321,16 @@ de cookie `latch_comment`.
   pin_id, body)` : résout pin→version→projet (comme `moderate_delete_message`), **sans owner-check**
   (l'admin peut répondre à tout fil de son projet), 404 si le pin n'appartient pas au projet. La
   réponse redevient visible du visiteur propriétaire du fil via son `GET /c/<slug>/comments` habituel.
-- `PUT    /api/projects/{id}/comments/messages/{cid}` — l'admin édite un de **ses** messages.
-  Réutilise `edit_message(cid, ADMIN_OWNER_TOKEN, body)` : l'owner-check interne restreint
-  naturellement à ses propres messages (message visiteur → 404, pas d'escalade).
-- `DELETE /api/projects/{id}/comments/pins/{pin}` — l'admin supprime un de **ses** fils entiers.
-  Réutilise `delete_pin(pin, ADMIN_OWNER_TOKEN)` : owner-check interne restreint aux pins propres
-  de l'admin (pin visiteur → 404 ; la suppression d'un message visiteur individuel reste
-  `moderate_delete_message`, déjà couverte).
+- `PUT    /api/projects/{id}/comments/messages/{cid}` — l'admin édite un de **ses** messages
+  **appartenant au projet `{id}`**. Méthode de service dédiée `admin_edit_message(project_id,
+  comment_id, body)` : owner-check interne (message visiteur → 404) **puis** vérification
+  message→pin→version→projet (comme `moderate_delete_message`) — un message admin d'un
+  *autre* projet passé via l'`id` de l'URL → 404 (pas d'escalade cross-projet).
+- `DELETE /api/projects/{id}/comments/pins/{pin}` — l'admin supprime un de **ses** fils entiers
+  **appartenant au projet `{id}`**. Méthode de service dédiée `admin_delete_own_pin(project_id,
+  pin_id)` : owner-check interne restreint aux pins propres de l'admin (pin visiteur → 404), **plus**
+  la même vérification pin→version→projet (pin admin d'un autre projet → 404 ; la suppression d'un
+  message visiteur individuel reste `moderate_delete_message`, déjà couverte).
 
 Identité non usurpable : le `author_name` envoyé par le client sur ces 4 endpoints est **ignoré** —
 le serveur pose toujours `ADMIN_AUTHOR` (« admin », valeur brute jamais affichée) ; l'UI rend le

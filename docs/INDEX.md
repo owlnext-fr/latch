@@ -254,8 +254,7 @@
   sentinelle `ADMIN_OWNER_TOKEN = "__admin__"` (aucune migration DB) + `ADMIN_AUTHOR = "admin"` ;
   booléen dérivé `is_admin` sur `CommentMessage` **et** `AdminCommentMessage` (`owner_token`
   toujours absent du JSON) ; nouvelle méthode service `admin_add_reply(project_id, pin_id, body)`
-  (répond à n'importe quel pin du projet, sans owner-check) + réutilisation de
-  `create_pin`/`edit_message`/`delete_pin`/`moderate_delete_message` avec la sentinelle ; 4
+  (répond à n'importe quel pin du projet, sans owner-check) + `create_pin` avec la sentinelle ; 4
   endpoints admin (`POST .../versions/{n}/comments`, `POST .../pins/{pin}/replies`,
   `PUT .../messages/{cid}`, `DELETE .../pins/{pin}`, sous `AdminAuth`+`require_same_origin`,
   sans `X-Comment-Client`) ; adaptateur admin frontend en authoring complet + seam
@@ -263,4 +262,12 @@
   Review) ; e2e Playwright (réponse admin à un fil visiteur) — commits `dda592e..c24502f` —
   spec `docs/superpowers/specs/2026-07-01-admin-comments-authoring-design.md`, plan
   `docs/superpowers/plans/2026-07-01-admin-comments-authoring.md` — Phase 10 — 2026-07-01
+- [x] **Fix : scope projet sur edit/delete-pin admin** — `admin_edit_comment`/`admin_delete_pin`
+  vérifiaient l'owner sentinelle mais pas l'appartenance au projet de l'URL (asymétrie avec
+  `admin_add_reply`/`moderate_delete_message`) ; nouvelles méthodes dédiées
+  `admin_edit_message(project_id, comment_id, body)` / `admin_delete_own_pin(project_id, pin_id)`
+  (helper `assert_version_in_project`, NotFound si mismatch) remplacent l'usage de
+  `edit_message`/`delete_pin` génériques côté admin (toujours utilisés par le visiteur, inchangés) ;
+  aucun changement de route/DTO/OpenAPI ; TDD (6 tests unitaires + 1 intégration cross-projet) —
+  rapport `.superpowers/sdd/fix-projectscope-report.md` — 2026-07-01
 - [x] **Polish fil + listes commentaires** — actions du fil (`ThreadPopup`, /c + /admin) en **boutons-icône** en haut à droite du message (`Pencil`/`Trash2`), suppression message + suppression du fil en variante **`destructive` (rouge)** ; listes (drawer + panneau admin) en **date absolue AVEC heure** via helper partagé `formatDateTime` (relatif `timeAgo` retiré) — frontend-only — 2026-07-01

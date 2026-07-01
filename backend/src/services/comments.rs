@@ -354,6 +354,60 @@ impl CommentsService {
         self.soft_delete_pin_if_empty(pin_id).await
     }
 
+    /// Vérifie qu'une version appartient au projet, sinon NotFound (anti-fuite d'existence).
+    async fn assert_version_in_project(
+        &self,
+        version_id: i32,
+        project_id: i32,
+    ) -> Result<(), CoreError> {
+        use crate::models::_entities::versions;
+        let version = versions::Entity::find_by_id(version_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        if version.project_id != project_id {
+            return Err(CoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Édite un message **de l'admin** (owner = sentinelle) appartenant au projet `project_id`.
+    /// Message d'un visiteur, ou hors projet → NotFound.
+    pub async fn admin_edit_message(
+        &self,
+        project_id: i32,
+        comment_id: i32,
+        body: &str,
+    ) -> Result<comments::Model, CoreError> {
+        let body = validate_body(body)?;
+        let msg = self
+            .owned_live_message(comment_id, ADMIN_OWNER_TOKEN)
+            .await?;
+        let pin = comment_pins::Entity::find_by_id(msg.pin_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        self.assert_version_in_project(pin.version_id, project_id)
+            .await?;
+        let mut active: comments::ActiveModel = msg.into();
+        active.body = Set(body);
+        active.updated_at = Set(chrono::Utc::now().into());
+        Ok(active.update(&self.db).await?)
+    }
+
+    /// Supprime un fil **de l'admin** (owner = sentinelle) appartenant au projet `project_id`.
+    /// Fil d'un visiteur, ou hors projet → NotFound.
+    pub async fn admin_delete_own_pin(
+        &self,
+        project_id: i32,
+        pin_id: i32,
+    ) -> Result<(), CoreError> {
+        let pin = self.owned_live_pin(pin_id, ADMIN_OWNER_TOKEN).await?;
+        self.assert_version_in_project(pin.version_id, project_id)
+            .await?;
+        self.soft_delete_pin(pin).await
+    }
+
     async fn owned_live_message(
         &self,
         comment_id: i32,
@@ -791,5 +845,116 @@ mod tests {
             .await
             .unwrap();
         assert!(svc.list_for_version(v.id).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn admin_edit_message_updates_own_message_in_project() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, ADMIN_OWNER_TOKEN, ADMIN_AUTHOR, "avant", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+
+        let edited = svc
+            .admin_edit_message(v.project_id, id, "après")
+            .await
+            .unwrap();
+        assert_eq!(edited.body, "après");
+    }
+
+    #[tokio::test]
+    async fn admin_edit_message_wrong_project_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, ADMIN_OWNER_TOKEN, ADMIN_AUTHOR, "avant", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+
+        assert!(matches!(
+            svc.admin_edit_message(v.project_id + 999, id, "hack")
+                .await
+                .unwrap_err(),
+            CoreError::NotFound
+        ));
+    }
+
+    #[tokio::test]
+    async fn admin_edit_message_of_visitor_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "avant", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+
+        assert!(matches!(
+            svc.admin_edit_message(v.project_id, id, "hack")
+                .await
+                .unwrap_err(),
+            CoreError::NotFound
+        ));
+    }
+
+    #[tokio::test]
+    async fn admin_delete_own_pin_removes_thread_in_project() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, ADMIN_OWNER_TOKEN, ADMIN_AUTHOR, "un", "{}")
+            .await
+            .unwrap();
+
+        svc.admin_delete_own_pin(v.project_id, pwm.pin.id)
+            .await
+            .unwrap();
+        assert!(svc.list_for_version(v.id).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn admin_delete_own_pin_wrong_project_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, ADMIN_OWNER_TOKEN, ADMIN_AUTHOR, "un", "{}")
+            .await
+            .unwrap();
+
+        assert!(matches!(
+            svc.admin_delete_own_pin(v.project_id + 999, pwm.pin.id)
+                .await
+                .unwrap_err(),
+            CoreError::NotFound
+        ));
+        // Toujours présent : le mismatch de projet n'a pas supprimé le pin.
+        assert_eq!(svc.list_for_version(v.id).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn admin_delete_own_pin_of_visitor_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un", "{}")
+            .await
+            .unwrap();
+
+        assert!(matches!(
+            svc.admin_delete_own_pin(v.project_id, pwm.pin.id)
+                .await
+                .unwrap_err(),
+            CoreError::NotFound
+        ));
+        assert_eq!(svc.list_for_version(v.id).await.unwrap().len(), 1);
     }
 }

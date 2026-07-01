@@ -4,6 +4,39 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (bis) — Fix : scope projet sur edit/delete-pin admin (parité reply/moderate)
+
+### Dernière chose faite
+La revue finale de l'authoring admin (session précédente le même jour) avait noté une asymétrie :
+`admin_edit_comment` et `admin_delete_pin` (`backend/src/controllers/admin.rs`) recevaient l'`id`
+projet du path mais ne le vérifiaient jamais — ils résolvaient uniquement par owner-check
+sentinelle via `edit_message`/`delete_pin` (génériques, partagés avec le visiteur). Corrigé :
+nouvelles méthodes de service `admin_edit_message(project_id, comment_id, body)` et
+`admin_delete_own_pin(project_id, pin_id)` (`backend/src/services/comments.rs`) qui ajoutent la
+vérification `message/pin → pin → version → projet` (helper privé `assert_version_in_project`),
+NotFound en cas de mismatch — parité avec `admin_add_reply`/`moderate_delete_message`. Signatures
+HTTP inchangées (aucune régén `openapi.json`). TDD : 6 tests unitaires + 1 test d'intégration
+(2 projets, tentative cross-projet → 404 + fil intact, bon projet → 200). Doc normative mise à
+jour : `docs/contrat-deploy.md` §6.4 (mapping des 2 endpoints pointe désormais vers les nouvelles
+méthodes dédiées, plus `edit_message`/`delete_pin`). Rapport détaillé :
+`.superpowers/sdd/fix-projectscope-report.md`.
+
+### Trucs en suspens
+- Aucun — `edit_message`/`delete_pin` génériques restent utilisés tels quels par le flux visiteur
+  (non touchés, pas de régression possible).
+- Duplication mineure assumée : `admin_add_reply`/`moderate_delete_message` gardent leur propre
+  inline pin→version→projet plutôt que d'être migrés vers `assert_version_in_project` (hors scope
+  de ce fix, diff minimal ; refactor de convergence possible plus tard si souhaité, cf. BACKLOG).
+
+### Prochaine chose à creuser
+Rien d'ouvert sur ce fix. Sujet naturel suivant, inchangé : décider du sort de la branche
+`feat/prototype-comments` (merge dans `main` ou PR) — décision humaine.
+
+### Notes pour future Claude
+- Gate relancée : `cargo fmt` + `cargo clippy --all-targets -- -D warnings` (0 warning) +
+  `cargo nextest run` → 194 passed. Pas de changement frontend/OpenAPI → suites `pnpm`/Playwright
+  non ré-exécutées (aucun fichier frontend touché par ce fix).
+
 ## 2026-07-01 — Authoring commentaires admin (clôture Task 9 : doc + mémoire + gate finale)
 
 ### Dernière chose faite

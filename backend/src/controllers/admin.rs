@@ -550,13 +550,12 @@ async fn admin_reply(
 async fn admin_edit_comment(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
-    Path((_id, cid)): Path<(i32, i32)>,
+    Path((id, cid)): Path<(i32, i32)>,
     Json(body): Json<crate::dto::EditMessageReq>,
 ) -> Result<Response> {
-    use crate::services::comments::ADMIN_OWNER_TOKEN;
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let msg = svc
-        .edit_message(cid, ADMIN_OWNER_TOKEN, &body.body)
+        .admin_edit_message(id, cid, &body.body)
         .await
         .map_err(into_response)?;
     format::json(crate::dto::to_admin_comment_message(&msg))
@@ -576,11 +575,10 @@ async fn admin_edit_comment(
 async fn admin_delete_pin(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
-    Path((_id, pin)): Path<(i32, i32)>,
+    Path((id, pin)): Path<(i32, i32)>,
 ) -> Result<Response> {
-    use crate::services::comments::ADMIN_OWNER_TOKEN;
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
-    svc.delete_pin(pin, ADMIN_OWNER_TOKEN)
+    svc.admin_delete_own_pin(id, pin)
         .await
         .map_err(into_response)?;
     format::json(crate::dto::OkResponse::ok())

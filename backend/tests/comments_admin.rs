@@ -312,6 +312,107 @@ async fn admin_create_own_pin_is_private_and_flagged() {
 
 #[tokio::test]
 #[serial]
+async fn admin_edit_comment_and_delete_pin_are_scoped_to_project() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/api/login")
+            .json(&serde_json::json!({"user":"admin","pass":"s3cret"}))
+            .await;
+
+        // Projet A (celui qui possède réellement le fil admin).
+        let proj_a = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name":"Demo","code_enabled":false,"comments_enabled":true}))
+            .await;
+        let id_a = proj_a.json::<serde_json::Value>()["id"].as_i64().unwrap();
+        request
+            .post(&format!("/api/projects/{id_a}/deploy"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"html":"<h1>A</h1>","activate":true}))
+            .await;
+
+        // Projet B (mauvais projet, utilisé pour la tentative hors-scope).
+        let proj_b = request
+            .post("/api/projects")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"name":"Autre","code_enabled":false,"comments_enabled":true}))
+            .await;
+        let id_b = proj_b.json::<serde_json::Value>()["id"].as_i64().unwrap();
+
+        // L'admin crée son propre fil dans le projet A.
+        let pin = request
+            .post(&format!("/api/projects/{id_a}/versions/1/comments"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"anchor":"{}","body":"note interne"}))
+            .await;
+        assert_eq!(pin.status_code(), 200);
+        let pin_json = pin.json::<serde_json::Value>();
+        let pin_id = pin_json["id"].as_i64().unwrap();
+        let cid = pin_json["messages"][0]["id"].as_i64().unwrap();
+
+        // Edition via le mauvais projet → 404, le message n'est pas modifié.
+        let edit_wrong = request
+            .put(&format!("/api/projects/{id_b}/comments/messages/{cid}"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"body":"intrus"}))
+            .await;
+        assert_eq!(edit_wrong.status_code(), 404);
+
+        // Edition via le bon projet → 200.
+        let edit_ok = request
+            .put(&format!("/api/projects/{id_a}/comments/messages/{cid}"))
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"body":"note corrigée"}))
+            .await;
+        assert_eq!(edit_ok.status_code(), 200);
+        assert_eq!(edit_ok.json::<serde_json::Value>()["body"], "note corrigée");
+
+        // Suppression via le mauvais projet → 404, le fil reste visible.
+        let del_wrong = request
+            .delete(&format!("/api/projects/{id_b}/comments/pins/{pin_id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(del_wrong.status_code(), 404);
+        let still_there = request
+            .get(&format!("/api/projects/{id_a}/versions/1/comments"))
+            .await;
+        assert_eq!(
+            still_there.json::<serde_json::Value>()["pins"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+
+        // Suppression via le bon projet → 200, le fil disparaît.
+        let del_ok = request
+            .delete(&format!("/api/projects/{id_a}/comments/pins/{pin_id}"))
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(del_ok.status_code(), 200);
+        let gone = request
+            .get(&format!("/api/projects/{id_a}/versions/1/comments"))
+            .await;
+        assert_eq!(
+            gone.json::<serde_json::Value>()["pins"]
+                .as_array()
+                .unwrap()
+                .len(),
+            0
+        );
+    })
+    .await;
+    drop(tmp);
+}
+
+#[tokio::test]
+#[serial]
 async fn admin_write_endpoints_require_session() {
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
