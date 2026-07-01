@@ -19,6 +19,7 @@ const VISITOR_CAPS: Capabilities = Object.freeze({
 export function createVisitorAdapter(slug: string): CommentsAdapter {
   return {
     capabilities: VISITOR_CAPS,
+    fixedAuthorName: null,
 
     async list(): Promise<CommentList> {
       const { data, error } = await api.GET('/c/{slug}/comments', {

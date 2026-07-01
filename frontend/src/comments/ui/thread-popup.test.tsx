@@ -12,8 +12,8 @@ const pin: CommentPin = {
   anchor: '{}',
   created_at: 'now',
   messages: [
-    { id: 1, author_name: 'Léa', body: 'First', created_at: 'n', updated_at: 'n', editable: true },
-    { id: 2, author_name: 'Max', body: 'Reply', created_at: 'n', updated_at: 'n', editable: false },
+    { id: 1, author_name: 'Léa', body: 'First', created_at: 'n', updated_at: 'n', editable: true, is_admin: true },
+    { id: 2, author_name: 'Max', body: 'Reply', created_at: 'n', updated_at: 'n', editable: false, is_admin: false },
   ],
 }
 const position: PinPosition = {
@@ -99,7 +99,7 @@ describe('ThreadPopup', () => {
       anchor: '{}',
       created_at: '',
       messages: [
-        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false },
+        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false, is_admin: false },
       ],
     }
     renderThread({ pin: singleMessagePin, capabilities: moderatorCaps })
@@ -115,7 +115,7 @@ describe('ThreadPopup', () => {
       anchor: '{}',
       created_at: '',
       messages: [
-        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false },
+        { id: 9, author_name: 'Léa', body: 'salut', created_at: '', updated_at: '', editable: false, is_admin: false },
       ],
     }
     renderThread({ pin: nonEditablePin, capabilities: visitorCaps })

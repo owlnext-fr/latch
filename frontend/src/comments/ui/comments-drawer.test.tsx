@@ -20,6 +20,7 @@ function pin(id: number, author: string, created: string): CommentPin {
         created_at: created,
         updated_at: created,
         editable: false,
+        is_admin: false,
       },
     ],
   }

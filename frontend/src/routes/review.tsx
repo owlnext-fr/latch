@@ -20,7 +20,10 @@ export function ReviewPage() {
   const [reloadKey, setReloadKey] = useState(0)
 
   const cacheKey = useMemo(() => `admin:${id}:${n}`, [id, n])
-  const adapter = useMemo(() => createAdminAdapter(Number(id), Number(n)), [id, n])
+  const adapter = useMemo(
+    () => createAdminAdapter(Number(id), Number(n), t('comment.admin_author')),
+    [id, n, t],
+  )
 
   useEffect(() => {
     if (!frameEl) return

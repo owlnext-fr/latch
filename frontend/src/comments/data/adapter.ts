@@ -14,6 +14,8 @@ export interface Capabilities {
 /** Façade de données partagée par le visiteur (et plus tard l'admin, Plan 3). */
 export interface CommentsAdapter {
   readonly capabilities: Capabilities
+  /** Nom d'auteur imposé (admin) ; `null` = l'appelant saisit son nom (visiteur). */
+  readonly fixedAuthorName: string | null
   list(): Promise<CommentList>
   createPin(input: { anchor: string; author_name: string; body: string }): Promise<CommentPin>
   addReply(pinId: number, input: { author_name: string; body: string }): Promise<CommentMessage>

@@ -9,6 +9,7 @@ import type { FrameRef } from './picker/picker'
 
 const fakeAdapter: CommentsAdapter = {
   capabilities: { canAuthor: true, canEditOwn: true, canModerate: false },
+  fixedAuthorName: null,
   list: async () => ({ version: 1, pins: [] }),
   createPin: async () => {
     throw new Error('unused')

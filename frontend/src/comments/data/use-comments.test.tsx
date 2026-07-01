@@ -8,6 +8,7 @@ import type { CommentsAdapter } from './adapter'
 function fakeAdapter(over: Partial<CommentsAdapter> = {}): CommentsAdapter {
   return {
     capabilities: { canAuthor: true, canEditOwn: true, canModerate: false },
+    fixedAuthorName: null,
     list: vi.fn().mockResolvedValue({ version: 1, pins: [] }),
     createPin: vi.fn().mockResolvedValue({ id: 1, anchor: '{}', created_at: 'n', messages: [] }),
     addReply: vi.fn(),
