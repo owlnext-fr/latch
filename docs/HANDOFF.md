@@ -4,6 +4,19 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Statut commentaires dans la carte Configuration (détail projet)
+
+### Dernière chose faite
+Petit correctif UX remonté pendant la validation : la carte **Configuration** du détail projet
+(`frontend/src/routes/detail.tsx`) affichait le statut du **code** (activé/libre) mais pas celui des
+**commentaires**. Ajout d'une ligne « Commentaires : activés/désactivés » symétrique de la ligne Code
+(clés i18n `detail.comments_*` EN/FR, test `detail.test.tsx`). Commit `c552e05`. Gate : vitest 225,
+lint/typecheck clean. `dist/` rebuild → serveur de validation `:5150` à jour.
+
+### Notes pour future Claude
+`project.comments_enabled` est déjà dans le DTO `ProjectDetail` (aucun backend touché). Le toggle
+d'édition vit dans `ProjectForm` (déjà là) ; ici c'est purement l'affichage lecture-seule du détail.
+
 ## 2026-07-01 — Popups commentaires ancrés au pin
 
 ### Dernière chose faite
