@@ -324,3 +324,60 @@ async fn mcp_deploy_bad_token_no_side_effect() {
     })
     .await;
 }
+
+#[tokio::test]
+#[serial]
+async fn mcp_pull_prototype_roundtrip() {
+    let _dir = setup_env();
+    request::<App, _, _>(|request, ctx| async move {
+        // Projet préexistant + version déployée via le service (chemin réel).
+        let project = projects::ActiveModel {
+            slug: Set("pull-me-cccccccc".to_string()),
+            name: Set("Pull Me".to_string()),
+            code_enabled: Set(false),
+            pin: Set(None),
+            comments_enabled: Set(true),
+            ..Default::default()
+        }
+        .insert(&ctx.db)
+        .await
+        .expect("insert project");
+
+        let storage = latch::web::storage_from_ctx(&ctx);
+        latch::services::deploy::DeployService::new(ctx.db.clone(), storage)
+            .deploy(project.id, "<h1>pulled</h1>", true, None)
+            .await
+            .expect("deploy v1");
+
+        let (headers, _) = mcp_post(&request, init_body(), None).await;
+        let sid = headers
+            .get("mcp-session-id")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let body = serde_json::json!({
+            "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+            "params": {
+                "name": "pull_prototype",
+                "arguments": {
+                    "slug": "pull-me-cccccccc",
+                    "deploy_token": TOKEN
+                }
+            }
+        });
+        let (_, value) = mcp_post(&request, body, Some(&sid)).await;
+
+        let structured = &value["result"]["structuredContent"];
+        assert_eq!(structured["version"], 1);
+        assert_eq!(structured["html"], "<h1>pulled</h1>");
+        assert_eq!(
+            structured["url"],
+            "http://localhost:5150/c/pull-me-cccccccc"
+        );
+        assert_eq!(structured["comments_enabled"], true);
+        assert!(structured["threads"].as_array().unwrap().is_empty());
+    })
+    .await;
+}
