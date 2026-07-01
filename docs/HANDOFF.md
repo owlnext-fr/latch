@@ -4,6 +4,36 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (sexies) — Issue #3 : traitement des maintainability issues Sonar (13 code smells)
+
+### Dernière chose faite
+Les 13 code smells de maintenabilité remontés par SonarCloud (tous frontend TS, récupérés via
+l'API `api/issues/search?impactSoftwareQualities=MAINTAINABILITY`) traités, aucun changement de
+comportement :
+- **S3735** `void` inutile (×4) : `follow/controller.ts` (`defaultRequestFrame` réécrit en corps de
+  bloc `if/else`) + `use-version-comments.ts` (`void qc.invalidateQueries` → appel direct, cohérent
+  avec `use-projects.ts`). `no-floating-promises` inactif → suppression sûre (cf. QUIRKS).
+- **S3863** imports dupliqués du même module (×4) : `comments-app.tsx` (`FrameRef`+`ShellRect`
+  fusionnés depuis `./picker/picker`), `controller.ts` (`AnchorDescriptor`+`Point` depuis
+  `../anchor/descriptor`).
+- **S3358** ternaires imbriqués (×2) : `similarity.ts` (`fp.role === null || elRole === fp.role ? 1 : 0`),
+  `version-comments-panel.tsx` (ternaire JSX loading/empty/list → 3 gardes `&&`, le bloc `.map` intact).
+- **S2933** (×1) : `listeners` marqué `readonly` dans `FollowController`.
+- **S6582** (×1) : `found?.width === 0 && found?.height === 0` (optional chaining) dans `controller.ts`.
+- **S7735** (×1) : condition négative inversée dans `sortPins` (`delta === 0 ? … : delta`).
+Branche `chore/3-sonar-maintainability`. Gate frontend verte : lint 0, typecheck 0, Vitest **233 passed**.
+
+### Trucs en suspens
+- Vérif finale = job `sonar` de la CI sur la PR (les 13 issues portent sur du code existant ; elles
+  disparaîtront à la ré-analyse). Pas de scan Sonar local lancé (mapping 1:1 rule↔ligne, gate front verte).
+- Reste des tickets Sonar-adjacents : #11 (dette CI — dont le warning Node 20 sur actions checkout/docker
+  vu au run v1.3.1), #13 (nettoyages UI/OpenAPI).
+
+### Notes pour future Claude
+- **API Sonar issues** (récup rapide) : `curl -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=owlnext-fr_latch&impactSoftwareQualities=MAINTAINABILITY&statuses=OPEN,CONFIRMED&ps=200"`. Token dans `.env.local`.
+- Nuance S3863 : Sonar ne flag PAS un split `import type {X}` + `import {y}` du même module (kinds
+  différents) ; il flag deux imports de **même kind** (deux `import type`). Cf. QUIRKS.
+
 ## 2026-07-01 (quinquies) — Gate `docker` push-only + release v1.3.1
 
 ### Dernière chose faite

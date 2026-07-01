@@ -1,5 +1,4 @@
-import type { Point } from '../anchor/descriptor'
-import type { AnchorDescriptor } from '../anchor/descriptor'
+import type { AnchorDescriptor, Point } from '../anchor/descriptor'
 import type { AnchorStatus } from '../anchor/resolve'
 import type { Picker, ShellRect } from '../picker/picker'
 
@@ -19,13 +18,15 @@ export interface PinPosition {
 
 type FrameFn = (cb: () => void) => void
 
-const defaultRequestFrame: FrameFn = (cb) =>
-  typeof requestAnimationFrame === 'function' ? void requestAnimationFrame(cb) : void cb()
+const defaultRequestFrame: FrameFn = (cb) => {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(cb)
+  else cb()
+}
 
 export class FollowController {
   private readonly picker: Picker
   private pins: PinInput[] = []
-  private listeners = new Set<(p: PinPosition[]) => void>()
+  private readonly listeners = new Set<(p: PinPosition[]) => void>()
   private unsubscribe: (() => void) | null = null
   private dirty = false
   private frameScheduled = false
@@ -78,7 +79,7 @@ export class FollowController {
       const found = res.element ? this.picker.toShellRect(res.element) : null
       // Élément résolu mais rect à aire nulle = vue/scène masquée (display:none) du proto :
       // on le signale `hidden` pour ne pas coller le pin en (0,0) ni ouvrir un fil fantôme.
-      const hidden = found != null && found.width === 0 && found.height === 0
+      const hidden = found?.width === 0 && found?.height === 0
       const rect = found ?? this.picker.fallbackRect(pin.anchor)
       return { id: pin.id, status: res.status, rect, offset: pin.anchor.offset, hidden }
     })

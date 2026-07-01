@@ -21,6 +21,6 @@ export function score(el: Element, fp: Fingerprint): number {
   const tagScore = el.tagName.toLowerCase() === fp.tag ? 1 : 0
   const textScore = textSimilarity(normalizeText(el.textContent ?? ''), fp.text)
   const elRole = roleOf(el)
-  const roleScore = fp.role === null ? 1 : elRole === fp.role ? 1 : 0
+  const roleScore = fp.role === null || elRole === fp.role ? 1 : 0
   return 0.4 * tagScore + 0.4 * textScore + 0.2 * roleScore
 }

@@ -46,8 +46,8 @@ export function useModerateComment(projectId: number, n: number): UseMutationRes
       if (error) throw new Error('admin:moderate')
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: versionCommentsKey(projectId, n) })
-      void qc.invalidateQueries({ queryKey: ['project', projectId] })
+      qc.invalidateQueries({ queryKey: versionCommentsKey(projectId, n) })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
     },
   })
 }

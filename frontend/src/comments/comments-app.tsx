@@ -1,10 +1,9 @@
 import { useMemo, useReducer, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SameOriginPicker } from './picker/same-origin-picker'
-import type { FrameRef } from './picker/picker'
+import type { FrameRef, ShellRect } from './picker/picker'
 import type { AnchorDescriptor } from './anchor/descriptor'
 import { parseAnchor, serializeAnchor } from './anchor/descriptor'
-import type { ShellRect } from './picker/picker'
 import { useFollow } from './follow/use-follow'
 import type { PinInput } from './follow/controller'
 import {

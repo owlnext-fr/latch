@@ -111,6 +111,7 @@
 - [x] `docker-compose.yml` + `deploy.sh` + `.env.example` + dual-license MIT/Apache — Phase 0 — 2026-06-24
 - [x] `deploy-docs` (GitHub Pages) gaté par `needs: [docs, docker]` : la doc n'est publiée qu'après un push Docker réussi (toute la gate verte) — inverse le couplage faible Phase 8 §6.2 — Issue #1 — 2026-07-01
 - [x] Job `docker` gaté `if: github.event_name == 'push'` : ne build plus sur les PR (build image = job le plus lent, ne poussait déjà rien sur PR) ; couvre push branche + tag (release image toujours poussée) — 2026-07-01
+- [x] Sonar maintainability : 13 code smells frontend traités (S3735 `void`, S3863 imports dupliqués, S3358 ternaires imbriqués, S2933 `readonly`, S6582 optional chaining, S7735 condition négative) — Issue #3 — 2026-07-01
 
 ## Phase 4 — Serving `/c/<slug>`
 - [x] `services/unlock_cookie.rs` : `issue_token` / `verify_token` — cœur pur (sans axum/loco), empreinte HMAC du PIN, TTL — Phase 4 Task 1 — 2026-06-25
