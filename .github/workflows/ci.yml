@@ -270,12 +270,15 @@ jobs:
           path: public_docs/out
 
   # 11. Doc publique — déploiement GitHub Pages (main uniquement)
-  # Couplage faible : dépend seulement de `docs` (pas des jobs Rust) — la doc ne doit
-  # pas être bloquée par un test backend sans rapport (cf. spec Phase 8 §6.2).
+  # Dépend de `docs` (le build) ET de `docker` : la publication ne doit avoir lieu
+  # qu'APRÈS un push Docker réussi (cf. issue #1). Comme `docker` dépend lui-même de
+  # toute la gate (fmt/clippy, tests, supply-chain, e2e, sonar), la doc n'est publiée
+  # que si l'intégralité de la CI — build d'image compris — est verte : plus de doc
+  # publiée alors que la CI plante après coup.
   deploy-docs:
     name: docs (deploy Pages)
     runs-on: ubuntu-latest
-    needs: [docs]
+    needs: [docs, docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       pages: write
