@@ -22,5 +22,12 @@
   "comment.thread.orphaned": "Élément d'origine introuvable",
   "comment.error.name_required": "Veuillez saisir votre nom.",
   "comment.error.body_required": "Le commentaire ne peut pas être vide.",
-  "comment.error.body_too_long": "Le commentaire est trop long (2000 caractères max)."
+  "comment.error.body_too_long": "Le commentaire est trop long (2000 caractères max).",
+  "comment.drawer.title_one": "{{count}} commentaire",
+  "comment.drawer.title_other": "{{count}} commentaires",
+  "comment.drawer.close": "Fermer la liste des commentaires",
+  "comment.drawer.empty": "Aucun commentaire",
+  "comment.drawer.orphaned": "orphelin",
+  "comment.drawer.replies_one": "{{count}} réponse",
+  "comment.drawer.replies_other": "{{count}} réponses"
 }

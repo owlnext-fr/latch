@@ -22,5 +22,12 @@
   "comment.thread.orphaned": "Original element not found",
   "comment.error.name_required": "Please enter your name.",
   "comment.error.body_required": "Comment can't be empty.",
-  "comment.error.body_too_long": "Comment is too long (max 2000 characters)."
+  "comment.error.body_too_long": "Comment is too long (max 2000 characters).",
+  "comment.drawer.title_one": "{{count}} comment",
+  "comment.drawer.title_other": "{{count}} comments",
+  "comment.drawer.close": "Close comments list",
+  "comment.drawer.empty": "No comments yet",
+  "comment.drawer.orphaned": "orphaned",
+  "comment.drawer.replies_one": "{{count}} reply",
+  "comment.drawer.replies_other": "{{count}} replies"
 }

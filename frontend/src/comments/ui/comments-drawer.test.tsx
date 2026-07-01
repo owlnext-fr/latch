@@ -1,0 +1,65 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '@/shell/i18n'
+import { CommentsDrawer, sortPins } from './comments-drawer'
+import type { CommentPin } from '../data/adapter'
+import type { AnchorStatus } from '../anchor/resolve'
+
+function pin(id: number, author: string, created: string): CommentPin {
+  return {
+    id,
+    anchor: '{}',
+    created_at: created,
+    messages: [
+      { id: id * 10, author_name: author, body: `Body ${id}`, created_at: created, updated_at: created, editable: false },
+    ],
+  }
+}
+
+const pins = [pin(1, 'Alice', '2026-07-01T09:00:00Z'), pin(2, 'Max', '2026-07-01T11:00:00Z'), pin(3, 'Jo', '2026-07-01T08:00:00Z')]
+const statusOf = (id: number): AnchorStatus | undefined => (id === 3 ? 'orphaned' : 'anchored')
+
+function renderDrawer(over: Partial<Parameters<typeof CommentsDrawer>[0]> = {}) {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <CommentsDrawer open pins={pins} statusOf={statusOf} onClose={vi.fn()} onSelect={vi.fn()} {...over} />
+    </I18nextProvider>,
+  )
+}
+
+beforeEach(() => i18n.changeLanguage('en'))
+
+describe('sortPins', () => {
+  it('met les orphelins en bas, sains par récence desc', () => {
+    const ids = sortPins(pins, statusOf).map((p) => p.id)
+    expect(ids).toEqual([2, 1, 3]) // 2 (11h) > 1 (9h) sains ; 3 orphelin en dernier
+  })
+})
+
+describe('CommentsDrawer', () => {
+  it('rend une ligne par pin', () => {
+    renderDrawer()
+    expect(screen.getAllByTestId('drawer-row')).toHaveLength(3)
+    expect(screen.getByText('orphaned')).toBeInTheDocument()
+  })
+
+  it('appelle onSelect avec l’id au clic', async () => {
+    const onSelect = vi.fn()
+    renderDrawer({ onSelect })
+    await userEvent.click(screen.getAllByTestId('drawer-row')[0])
+    expect(onSelect).toHaveBeenCalledWith(2) // première ligne = plus récente
+  })
+
+  it('affiche l’état vide', () => {
+    renderDrawer({ pins: [] })
+    expect(screen.getByText('No comments yet')).toBeInTheDocument()
+    expect(screen.queryByTestId('drawer-row')).toBeNull()
+  })
+
+  it('ne rend rien si fermé', () => {
+    const { container } = renderDrawer({ open: false })
+    expect(container.querySelector('[data-testid="comments-drawer"]')).toBeNull()
+  })
+})
