@@ -352,6 +352,66 @@
       }
     },
     "/api/projects/{id}/comments/messages/{cid}": {
+      "put": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "PUT /api/projects/{id}/comments/messages/{cid} — l'admin édite un de SES messages.",
+        "operationId": "admin_edit_comment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "description": "Identifiant du message",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message modifié",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCommentMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Message étranger ou inconnu"
+          }
+        }
+      },
       "delete": {
         "tags": [
           "versions"
@@ -399,6 +459,120 @@
           },
           "404": {
             "description": "Message hors projet ou inconnu"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/comments/pins/{pin}": {
+      "delete": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "DELETE /api/projects/{id}/comments/pins/{pin} — l'admin supprime un de SES fils.",
+        "operationId": "admin_delete_pin",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pin",
+            "in": "path",
+            "description": "Identifiant du pin",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fil supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Pin étranger ou inconnu"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/comments/pins/{pin}/replies": {
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "POST /api/projects/{id}/comments/pins/{pin}/replies — l'admin répond à un fil (visiteur ou sien).",
+        "operationId": "admin_reply",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pin",
+            "in": "path",
+            "description": "Identifiant du pin",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminReplyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Réponse ajoutée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCommentMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
+          },
+          "404": {
+            "description": "Pin hors projet ou inconnu"
           }
         }
       }
@@ -601,6 +775,66 @@
           },
           "401": {
             "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Version inconnue"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "POST /api/projects/{id}/versions/{n}/comments — l'admin démarre son propre fil (note privée).",
+        "operationId": "admin_create_pin",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant du projet",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "Numéro de version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCreatePinReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Fil créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCommentPin"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Origin invalide (CSRF)"
           },
           "404": {
             "description": "Version inconnue"
@@ -1104,6 +1338,34 @@
             "items": {
               "$ref": "#/components/schemas/AdminCommentMessage"
             }
+          }
+        }
+      },
+      "AdminCreatePinReq": {
+        "type": "object",
+        "description": "Corps de `POST /api/projects/{id}/versions/{n}/comments` (fil propre de l'admin).",
+        "required": [
+          "anchor",
+          "body"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminReplyReq": {
+        "type": "object",
+        "description": "Corps de `POST /api/projects/{id}/comments/pins/{pin}/replies` (réponse admin).",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
           }
         }
       },

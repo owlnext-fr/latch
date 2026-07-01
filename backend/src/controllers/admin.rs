@@ -475,6 +475,117 @@ async fn moderate_delete_comment(
     format::json(crate::dto::OkResponse::ok())
 }
 
+/// POST /api/projects/{id}/versions/{n}/comments — l'admin démarre son propre fil (note privée).
+#[utoipa::path(
+    post, path = "/api/projects/{id}/versions/{n}/comments", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("n" = i32, Path, description = "Numéro de version")),
+    request_body = crate::dto::AdminCreatePinReq,
+    responses((status = 200, description = "Fil créé", body = crate::dto::AdminCommentPin),
+              (status = 404, description = "Version inconnue"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
+#[debug_handler]
+async fn admin_create_pin(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, n)): Path<(i32, i32)>,
+    Json(body): Json<crate::dto::AdminCreatePinReq>,
+) -> Result<Response> {
+    use crate::services::comments::{ADMIN_AUTHOR, ADMIN_OWNER_TOKEN};
+    let version = find_version(&ctx, id, n).await?;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let pwm = svc
+        .create_pin(
+            version.id,
+            ADMIN_OWNER_TOKEN,
+            ADMIN_AUTHOR,
+            &body.body,
+            &body.anchor,
+        )
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_admin_comment_pin(&pwm.pin, &pwm.messages))
+}
+
+/// POST /api/projects/{id}/comments/pins/{pin}/replies — l'admin répond à un fil (visiteur ou sien).
+#[utoipa::path(
+    post, path = "/api/projects/{id}/comments/pins/{pin}/replies", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("pin" = i32, Path, description = "Identifiant du pin")),
+    request_body = crate::dto::AdminReplyReq,
+    responses((status = 200, description = "Réponse ajoutée", body = crate::dto::AdminCommentMessage),
+              (status = 404, description = "Pin hors projet ou inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
+#[debug_handler]
+async fn admin_reply(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((id, pin)): Path<(i32, i32)>,
+    Json(body): Json<crate::dto::AdminReplyReq>,
+) -> Result<Response> {
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let msg = svc
+        .admin_add_reply(id, pin, &body.body)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_admin_comment_message(&msg))
+}
+
+/// PUT /api/projects/{id}/comments/messages/{cid} — l'admin édite un de SES messages.
+#[utoipa::path(
+    put, path = "/api/projects/{id}/comments/messages/{cid}", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("cid" = i32, Path, description = "Identifiant du message")),
+    request_body = crate::dto::EditMessageReq,
+    responses((status = 200, description = "Message modifié", body = crate::dto::AdminCommentMessage),
+              (status = 404, description = "Message étranger ou inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
+#[debug_handler]
+async fn admin_edit_comment(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((_id, cid)): Path<(i32, i32)>,
+    Json(body): Json<crate::dto::EditMessageReq>,
+) -> Result<Response> {
+    use crate::services::comments::ADMIN_OWNER_TOKEN;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    let msg = svc
+        .edit_message(cid, ADMIN_OWNER_TOKEN, &body.body)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::to_admin_comment_message(&msg))
+}
+
+/// DELETE /api/projects/{id}/comments/pins/{pin} — l'admin supprime un de SES fils.
+#[utoipa::path(
+    delete, path = "/api/projects/{id}/comments/pins/{pin}", tag = "versions",
+    params(("id" = i32, Path, description = "Identifiant du projet"),
+           ("pin" = i32, Path, description = "Identifiant du pin")),
+    responses((status = 200, description = "Fil supprimé", body = OkResponse),
+              (status = 404, description = "Pin étranger ou inconnu"),
+              (status = 401, description = "Non authentifié"),
+              (status = 403, description = "Origin invalide (CSRF)"))
+)]
+#[debug_handler]
+async fn admin_delete_pin(
+    _auth: AdminAuth,
+    State(ctx): State<AppContext>,
+    Path((_id, pin)): Path<(i32, i32)>,
+) -> Result<Response> {
+    use crate::services::comments::ADMIN_OWNER_TOKEN;
+    let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
+    svc.delete_pin(pin, ADMIN_OWNER_TOKEN)
+        .await
+        .map_err(into_response)?;
+    format::json(crate::dto::OkResponse::ok())
+}
+
 /// Routes de l'adaptateur admin. Les endpoints de lecture (GET) sont publics après
 /// auth ; les mutations (POST/PUT/DELETE) sont également protégées par la garde
 /// `require_same_origin` (contrat §4/§9.6 — CSRF complémentaire au SameSite).
@@ -528,8 +639,24 @@ pub fn routes() -> Routes {
             get(list_version_comments),
         )
         .add(
+            "/projects/{id}/versions/{n}/comments",
+            post(admin_create_pin).layer(from_fn(require_same_origin)),
+        )
+        .add(
+            "/projects/{id}/comments/pins/{pin}/replies",
+            post(admin_reply).layer(from_fn(require_same_origin)),
+        )
+        .add(
             "/projects/{id}/comments/messages/{cid}",
             axum::routing::delete(moderate_delete_comment).layer(from_fn(require_same_origin)),
+        )
+        .add(
+            "/projects/{id}/comments/messages/{cid}",
+            put(admin_edit_comment).layer(from_fn(require_same_origin)),
+        )
+        .add(
+            "/projects/{id}/comments/pins/{pin}",
+            axum::routing::delete(admin_delete_pin).layer(from_fn(require_same_origin)),
         )
         // Preview : GET idempotent, pas de garde Origin, mais derrière AdminAuth.
         .add("/projects/{id}/versions/{n}/preview", get(preview_version))
