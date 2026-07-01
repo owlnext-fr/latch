@@ -1,10 +1,10 @@
 # ROADMAP — latch
 
-> Phases, dépendances, critères de sortie. Identifier la phase courante avant de
-> coder (cf. `docs/HANDOFF.md` et `docs/INDEX.md`). Une phase n'est close que si ses
-> critères de sortie sont **verts** — alors on le consigne dans INDEX + HANDOFF.
+> **Journal de build historique (Phases 0–10).** Le planning *courant* vit sur le
+> **board GitHub** (projet #1) — ce fichier ne pilote plus le travail à venir, il
+> retrace comment le socle v1 a été construit, phase par phase.
 
-L'ordre suit les dépendances : le cœur d'abord (testable sans HTTP), puis les
+L'ordre suivait les dépendances : le cœur d'abord (testable sans HTTP), puis les
 adaptateurs un par un, puis l'e2e qui valide le tout assemblé, puis le packaging.
 
 ---
@@ -218,23 +218,25 @@ pipeline `deploy-docs` vert + le site accessible à l'URL Pages (charger une pag
 agrandissables sur docs et landing ; `.env.example` propre et homogène, **toutes les variables de chemin
 auditées (relatif vs absolu)** et le couplage env ↔ volume documenté.
 
-## Phase 10 — Commentaires ancrés sur les prototypes [EN COURS]
+## Phase 10 ✅ LIVRÉE (2026-07-01) — Commentaires ancrés sur les prototypes
 
 > Spec : `docs/superpowers/specs/2026-06-30-prototype-comments-design.md`
 > Plan backend : `docs/superpowers/plans/2026-06-30-prototype-comments-backend.md`
-> Branche : `feat/prototype-comments` (non mergée — choix humain).
+> Branche : `feat/prototype-comments` — **mergée sur `main`**.
 
 Commentaires type Figma ancrés à des éléments du DOM, sur la surface visiteur `/c/<slug>` (visibilité
-**privée** par relecteur), avec lecture + modération côté admin. Découpé en 3 plans :
+**privée** par relecteur), avec lecture + modération + authoring côté admin. Livré en 3 plans + itérations :
 
 - **Plan 1 — Backend** ✅ **LIVRÉ** (2026-06-30) : schéma `comment_pins`/`comments` + `comments_enabled`,
   `CommentsService`, identité visiteur (cookie signé), endpoints publics + admin, OpenAPI régénéré,
   invariants. **Revue finale opus = YES ; gate Sonar PASSED** (couverture 97.7 %, duplication 2.1 %, A/A/A).
-- **Plan 2 — Frontend (module partagé + shell visiteur)** [À FAIRE] : `src/comments/` (interface `Picker`
-  same-origin, échelle d'ancrage W3C, contrôleur de suivi, overlay + popup `@floating-ui/dom`, barre
-  d'action, adaptateur de données), chargé en lazy dans le shell.
-- **Plan 3 — Frontend admin + docs** [À FAIRE] : toggle `comments_enabled` dans `ProjectForm`, vue Review
-  admin (montant le même module via l'adaptateur admin), passe `public_docs`.
+- **Plan 2 — Frontend (module partagé + shell visiteur)** ✅ **LIVRÉ** (2026-06-30) : `src/comments/`
+  (interface `Picker` same-origin, échelle d'ancrage W3C, contrôleur de suivi, overlay + popup
+  `@floating-ui/dom`, barre d'action, adaptateur de données), chargé en lazy dans le shell.
+- **Plan 3 — Frontend admin + docs** ✅ **LIVRÉ** (2026-06-30) : toggle `comments_enabled` dans `ProjectForm`,
+  vue Review admin (montant le même module via l'adaptateur admin), passe `public_docs`.
+- **Itérations** ✅ (2026-07-01) : refactor UX (drawer de liste + saut-au-pin), popups ancrés au pin,
+  **authoring admin** (l'admin écrit, plus seulement modère), scope projet sur edit/delete-pin. Cf. `INDEX.md`.
 
-**Sortie** : commentaires bout-en-bout (visiteur desktop + admin), gate verte par couche. Hors v1 :
-collaboratif, statut « résolu », tactile/mobile, report inter-versions, authoring admin (cf. spec §BACKLOG).
+**Sortie atteinte** : commentaires bout-en-bout (visiteur desktop + admin authoring), gate verte par couche.
+Hors v1 (→ board si repris) : collaboratif, statut « résolu », tactile/mobile, report inter-versions.

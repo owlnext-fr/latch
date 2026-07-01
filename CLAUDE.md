@@ -16,19 +16,25 @@ endpoint MCP (`/mcp`) appelé par Claude pour déployer.
 
 ## Protocole obligatoire avant tout travail
 
-1. **Se resituer via la mémoire projet** : lire `docs/HANDOFF.md` (état courant,
+1. **Consulter le board GitHub — source de suivi principale.** `gh issue list` ou le
+   projet #1 (`github.com/owlnext-fr/latch`). Les colonnes *Ready* / *In progress*
+   disent ce qui est à prendre et ce qui est déjà en cours. **Répartition des rôles :**
+   le **board fait foi pour le SUIVI** (ce qui reste à faire) ; les `docs/` font foi
+   pour le **SAVOIR** (loi, pièges, conventions) et l'**HISTOIRE** (livré, état de session).
+
+2. **Se resituer via la mémoire projet** : lire `docs/HANDOFF.md` (état courant,
    normalement injecté par le hook SessionStart) puis `docs/INDEX.md` (ce qui est
    déjà livré). Ne jamais dire « je n'ai pas le contexte » sans avoir lu ces fichiers.
 
-2. **Lire les documents normatifs**, dans cet ordre :
+3. **Lire les documents normatifs**, dans cet ordre :
    - `docs/contrat-deploy.md` — archi en couches, modèle de données, les trois
      surfaces, **les invariants de sécurité**. **Le contrat fait loi.**
    - `docs/BOOTSTRAP.md` — stack, versions épinglées, structure du repo, outillage,
      règles de test, CI, Docker, déploiement.
-   - `docs/ROADMAP.md` — phases, dépendances, critères de sortie. Identifier la
-     phase courante avant de coder.
+   - `docs/ROADMAP.md` — **journal de build historique** (Phases 0–10) : utile pour
+     comprendre comment le socle a été construit. Le planning *courant* vit sur le board.
 
-3. **Doc d'abord, code ensuite.** Si une décision manque ou semble se contredire
+4. **Doc d'abord, code ensuite.** Si une décision manque ou semble se contredire
    entre deux docs, on tranche dans la doc *avant* d'écrire du code. Un spec flou
    produit du code flou.
 
@@ -54,16 +60,44 @@ pas la dernière publiée.
 | Positionnement popups (commentaires) | `@floating-ui/dom` | `computePosition` contre un `VirtualElement` (rect suivi) ; retombe en (0,0) sans layout (jsdom) |
 | Cookie signé (déverrouillage client) | `axum-extra` (SignedCookieJar) / `cookie` | Détails de signature/scoping |
 
+## Cycle de travail sur un ticket (board → PR → merge)
+
+Le flux standard, du choix d'une issue jusqu'au merge. Le board est piloté à chaque
+étape ; la **gate** (suites complètes + Sonar) est réalisée **par le merge de la PR**.
+
+1. **Début de session** : lire les issues *Ready* (board). Triage rapide de l'icebox
+   `docs/BACKLOG.md` : un item mûr ? → le promouvoir en issue *Ready*.
+2. **Choisir un ticket** → le passer en **`In progress`**. Créer la branche liée
+   (`feat/<n>-<slug>`, ex. `feat/9-phase-9-polish`).
+   - **Ticket trivial** (fix mécanique, 1 item de checklist) → sauter directement en 5.
+   - **Ticket parapluie** (checklist multi-items comme #9–#13) → soit éclater l'item
+     pris en issue dédiée, soit traiter la checklist par lots en gardant le parapluie
+     *In progress*. Ne jamais laisser un parapluie ouvert des semaines.
+   - Sinon → **brainstormer** (skill `brainstorming`).
+3. **Spec** écrite → commit dans `docs/superpowers/specs/` + commentaire sur l'issue
+   avec le lien.
+4. **Plan** écrit → commit dans `docs/superpowers/plans/` + commentaire sur l'issue.
+5. **Implémentation.**
+6. **Rebuild** (backend compile + `pnpm build` → `dist/`) pour que `:5150` serve la
+   nouvelle version — précondition de la QA locale, *pas* la gate.
+7. **Carte → `In review`** + ouvrir la **PR** (`Closes #N`). QA manuelle humaine sur
+   `:5150` ; patch-loop sur la branche au besoin (la CI mouline en fond sur la PR).
+8. QA OK → **compléter les mémoires locales** (voir « Règle de fin d'implémentation »)
+   + push d'un **résumé sur l'issue**.
+9. **`In review → Done` = LA gate** : suites + Sonar verts → **merge de la PR**
+   (`Closes #N` auto-close l'issue + déplace la carte en `Done`). Supprimer la branche.
+
 ## Carte des chantiers — où vit quoi
 
 - **Règle d'architecture, modèle de données, invariant de sécurité** → `docs/contrat-deploy.md`.
 - **Standard d'outillage, version épinglée, règle de test, étape CI/Docker** → `docs/BOOTSTRAP.md`.
-- **Ordre des phases, critère « la phase X est finie »** → `docs/ROADMAP.md`.
+- **Suivi des tâches (à faire / en cours)** → **board GitHub** (projet #1).
+- **Historique du build (phases 0–10, comment le socle a été construit)** → `docs/ROADMAP.md`.
 - **État courant, ce qui vient d'être fait** → `docs/HANDOFF.md`.
 - **Ce qui est livré et marche** → `docs/INDEX.md`.
 - **Piège rencontré, contournement** → `docs/QUIRKS.md`.
 - **Squelette de code récurrent découvert en route** → `docs/CONVENTIONS.md`.
-- **Idée reportée, hors-périmètre v1** → `docs/BACKLOG.md`.
+- **Idée brute pas encore mûre** → `docs/BACKLOG.md` (icebox ; promue en issue quand elle mûrit).
 - **Orchestration seule** (cet ordre de lecture, le workflow) → ce fichier.
 
 > Routage en cas de doute : une règle *d'archi ou de sécu* va dans le **contrat**,
@@ -106,7 +140,7 @@ Une tâche n'est terminée que si **tout** ce qui suit est vrai :
   > est couvert par `pnpm test:vite` (smoke). Si `vite.config.ts` a été touché, les **deux suites**
   > font partie de « terminé ».
 - tests **substantiels** — la gate SonarCloud `new_coverage ≥ 80%` sur le code neuf est bloquante (CI) et fait partie de « terminé » ; vérifiable en local via le scan Sonar (cf. `docs/ENVIRONMENT.md §Scan local`) ;
-- les critères de sortie de la phase ROADMAP sont remplis ;
+- les critères d'acceptation de l'issue (board) sont remplis ;
 - la doc reste cohérente avec le code (si une décision a changé, le contrat est mis à jour) ;
 - `docs/HANDOFF.md` reçoit une entrée datée, et `docs/INDEX.md` est mis à jour si un
   livrable est passé au vert.
@@ -121,7 +155,7 @@ Le projet maintient une base de connaissances opérationnelle sous `docs/`. **En
 
 À consulter au cas par cas :
 - **`docs/QUIRKS.md`** — pièges et comportements non-évidents.
-- **`docs/BACKLOG.md`** — idées et améliorations identifiées mais non urgentes.
+- **`docs/BACKLOG.md`** — icebox d'idées brutes (le suivi actionnable vit sur le board).
 - **`docs/CONVENTIONS.md`** — skeletons de code et règles tacites.
 - **`docs/superpowers/specs/`** — design docs détaillés par feature.
 - **`docs/superpowers/plans/`** — plans d'implémentation détaillés par feature.
@@ -135,7 +169,8 @@ Le projet maintient une base de connaissances opérationnelle sous `docs/`. **En
 | Une feature livrée | ajouter une ligne dans `docs/INDEX.md` + spec/plan dans `docs/superpowers/` si non-trivial |
 | Où vit un container, un path, un port, un accès | `docs/ENVIRONMENT.md` |
 | Un comportement non-évident, un piège | `docs/QUIRKS.md` (ajouter dès la découverte, pas plus tard) |
-| Une idée future / nice-to-have | `docs/BACKLOG.md` |
+| Une idée future concrète / prête à être prise | **issue GitHub** (board, colonne `Backlog`) |
+| Une idée brute, pas encore mûre | `docs/BACKLOG.md` (icebox — promue en issue quand elle mûrit) |
 | L'état mental d'une session significative | `docs/HANDOFF.md` (en fin de session) |
 
 ### Règle de fin d'implémentation (NON-NÉGOCIABLE)
@@ -145,10 +180,11 @@ Le projet maintient une base de connaissances opérationnelle sous `docs/`. **En
 1. **Mettre à jour `docs/INDEX.md`** — ajouter une ligne dans la table correspondante (feature, commande, etc.).
 2. **Mettre à jour `docs/HANDOFF.md`** — ajouter une entrée datée en haut (sous le titre H1) avec : `Dernière chose faite`, `Trucs en suspens`, `Prochaine chose à creuser`, `Notes pour future Claude`.
 3. **Mettre à jour `docs/QUIRKS.md`** si tu as découvert un piège non-évident pendant l'implémentation.
-4. **Mettre à jour `docs/BACKLOG.md`** si tu as identifié des améliorations futures que tu n'as pas implémentées.
+4. **Créer une issue** (board) pour toute amélioration future concrète identifiée mais non implémentée ; une idée encore brute va dans `docs/BACKLOG.md` (icebox).
 5. **Mettre à jour `docs/CONVENTIONS.md`** si tu as introduit un nouveau pattern qui doit être reproduit.
 6. **Mettre à jour `docs/ENVIRONMENT.md`** si tu as ajouté/découvert un service, path, port, env var.
 7. **Mettre à jour `CLAUDE.md`** si tu as établi une règle qui s'applique toujours au projet.
+8. **Mettre à jour l'issue** : push d'un résumé, `Closes #N` dans la PR — la carte passe en `In review` puis `Done` au merge.
 
 Ces mises à jour font partie de la définition de "terminé". Une feature livrée sans mise à jour de la mémoire est une feature à moitié livrée.
 
