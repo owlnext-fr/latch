@@ -4,6 +4,23 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Polish fil + listes commentaires (icônes/rouge + date+heure)
+
+### Dernière chose faite
+Ajustements UX demandés pendant la validation (commit `e86999c`) :
+- **Fil** (`ThreadPopup`, partagé /c + /admin) : modifier/supprimer déplacés en **boutons-icône**
+  (`Pencil`/`Trash2`) en haut à droite du message ; suppression message ET suppression du fil en
+  variante **`destructive`** (rouge). Tests via `data-variant="destructive"` (robuste).
+- **Listes** (drawer `/c` + `/admin` Review, panneau admin `VersionCommentsPanel`) : passage du temps
+  relatif à une **date absolue AVEC heure** — nouveau helper pur `comments/ui/format-datetime.ts`
+  (`formatDateTime(iso, locale)` = `toLocaleString {dateStyle:'short', timeStyle:'short'}`). Le helper
+  `timeAgo` (+ test) a été **retiré** (plus aucun consommateur).
+Gate : vitest **227**, lint/typecheck clean, `dist/` rebuild → serveur validation `:5150` à jour.
+
+### Notes pour future Claude
+Choix « date absolue partout » tranché avec l'humain (vs relatif / infobulle). Si un affichage relatif
+redevient souhaité quelque part, `format-datetime.ts` reste le point d'entrée date des commentaires.
+
 ## 2026-07-01 — Statut commentaires dans la carte Configuration (détail projet)
 
 ### Dernière chose faite
