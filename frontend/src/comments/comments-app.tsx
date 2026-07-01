@@ -18,6 +18,7 @@ import {
 import type { CommentsAdapter, CommentPin } from './data/adapter'
 import { initialPickState, pickReducer } from './state/pick-machine'
 import { OverlayLayer } from './ui/overlay-layer'
+import { firstLetter } from './ui/pin-label'
 import { ComposePopup } from './ui/compose-popup'
 import { ThreadPopup } from './ui/thread-popup'
 import { ActionBar } from './ui/action-bar'
@@ -86,7 +87,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
         onPick={onPick}
         onPinClick={setActivePinId}
         activePinId={activePinId}
-        countOf={(id) => pins.find((p) => p.id === id)?.messages.length ?? 0}
+        labelOf={(id) => firstLetter(pins.find((p) => p.id === id)?.messages[0]?.author_name ?? '')}
       />
       {pick.mode === 'compose' && (
         <ComposePopup

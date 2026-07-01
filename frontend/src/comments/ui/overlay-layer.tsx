@@ -11,7 +11,7 @@ interface OverlayLayerProps {
   onPick: (anchor: AnchorDescriptor, rect: ShellRect) => void
   onPinClick: (pinId: number) => void
   activePinId: number | null
-  countOf?: (pinId: number) => number
+  labelOf: (pinId: number) => string
 }
 
 export function OverlayLayer({
@@ -21,7 +21,7 @@ export function OverlayLayer({
   onPick,
   onPinClick,
   activePinId,
-  countOf,
+  labelOf,
 }: Readonly<OverlayLayerProps>) {
   const [hover, setHover] = useState<ShellRect | null>(null)
 
@@ -69,7 +69,7 @@ export function OverlayLayer({
         <PinBadge
           key={p.id}
           position={p}
-          count={countOf ? countOf(p.id) : 1}
+          label={labelOf(p.id)}
           active={p.id === activePinId}
           onClick={() => onPinClick(p.id)}
         />

@@ -12,26 +12,28 @@ const pos: PinPosition = {
 }
 
 describe('PinBadge', () => {
-  it('renders the message count and positions itself', () => {
-    render(<PinBadge position={pos} count={3} active={false} onClick={() => {}} />)
+  it('affiche le label et se positionne', () => {
+    render(<PinBadge position={pos} label="A" active={false} onClick={() => {}} />)
     const btn = screen.getByRole('button')
-    expect(btn).toHaveTextContent('3')
-    // 100 + 0.5*80 = 140 ; 50 + 0.5*40 = 70
-    expect(btn.style.left).toBe('140px')
-    expect(btn.style.top).toBe('70px')
+    expect(btn).toHaveTextContent('A')
+    expect(btn.style.left).toBe('140px') // 100 + 0.5*80
+    expect(btn.style.top).toBe('70px') // 50 + 0.5*40
   })
 
-  it('calls onClick', async () => {
+  it('un pin ancré n’utilise pas la couleur d’avertissement (ambre)', () => {
+    render(<PinBadge position={pos} label="A" active={false} onClick={() => {}} />)
+    expect(screen.getByRole('button').className).not.toContain('amber')
+  })
+
+  it('un pin orphelin passe en ambre', () => {
+    render(<PinBadge position={{ ...pos, status: 'orphaned' }} label="J" active={false} onClick={() => {}} />)
+    expect(screen.getByRole('button').className).toContain('amber')
+  })
+
+  it('appelle onClick', async () => {
     const onClick = vi.fn()
-    render(<PinBadge position={pos} count={1} active={false} onClick={onClick} />)
+    render(<PinBadge position={pos} label="A" active={false} onClick={onClick} />)
     await userEvent.click(screen.getByRole('button'))
     expect(onClick).toHaveBeenCalledOnce()
-  })
-
-  it('marks a moved (approximate) pin via data-status', () => {
-    render(
-      <PinBadge position={{ ...pos, status: 'approximate' }} count={1} active={false} onClick={() => {}} />,
-    )
-    expect(screen.getByRole('button')).toHaveAttribute('data-status', 'approximate')
   })
 })

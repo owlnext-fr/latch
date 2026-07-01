@@ -41,6 +41,7 @@ describe('OverlayLayer', () => {
         onPick={vi.fn()}
         onPinClick={vi.fn()}
         activePinId={null}
+        labelOf={() => 'A'}
       />,
     )
     expect(screen.getByRole('button')).toBeInTheDocument()
@@ -56,6 +57,7 @@ describe('OverlayLayer', () => {
         onPick={onPick}
         onPinClick={vi.fn()}
         activePinId={null}
+        labelOf={() => 'A'}
       />,
     )
     const surface = container.querySelector('[data-testid="pick-surface"]')!
@@ -73,6 +75,7 @@ describe('OverlayLayer', () => {
         onPick={vi.fn()}
         onPinClick={onPinClick}
         activePinId={null}
+        labelOf={() => 'A'}
       />,
     )
     fireEvent.click(screen.getByRole('button'))
