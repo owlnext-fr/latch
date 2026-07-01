@@ -394,6 +394,29 @@ mod tests {
             .unwrap();
     }
 
+    /// Appelle `pull_prototype` avec des arguments concis (évite de répéter le littéral).
+    async fn call_pull(
+        m: &LatchMcp,
+        slug: &str,
+        version: Option<i32>,
+        token: &str,
+    ) -> Result<Json<PullResult>, ErrorData> {
+        m.pull_prototype(Parameters(PullArgs {
+            slug: slug.to_string(),
+            version,
+            deploy_token: token.to_string(),
+        }))
+        .await
+    }
+
+    /// Extrait l'erreur d'un résultat de tool (les `Json<_>` n'implémentent pas `Debug`).
+    fn expect_err<T>(res: Result<T, ErrorData>) -> ErrorData {
+        match res {
+            Err(e) => e,
+            Ok(_) => panic!("un résultat d'erreur était attendu"),
+        }
+    }
+
     fn mcp(db: DatabaseConnection, dir: &TempDir) -> LatchMcp {
         let storage: Arc<dyn Storage> = Arc::new(FsStorage::new(dir.path().to_path_buf()));
         LatchMcp::new(
@@ -591,17 +614,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = make_project(&db, false).await;
         let m = mcp(db, &dir);
-        let res = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: p.slug.clone(),
-                version: None,
-                deploy_token: "WRONG".to_string(),
-            }))
-            .await;
-        let err = match res {
-            Err(e) => e,
-            Ok(_) => panic!("token invalide doit être rejeté"),
-        };
+        let err = expect_err(call_pull(&m, &p.slug, None, "WRONG").await);
         assert_eq!(err.message, "deploy_token invalide");
     }
 
@@ -610,13 +623,7 @@ mod tests {
         let db = test_db().await;
         let dir = tempfile::tempdir().unwrap();
         let m = mcp(db, &dir);
-        let res = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: "nope-xxxxxxxx".to_string(),
-                version: None,
-                deploy_token: TOKEN.to_string(),
-            }))
-            .await;
+        let res = call_pull(&m, "nope-xxxxxxxx", None, TOKEN).await;
         assert!(res.is_err(), "slug inconnu → erreur");
     }
 
@@ -626,17 +633,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = make_project(&db, false).await; // créé mais jamais déployé
         let m = mcp(db, &dir);
-        let res = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: p.slug.clone(),
-                version: None,
-                deploy_token: TOKEN.to_string(),
-            }))
-            .await;
-        let err = match res {
-            Err(e) => e,
-            Ok(_) => panic!("aucune version active → erreur"),
-        };
+        let err = expect_err(call_pull(&m, &p.slug, None, TOKEN).await);
         assert_eq!(err.message, "aucune version active");
     }
 
@@ -647,14 +644,7 @@ mod tests {
         let p = make_project(&db, false).await;
         deploy_v1(&db, &dir, p.id, "<h1>hello</h1>").await;
         let m = mcp(db, &dir);
-        let Json(out) = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: p.slug.clone(),
-                version: None,
-                deploy_token: TOKEN.to_string(),
-            }))
-            .await
-            .unwrap();
+        let Json(out) = call_pull(&m, &p.slug, None, TOKEN).await.unwrap();
         assert_eq!(out.version, 1);
         assert_eq!(out.html, "<h1>hello</h1>");
         assert_eq!(out.slug, p.slug);
@@ -669,17 +659,7 @@ mod tests {
         let p = make_project(&db, false).await;
         deploy_v1(&db, &dir, p.id, "<h1>hello</h1>").await;
         let m = mcp(db, &dir);
-        let res = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: p.slug.clone(),
-                version: Some(99),
-                deploy_token: TOKEN.to_string(),
-            }))
-            .await;
-        let err = match res {
-            Err(e) => e,
-            Ok(_) => panic!("version inconnue → erreur"),
-        };
+        let err = expect_err(call_pull(&m, &p.slug, Some(99), TOKEN).await);
         assert_eq!(err.message, "version inconnue");
     }
 
@@ -720,14 +700,7 @@ mod tests {
             .unwrap();
 
         let m = mcp(db, &dir);
-        let Json(out) = m
-            .pull_prototype(Parameters(PullArgs {
-                slug: p.slug.clone(),
-                version: None,
-                deploy_token: TOKEN.to_string(),
-            }))
-            .await
-            .unwrap();
+        let Json(out) = call_pull(&m, &p.slug, None, TOKEN).await.unwrap();
 
         assert_eq!(out.threads.len(), 2);
         let all_msgs: Vec<&PullMessage> = out.threads.iter().flat_map(|t| &t.messages).collect();

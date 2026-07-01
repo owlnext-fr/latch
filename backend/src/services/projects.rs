@@ -325,15 +325,17 @@ mod tests {
         assert!(p.comments_enabled);
     }
 
-    #[tokio::test]
-    async fn get_version_by_n_and_missing() {
+    /// Socle des tests de résolution de version : (db, tempdir, service, projet libre).
+    async fn version_fixture() -> (
+        DatabaseConnection,
+        tempfile::TempDir,
+        ProjectsService,
+        projects::Model,
+    ) {
         let db = test_db().await;
         let dir = tempfile::tempdir().unwrap();
-        let storage: std::sync::Arc<dyn crate::services::storage::Storage> = std::sync::Arc::new(
-            crate::services::storage::FsStorage::new(dir.path().to_path_buf()),
-        );
-        let svc = ProjectsService::new(db.clone());
-        let p = svc
+        let service = ProjectsService::new(db.clone());
+        let p = service
             .create(CreateProject {
                 name: "P".to_string(),
                 brand_name: None,
@@ -343,51 +345,47 @@ mod tests {
             })
             .await
             .unwrap();
+        (db, dir, service, p)
+    }
+
+    /// Déploie et active une v1 minimale sur `project_id`.
+    async fn deploy_active_v1(db: &DatabaseConnection, dir: &tempfile::TempDir, project_id: i32) {
+        let storage: std::sync::Arc<dyn crate::services::storage::Storage> = std::sync::Arc::new(
+            crate::services::storage::FsStorage::new(dir.path().to_path_buf()),
+        );
         crate::services::deploy::DeployService::new(db.clone(), storage)
-            .deploy(p.id, "<h1>v1</h1>", true, None)
+            .deploy(project_id, "<h1>v1</h1>", true, None)
             .await
             .unwrap();
+    }
 
-        let v = svc.get_version(p.id, 1).await.unwrap();
+    #[tokio::test]
+    async fn get_version_by_n_and_missing() {
+        let (db, dir, service, p) = version_fixture().await;
+        deploy_active_v1(&db, &dir, p.id).await;
+
+        let v = service.get_version(p.id, 1).await.unwrap();
         assert_eq!(v.n, 1);
         assert!(matches!(
-            svc.get_version(p.id, 99).await,
+            service.get_version(p.id, 99).await,
             Err(CoreError::NotFound)
         ));
     }
 
     #[tokio::test]
     async fn get_active_version_via_pointer_and_none() {
-        let db = test_db().await;
-        let dir = tempfile::tempdir().unwrap();
-        let storage: std::sync::Arc<dyn crate::services::storage::Storage> = std::sync::Arc::new(
-            crate::services::storage::FsStorage::new(dir.path().to_path_buf()),
-        );
-        let svc = ProjectsService::new(db.clone());
-        let p = svc
-            .create(CreateProject {
-                name: "P".to_string(),
-                brand_name: None,
-                code_enabled: false,
-                pin: None,
-                comments_enabled: false,
-            })
-            .await
-            .unwrap();
+        let (db, dir, service, p) = version_fixture().await;
 
         // Aucune version déployée → NotFound.
         assert!(matches!(
-            svc.get_active_version(&p).await,
+            service.get_active_version(&p).await,
             Err(CoreError::NotFound)
         ));
 
-        crate::services::deploy::DeployService::new(db.clone(), storage)
-            .deploy(p.id, "<h1>v1</h1>", true, None)
-            .await
-            .unwrap();
+        deploy_active_v1(&db, &dir, p.id).await;
         // Recharger le projet pour avoir active_version_id à jour.
-        let p = svc.get_by_slug(&p.slug).await.unwrap();
-        let v = svc.get_active_version(&p).await.unwrap();
+        let p = service.get_by_slug(&p.slug).await.unwrap();
+        let v = service.get_active_version(&p).await.unwrap();
         assert_eq!(v.n, 1);
     }
 }
