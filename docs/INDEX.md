@@ -250,4 +250,17 @@
 - [x] **Refactor UX commentaires** — drawer de liste (`CommentsDrawer`, tri orphelins en bas, clic→scroll+ouverture), pins bleu fluo fixe (`COMMENT_FLUO`) + label 1ʳᵉ lettre auteur, ciblage inset-glow capé, positionnement popups borné au viewport (`useFloatingRect`), fix décalage pins admin (`OverlayLayer` root `fixed inset-0`) — frontend-only, backend inchangé — spec `docs/superpowers/specs/2026-07-01-comments-ux-refactor-design.md`, plan `docs/superpowers/plans/2026-07-01-comments-ux-refactor.md` — gate verte (lint/typecheck clean, vitest 212, e2e 8 passed/2 skipped, nextest 181) — 2026-07-01
 - [x] **Popups ancrés au pin (Figma-like)** — `ThreadPopup`+`ComposePopup` s'ouvrent collés au point du pin via `useFloatingPoint` (VirtualElement zéro-size) au lieu du bounding box ; helper pur `anchorPoint` (dédup PinBadge) ; offset = rayon pin + gap (pin visible) — frontend-only — spec `docs/superpowers/specs/2026-07-01-comments-popup-anchor-design.md`, plan `docs/superpowers/plans/2026-07-01-comments-popup-anchor.md` — 2026-07-01
 - [x] **Statut commentaires dans la carte Configuration (détail projet)** — ligne « Commentaires : activés/désactivés » symétrique de la ligne Code dans `detail.tsx` (clés i18n `detail.comments_*` EN/FR + test) — frontend-only — 2026-07-01
+- [x] **Authoring commentaires admin** — l'admin peut écrire, pas seulement lire/modérer : jeton
+  sentinelle `ADMIN_OWNER_TOKEN = "__admin__"` (aucune migration DB) + `ADMIN_AUTHOR = "admin"` ;
+  booléen dérivé `is_admin` sur `CommentMessage` **et** `AdminCommentMessage` (`owner_token`
+  toujours absent du JSON) ; nouvelle méthode service `admin_add_reply(project_id, pin_id, body)`
+  (répond à n'importe quel pin du projet, sans owner-check) + réutilisation de
+  `create_pin`/`edit_message`/`delete_pin`/`moderate_delete_message` avec la sentinelle ; 4
+  endpoints admin (`POST .../versions/{n}/comments`, `POST .../pins/{pin}/replies`,
+  `PUT .../messages/{cid}`, `DELETE .../pins/{pin}`, sous `AdminAuth`+`require_same_origin`,
+  sans `X-Comment-Client`) ; adaptateur admin frontend en authoring complet + seam
+  `fixedAuthorName` (compose sans champ nom, identité forcée serveur) + badge « Admin » (`/c` et
+  Review) ; e2e Playwright (réponse admin à un fil visiteur) — commits `dda592e..c24502f` —
+  spec `docs/superpowers/specs/2026-07-01-admin-comments-authoring-design.md`, plan
+  `docs/superpowers/plans/2026-07-01-admin-comments-authoring.md` — Phase 10 — 2026-07-01
 - [x] **Polish fil + listes commentaires** — actions du fil (`ThreadPopup`, /c + /admin) en **boutons-icône** en haut à droite du message (`Pencil`/`Trash2`), suppression message + suppression du fil en variante **`destructive` (rouge)** ; listes (drawer + panneau admin) en **date absolue AVEC heure** via helper partagé `formatDateTime` (relatif `timeAgo` retiré) — frontend-only — 2026-07-01

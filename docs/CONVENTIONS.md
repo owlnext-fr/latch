@@ -1373,3 +1373,33 @@ arbitraire (contrôlé par le client, pas par latch) — un token thème hérite
 invisible ou clasher. Une constante hex fixe garantit un contraste stable quel que soit le proto ciblé.
 L'ambre `#f59e0b` reste réservé aux pins `orphaned`/`moved` (statut, pas décoratif) — ne pas le fusionner
 avec `COMMENT_FLUO`.
+
+## Jeton sentinelle pour un compte unique (« qui possède ça » sans colonne de rôle) — Authoring commentaires admin, 2026-07-01
+
+Quand un modèle métier est indexé par un identifiant de propriété opaque (ici `owner_token` sur
+`comment_pins`/`comments`, un ULID par visiteur) et qu'**un seul compte spécial** (l'admin) doit
+pouvoir « posséder » des lignes sans migration ni colonne `role`/`is_admin_owned` : réserver une
+**valeur constante non collisionnable** avec l'espace de valeurs généré normalement.
+
+```rust
+// backend/src/services/comments.rs
+pub const ADMIN_OWNER_TOKEN: &str = "__admin__"; // jamais produit par mint_owner_token() (ULID base32, pas d'underscore)
+pub const ADMIN_AUTHOR: &str = "admin";           // author_name brut stocké, jamais affiché
+```
+
+- **Zéro migration** : la sentinelle est juste une valeur de plus dans une colonne `TEXT` existante.
+- **Non-collision garantie par construction** : documenter *pourquoi* le générateur normal ne peut
+  jamais produire cette valeur (ici : alphabet ULID Crockford base32 sans underscore).
+- **Anti-usurpation** : le check ne doit JAMAIS se fier à une valeur envoyée par le client — les
+  writes visiteur lisent l'owner depuis un cookie signé serveur ; les writes admin posent la
+  sentinelle uniquement derrière l'auth admin (session), jamais depuis le corps de la requête.
+- **Distinction à la sérialisation, pas au stockage** : dériver un booléen (`is_admin = owner_token
+  == ADMIN_OWNER_TOKEN`) au moment de construire le DTO de sortie, ne jamais sérialiser le token
+  brut (cf. invariant §9 du contrat — s'applique ici comme au `owner_token` visiteur).
+- **Réutilisation maximale du service existant** : toutes les opérations owner-checkées
+  (`edit_message`, `delete_pin`) fonctionnent *sans modification* avec la sentinelle en argument —
+  seule une opération sans owner-check (ici `admin_add_reply`, pour répondre à *n'importe quel*
+  pin du projet) a nécessité une nouvelle méthode de service.
+
+Applicable à tout futur besoin « un compte spécial unique agit sur un modèle indexé par jeton
+opaque » sans vouloir introduire une colonne de rôle dédiée.

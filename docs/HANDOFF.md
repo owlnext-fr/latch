@@ -4,6 +4,53 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Authoring commentaires admin (clôture Task 9 : doc + mémoire + gate finale)
+
+### Dernière chose faite
+Tasks 1-8 (déjà committées, commits `dda592e..c24502f`) ont livré l'**authoring de commentaires
+côté admin** : l'admin ne se contente plus de lire/modérer, il peut écrire. Cette session (Task 9)
+clôt la feature par la doc + la mémoire + la gate finale complète, **sans toucher au code** :
+- `docs/contrat-deploy.md` : §7 (bullet Commentaires) mentionne l'authoring dans `createAdminAdapter` ;
+  §6.4 documente les **4 endpoints admin d'écriture** (create pin / reply / edit / delete pin) avec
+  leur mapping service (`create_pin`/`admin_add_reply`/`edit_message`/`delete_pin` + sentinelle) ;
+  §9 (invariant 7) documente le **jeton sentinelle `ADMIN_OWNER_TOKEN = "__admin__"`** (aucune
+  migration DB, non collisionnable avec un ULID visiteur) et le booléen dérivé `is_admin` sur les
+  deux DTO (`CommentMessage` + `AdminCommentMessage`), en réaffirmant que `owner_token` n'est
+  toujours jamais sérialisé.
+- `public_docs/content/docs/admin/comments.mdx` : nouvelle section « Leaving comments as an
+  administrator » (EN) — créer un fil = note privée visible seulement en Review ; répondre à un
+  visiteur = visible de ce visiteur ; éditer/supprimer ses messages ; badge « Admin ». **Retiré**
+  l'ancienne phrase devenue fausse : « Administrators cannot post comments themselves ». Vérifié :
+  `pnpm types:check` (fumadocs-mdx + next typegen + tsc) passe.
+- `docs/INDEX.md` : ligne livrable « Authoring commentaires admin » (Phase 10), avec renvoi au
+  commit range et à la spec/au plan.
+- Gate finale (backend + frontend) relancée entièrement — voir résultats ci-dessous.
+
+### Trucs en suspens
+- Branche `feat/prototype-comments` toujours **non mergée** dans `main` — décision de merge/PR = humain.
+- Hors périmètre v1 (backlog, déjà noté dans la spec) : diffusion des fils propres de l'admin à
+  tous les visiteurs, notifications, statut « résolu ».
+
+### Prochaine chose à creuser
+Rien d'ouvert côté authoring admin — la feature est fonctionnellement complète et documentée.
+Prochain sujet naturel : décider du sort de la branche (merge dans `main` ou PR) — c'est une
+décision humaine, pas technique.
+
+### Notes pour future Claude
+- **`ADMIN_OWNER_TOKEN = "__admin__"`** (`backend/src/services/comments.rs`) est LE point d'entrée
+  pour comprendre comment l'admin « possède » des commentaires sans colonne de rôle ni migration :
+  c'est un `owner_token` constant, jamais produit par `mint_owner_token()` (ULID), réservé au
+  compte admin unique. `is_admin = (owner_token == ADMIN_OWNER_TOKEN)` est calculé à la
+  sérialisation dans `dto/mod.rs`, jamais stocké tel quel dans le JSON de sortie.
+- **Seam `fixedAuthorName`** (posé sur `CommentsAdapter`, pas sur `Capabilities` — écart assumé
+  vs la spec initiale pour minimiser la churn des littéraux `capabilities` dans les tests
+  existants, même effet fonctionnel) : quand non-null (cas admin), `compose-popup.tsx` et le
+  composer de réponse de `thread-popup.tsx` masquent le champ nom et soumettent ce libellé fixe —
+  c'est le mécanisme qui empêche le client de choisir le nom affiché pour l'admin.
+- Si une future tâche touche à nouveau l'authoring admin, relire d'abord
+  `docs/superpowers/specs/2026-07-01-admin-comments-authoring-design.md` (§2 sentinelle, §5 table
+  des 4 endpoints, §7 sécurité) — c'est la source de vérité design, le contrat n'en est qu'un résumé.
+
 ## 2026-07-01 — Polish fil + listes commentaires (icônes/rouge + date+heure)
 
 ### Dernière chose faite

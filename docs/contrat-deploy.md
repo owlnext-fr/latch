@@ -306,6 +306,33 @@ cookie d'identité `latch_comment` (ULID opaque, signé, `HttpOnly`/`Secure`/`Sa
 Réponses : `owner_token` **jamais** présent ; chaque message porte `editable: bool` (calculé
 par appelant). MCP `deploy_prototype` inchangé (ne touche pas aux commentaires).
 
+**Écriture admin — 4 endpoints (authoring)**, en plus des endpoints de lecture/modération déjà
+listés en §7. L'unique compte admin possède un **jeton sentinelle** `ADMIN_OWNER_TOKEN` (constant,
+non issu de `mint_owner_token()` — voir §9) : ces routes réutilisent le même cœur `CommentsService`
+que la surface visiteur, avec cette sentinelle comme `owner_token`. Toutes sous `AdminAuth` +
+`require_same_origin` ; **pas** de garde `X-Comment-Client` (spécifique à la surface visiteur), pas
+de cookie `latch_comment`.
+
+- `POST   /api/projects/{id}/versions/{n}/comments` — l'admin démarre **son propre fil** (note
+  privée de relecture, cf. §7 : visible **seulement** en Review admin, jamais diffusée aux
+  visiteurs). Réutilise `create_pin(version_id, ADMIN_OWNER_TOKEN, ADMIN_AUTHOR, …)`.
+- `POST   /api/projects/{id}/comments/pins/{pin}/replies` — l'admin **répond à n'importe quel pin
+  du projet** (fil d'un visiteur ou le sien). Nouvelle méthode de service `admin_add_reply(project_id,
+  pin_id, body)` : résout pin→version→projet (comme `moderate_delete_message`), **sans owner-check**
+  (l'admin peut répondre à tout fil de son projet), 404 si le pin n'appartient pas au projet. La
+  réponse redevient visible du visiteur propriétaire du fil via son `GET /c/<slug>/comments` habituel.
+- `PUT    /api/projects/{id}/comments/messages/{cid}` — l'admin édite un de **ses** messages.
+  Réutilise `edit_message(cid, ADMIN_OWNER_TOKEN, body)` : l'owner-check interne restreint
+  naturellement à ses propres messages (message visiteur → 404, pas d'escalade).
+- `DELETE /api/projects/{id}/comments/pins/{pin}` — l'admin supprime un de **ses** fils entiers.
+  Réutilise `delete_pin(pin, ADMIN_OWNER_TOKEN)` : owner-check interne restreint aux pins propres
+  de l'admin (pin visiteur → 404 ; la suppression d'un message visiteur individuel reste
+  `moderate_delete_message`, déjà couverte).
+
+Identité non usurpable : le `author_name` envoyé par le client sur ces 4 endpoints est **ignoré** —
+le serveur pose toujours `ADMIN_AUTHOR` (« admin », valeur brute jamais affichée) ; l'UI rend le
+libellé i18n « Admin » via le booléen dérivé `is_admin` (§9), jamais le `author_name` brut.
+
 ## 7. Admin — rails par page (contenu + comportement, pas layout)
 
 Le rendu fin est assuré par **shadcn/ui** (Radix, base stone, thème oklch `bJfDPe2y`).
@@ -345,10 +372,14 @@ persistée en localStorage.
     État vide : ce bloc passe au premier plan.
 - **Commentaires** : toggle `comments_enabled` par projet dans `ProjectForm` (défaut sécurité-aware) ;
   **page Review** `/admin/projects/<id>/versions/<n>/review` : iframe plein-écran (`previewUrl`, `frame-ancestors 'self'`)
-  avec overlay lazy `CommentsApp` en mode admin (`createAdminAdapter` : lecture + modération) ;
+  avec overlay lazy `CommentsApp` en mode admin (`createAdminAdapter` : lecture + **authoring**
+  (créer son propre fil, répondre à un fil visiteur, éditer ses messages) + modération) ;
   `VersionCommentsPanel` accessible depuis le détail projet (liste lecture seule
   `GET /api/projects/<id>/versions/<n>/comments` + modération `DELETE /api/projects/<id>/comments/messages/<id>`,
-  vérifie l'appartenance au projet).
+  vérifie l'appartenance au projet). **Écriture admin (4 endpoints, sous `AdminAuth` +
+  `require_same_origin`, PAS de `X-Comment-Client` — c'est la garde visiteur)** : voir §6.4.
+  Identité forcée serveur (libellé i18n « Admin », badge discret à côté du nom sur `/c` **et**
+  Review) — le client ne choisit ni le nom, ni l'`owner_token`.
 - **Retour racine** : le nom de l'app en tête est un lien vers `/admin`. Nav minimale :
   titre cliquable + **sélecteur de langue FR/EN** + logout. Compte unique → pas de menu utilisateur.
   L'UI est **internationalisée (FR + EN, défaut EN)** via `react-i18next` ; la langue est persistée
@@ -384,7 +415,15 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
    `HttpOnly`/`Secure`/`SameSite`. Vérif `Origin` sur les mutations admin via
    `require_same_origin` (middleware `axum::from_fn`, 403 cross-origin).
 7. **`owner_token` jamais sérialisé** (réponse publique ou admin) — `editable: bool` à la place.
-   Le gate `unlock_ok` + `comments_enabled` couvre toutes les routes commentaires.
+   Le gate `unlock_ok` + `comments_enabled` couvre toutes les routes commentaires. **L'unique
+   compte admin est modélisé par un jeton sentinelle constant `ADMIN_OWNER_TOKEN = "__admin__"`**
+   (`backend/src/services/comments.rs`, aucune migration DB, aucune colonne de rôle) — non
+   collisionnable avec un `owner_token` visiteur (ULID Crockford base32, jamais des underscores).
+   Sur les deux surfaces DTO (`CommentMessage` public et `AdminCommentMessage` admin), un booléen
+   **dérivé** `is_admin = (owner_token == ADMIN_OWNER_TOKEN)` est sérialisé — **jamais** le token
+   lui-même. Anti-usurpation : les écritures visiteur lisent l'owner uniquement depuis le cookie
+   signé `latch_comment` (un client ne peut pas se forger `owner_token = "__admin__"`) ; les
+   écritures admin sont derrière `AdminAuth` et pose la sentinelle côté serveur (§6.4/§7).
 
 ### Note (hors-invariants) — `GET /api/settings` et le `deploy_token`
 
