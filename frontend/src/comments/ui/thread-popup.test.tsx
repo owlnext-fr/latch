@@ -121,4 +121,25 @@ describe('ThreadPopup', () => {
     renderThread({ pin: nonEditablePin, capabilities: visitorCaps })
     expect(screen.queryByRole('button', { name: /delete/i })).toBeNull()
   })
+
+  it('rend modifier/supprimer en boutons-icône (aria, sans texte visible)', () => {
+    renderThread()
+    // icônes seulement → aucun libellé texte visible
+    expect(screen.queryByText('Edit')).toBeNull()
+    expect(screen.queryByText('Delete')).toBeNull()
+    // mais toujours accessibles par leur aria-label
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+  })
+
+  it('rend supprimer (message) et supprimer-le-fil en variante danger', () => {
+    renderThread()
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Delete thread' }),
+    ).toHaveAttribute('data-variant', 'destructive')
+  })
 })

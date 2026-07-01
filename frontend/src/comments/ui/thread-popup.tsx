@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -68,7 +68,33 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
           const canDeleteMsg = canEditMsg || capabilities.canModerate
           return (
             <li key={m.id} className="flex flex-col gap-1">
-              <span className="text-xs font-semibold">{m.author_name}</span>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-semibold">{m.author_name}</span>
+                {editingId !== m.id && canDeleteMsg && (
+                  <div className="flex shrink-0 gap-0.5">
+                    {canEditMsg && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={t('comment.thread.edit')}
+                        onClick={() => startEdit(m)}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon-xs"
+                      aria-label={t('comment.thread.delete')}
+                      onClick={() => onDelete(m.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
               {editingId === m.id ? (
                 <div className="flex flex-col gap-1">
                   <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} />
@@ -82,28 +108,7 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
                   </div>
                 </div>
               ) : (
-                <>
-                  <p className="whitespace-pre-wrap text-sm">{m.body}</p>
-                  {canDeleteMsg && (
-                    <div className="flex gap-2">
-                      {canEditMsg && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(m)}>
-                          {t('comment.thread.edit')}
-                        </Button>
-                      )}
-                      {canDeleteMsg && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(m.id)}
-                        >
-                          {t('comment.thread.delete')}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </>
+                <p className="whitespace-pre-wrap text-sm">{m.body}</p>
               )}
             </li>
           )
@@ -134,7 +139,8 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
       )}
       {capabilities.canEditOwn && (pin.messages[0]?.editable ?? false) && (
         <div className="flex justify-end">
-          <Button type="button" variant="ghost" size="sm" onClick={onDeletePin}>
+          <Button type="button" variant="destructive" size="sm" onClick={onDeletePin}>
+            <Trash2 className="size-3.5" />
             {t('comment.thread.delete_thread')}
           </Button>
         </div>

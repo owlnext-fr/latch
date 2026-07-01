@@ -72,6 +72,14 @@ describe('CommentsDrawer', () => {
     expect(screen.getByText('orphaned')).toBeInTheDocument()
   })
 
+  it('affiche une date absolue AVEC heure (h:mm) sur les lignes', () => {
+    renderDrawer()
+    const rows = screen.getAllByTestId('drawer-row')
+    expect(
+      rows.some((r) => /\d{1,2}:\d{2}/.test(r.textContent ?? '')),
+    ).toBe(true)
+  })
+
   it('appelle onSelect avec l’id au clic', async () => {
     const onSelect = vi.fn()
     renderDrawer({ onSelect })

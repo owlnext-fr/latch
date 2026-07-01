@@ -6,7 +6,7 @@ import type { AnchorStatus } from '../anchor/resolve'
 import type { CommentPin } from '../data/adapter'
 import { COMMENT_FLUO } from './colors'
 import { firstLetter } from './pin-label'
-import { timeAgo } from './time-ago'
+import { formatDateTime } from './format-datetime'
 
 interface CommentsDrawerProps {
   open: boolean
@@ -42,8 +42,6 @@ export function CommentsDrawer({
   onSelect,
 }: Readonly<CommentsDrawerProps>) {
   const { t, i18n } = useTranslation()
-  // Lazy init : évite d'appeler `Date.now()` (impur) à chaque render (react-hooks/purity).
-  const [now] = useState(() => Date.now())
   // Pin dont on affiche la note « hors écran » (ancré sur un écran du proto non affiché).
   const [noticeId, setNoticeId] = useState<number | null>(null)
   if (!open) return null
@@ -108,9 +106,8 @@ export function CommentsDrawer({
                         {author}
                       </span>
                       <span className="text-muted-foreground text-[10px]">
-                        {timeAgo(
+                        {formatDateTime(
                           pin.messages[0]?.created_at ?? pin.created_at,
-                          now,
                           i18n.language,
                         )}
                       </span>

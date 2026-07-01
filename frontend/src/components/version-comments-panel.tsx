@@ -12,6 +12,7 @@ import {
   useVersionComments,
   useModerateComment,
 } from '@/hooks/use-version-comments'
+import { formatDateTime } from '@/comments/ui/format-datetime'
 import type { components } from '@/api/schema'
 
 type AdminCommentPin = components['schemas']['AdminCommentPin']
@@ -40,7 +41,7 @@ export function VersionCommentsPanel(
   props: Readonly<VersionCommentsPanelProps>,
 ) {
   const { projectId, version, open, onOpenChange } = props
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data, isLoading } = useVersionComments(projectId, version)
   const moderateComment = useModerateComment(projectId, version)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
@@ -83,7 +84,7 @@ export function VersionCommentsPanel(
                           </span>
                           <p className="text-sm">{m.body}</p>
                           <span className="text-muted-foreground text-xs">
-                            {new Date(m.created_at).toLocaleDateString()}
+                            {formatDateTime(m.created_at, i18n.language)}
                           </span>
                         </div>
                         {confirmingId === m.id ? (
