@@ -13,6 +13,7 @@ function renderPopup(props: Partial<Parameters<typeof ComposePopup>[0]> = {}) {
       <ComposePopup
         point={point}
         submitting={false}
+        fixedAuthorName={null}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         {...props}
@@ -66,5 +67,25 @@ describe('ComposePopup', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Post' }))
     expect(onSubmit).not.toHaveBeenCalled()
     expect(screen.getByText('Comment is too long (max 2000 characters).')).toBeInTheDocument()
+  })
+
+  it('affiche le champ nom quand fixedAuthorName est null (visiteur)', () => {
+    renderPopup({ fixedAuthorName: null })
+    expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
+  })
+
+  it('masque le champ nom quand fixedAuthorName est fourni (admin)', () => {
+    renderPopup({ fixedAuthorName: 'Admin' })
+    expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Commenting as Admin')).toBeInTheDocument()
+  })
+
+  it('soumet avec author_name imposé et ne persiste pas le nom quand fixedAuthorName est fourni', async () => {
+    const onSubmit = vi.fn()
+    renderPopup({ onSubmit, fixedAuthorName: 'Admin' })
+    await userEvent.type(screen.getByLabelText('Comment'), 'Looks good')
+    await userEvent.click(screen.getByRole('button', { name: 'Post' }))
+    expect(onSubmit).toHaveBeenCalledWith({ author_name: 'Admin', body: 'Looks good' })
+    expect(localStorage.getItem('latch:comment-name')).toBeNull()
   })
 })

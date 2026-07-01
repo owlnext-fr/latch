@@ -105,6 +105,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
         <ComposePopup
           point={anchorPoint(pick.rect, pick.anchor.offset)}
           submitting={createPin.isPending}
+          fixedAuthorName={adapter.fixedAuthorName}
           onSubmit={submitNewComment}
           onCancel={() => dispatch({ type: 'CANCEL' })}
         />
@@ -118,7 +119,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
           onReply={(body) =>
             addReply.mutate({
               pinId: activePin.id,
-              author_name: getStoredName() || lastAuthor(activePin),
+              author_name: adapter.fixedAuthorName ?? (getStoredName() || lastAuthor(activePin)),
               body,
             })
           }

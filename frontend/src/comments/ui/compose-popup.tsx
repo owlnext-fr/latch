@@ -12,24 +12,31 @@ const MAX_BODY = 2000
 interface ComposePopupProps {
   point: { x: number; y: number }
   submitting: boolean
+  fixedAuthorName: string | null
   onSubmit: (v: { author_name: string; body: string }) => void
   onCancel: () => void
 }
 
-export function ComposePopup({ point, submitting, onSubmit, onCancel }: Readonly<ComposePopupProps>) {
+export function ComposePopup({
+  point,
+  submitting,
+  fixedAuthorName,
+  onSubmit,
+  onCancel,
+}: Readonly<ComposePopupProps>) {
   const { t } = useTranslation()
   const { ref, style } = useFloatingPoint(point)
-  const [name, setName] = useState(getStoredName())
+  const [name, setName] = useState(fixedAuthorName ?? getStoredName())
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function submit() {
-    const trimmedName = name.trim()
+    const trimmedName = (fixedAuthorName ?? name).trim()
     const trimmedBody = body.trim()
     if (!trimmedName) return setError(t('comment.error.name_required'))
     if (!trimmedBody) return setError(t('comment.error.body_required'))
     if (trimmedBody.length > MAX_BODY) return setError(t('comment.error.body_too_long'))
-    setStoredName(trimmedName)
+    if (!fixedAuthorName) setStoredName(trimmedName)
     onSubmit({ author_name: trimmedName, body: trimmedBody })
   }
 
@@ -40,13 +47,21 @@ export function ComposePopup({ point, submitting, onSubmit, onCancel }: Readonly
       className="bg-background z-[60] w-72 rounded-lg border p-3 shadow-xl"
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="comment-name">{t('comment.compose.name_label')}</Label>
-        <Input
-          id="comment-name"
-          value={name}
-          placeholder={t('comment.compose.name_placeholder')}
-          onChange={(e) => { setName(e.target.value); setError(null) }}
-        />
+        {fixedAuthorName ? (
+          <p className="text-muted-foreground text-xs">
+            {t('comment.compose.as_label', { name: fixedAuthorName })}
+          </p>
+        ) : (
+          <>
+            <Label htmlFor="comment-name">{t('comment.compose.name_label')}</Label>
+            <Input
+              id="comment-name"
+              value={name}
+              placeholder={t('comment.compose.name_placeholder')}
+              onChange={(e) => { setName(e.target.value); setError(null) }}
+            />
+          </>
+        )}
         <Label htmlFor="comment-body">{t('comment.compose.body_label')}</Label>
         <Textarea
           id="comment-body"
