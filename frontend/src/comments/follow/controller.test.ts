@@ -78,4 +78,29 @@ describe('FollowController', () => {
     ctrl.stop()
     expect(off).toHaveBeenCalled()
   })
+
+  it('marque hidden un élément résolu dont le rect a une aire nulle (vue display:none)', () => {
+    const el = { tag: 'el' } as unknown as Element
+    const picker = {
+      ...fakePicker(),
+      resolve: (a: AnchorDescriptor) =>
+        a.selector === '#p1'
+          ? { element: el, status: 'anchored' as const }
+          : { element: null, status: 'orphaned' as const },
+      // #p1 est résolu mais son rect est à aire nulle (élément dans une scène masquée)
+      toShellRect: (): ShellRect => ({ x: 40, y: 56, width: 0, height: 0 }),
+    } as unknown as Picker
+    const ctrl = new FollowController(picker, { requestFrame: (cb) => cb() })
+    let positions: Array<{ id: number; hidden?: boolean }> = []
+    ctrl.onUpdate((p) => (positions = p as never))
+    ctrl.setPins([
+      { id: 1, anchor: anchor(1) },
+      { id: 2, anchor: anchor(2) },
+    ])
+    ctrl.start()
+    // résolu + rect nul → hidden
+    expect(positions.find((p) => p.id === 1)?.hidden).toBe(true)
+    // orphaned (élément absent) → pas hidden (utilise fallbackRect)
+    expect(positions.find((p) => p.id === 2)?.hidden).toBe(false)
+  })
 })

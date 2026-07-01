@@ -12,6 +12,8 @@ interface CommentsDrawerProps {
   open: boolean
   pins: CommentPin[]
   statusOf: (pinId: number) => AnchorStatus | undefined
+  /** `true` si l'ancre du pin est sur un écran du proto non affiché (rect masqué). */
+  hiddenOf: (pinId: number) => boolean
   onClose: () => void
   onSelect: (pinId: number) => void
 }
@@ -35,12 +37,15 @@ export function CommentsDrawer({
   open,
   pins,
   statusOf,
+  hiddenOf,
   onClose,
   onSelect,
 }: Readonly<CommentsDrawerProps>) {
   const { t, i18n } = useTranslation()
   // Lazy init : évite d'appeler `Date.now()` (impur) à chaque render (react-hooks/purity).
   const [now] = useState(() => Date.now())
+  // Pin dont on affiche la note « hors écran » (ancré sur un écran du proto non affiché).
+  const [noticeId, setNoticeId] = useState<number | null>(null)
   if (!open) return null
   const ordered = sortPins(pins, statusOf)
   return (
@@ -71,13 +76,16 @@ export function CommentsDrawer({
             const author = pin.messages[0]?.author_name ?? ''
             const status = statusOf(pin.id)
             const warning = status === 'orphaned' || status === 'approximate'
+            const offscreen = hiddenOf(pin.id)
             const replies = Math.max(0, pin.messages.length - 1)
             return (
               <li key={pin.id}>
                 <button
                   type="button"
                   data-testid="drawer-row"
-                  onClick={() => onSelect(pin.id)}
+                  onClick={() =>
+                    offscreen ? setNoticeId(pin.id) : onSelect(pin.id)
+                  }
                   className="hover:bg-muted flex w-full gap-3 border-b px-4 py-3 text-left"
                 >
                   <span
@@ -98,12 +106,21 @@ export function CommentsDrawer({
                           i18n.language,
                         )}
                       </span>
-                      {warning && (
-                        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] text-amber-700">
-                          {status === 'orphaned'
-                            ? t('comment.drawer.orphaned')
-                            : t('comment.drawer.moved')}
+                      {offscreen ? (
+                        <span
+                          data-testid="offscreen-badge"
+                          className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[9px]"
+                        >
+                          {t('comment.drawer.offscreen')}
                         </span>
+                      ) : (
+                        warning && (
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] text-amber-700">
+                            {status === 'orphaned'
+                              ? t('comment.drawer.orphaned')
+                              : t('comment.drawer.moved')}
+                          </span>
+                        )
                       )}
                     </span>
                     <span className="text-muted-foreground block truncate text-xs">
@@ -114,6 +131,14 @@ export function CommentsDrawer({
                     </span>
                   </span>
                 </button>
+                {noticeId === pin.id && (
+                  <p
+                    data-testid="offscreen-notice"
+                    className="text-muted-foreground bg-muted/40 border-b px-4 py-2 text-[11px]"
+                  >
+                    {t('comment.drawer.offscreen_notice')}
+                  </p>
+                )}
               </li>
             )
           })}

@@ -81,15 +81,17 @@ export function OverlayLayer({
           }}
         />
       )}
-      {positions.map((p) => (
-        <PinBadge
-          key={p.id}
-          position={p}
-          label={labelOf(p.id)}
-          active={p.id === activePinId}
-          onClick={() => onPinClick(p.id)}
-        />
-      ))}
+      {positions
+        .filter((p) => !p.hidden)
+        .map((p) => (
+          <PinBadge
+            key={p.id}
+            position={p}
+            label={labelOf(p.id)}
+            active={p.id === activePinId}
+            onClick={() => onPinClick(p.id)}
+          />
+        ))}
     </div>
   )
 }

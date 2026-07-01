@@ -108,7 +108,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
           onCancel={() => dispatch({ type: 'CANCEL' })}
         />
       )}
-      {activePin !== null && activePosition !== null && (
+      {activePin !== null && activePosition !== null && !activePosition.hidden && (
         <ThreadPopup
           pin={activePin}
           position={activePosition}
@@ -134,6 +134,7 @@ function CommentsInner({ cacheKey, frame, adapter }: Readonly<CommentsAppProps>)
         open={drawerOpen}
         pins={pins}
         statusOf={(id) => positions.find((p) => p.id === id)?.status}
+        hiddenOf={(id) => positions.find((p) => p.id === id)?.hidden ?? false}
         onClose={() => setDrawerOpen(false)}
         onSelect={focusPinFromList}
       />

@@ -29,6 +29,8 @@
   "comment.drawer.empty": "No comments yet",
   "comment.drawer.orphaned": "orphaned",
   "comment.drawer.moved": "moved",
+  "comment.drawer.offscreen": "off-screen",
+  "comment.drawer.offscreen_notice": "This comment is anchored on a prototype screen that isn't currently shown.",
   "comment.drawer.replies_one": "{{count}} reply",
   "comment.drawer.replies_other": "{{count}} replies"
 }

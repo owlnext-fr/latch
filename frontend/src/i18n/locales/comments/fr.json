@@ -29,6 +29,8 @@
   "comment.drawer.empty": "Aucun commentaire",
   "comment.drawer.orphaned": "orphelin",
   "comment.drawer.moved": "déplacé",
+  "comment.drawer.offscreen": "hors écran",
+  "comment.drawer.offscreen_notice": "Ce commentaire est ancré sur un écran du prototype qui n'est pas affiché.",
   "comment.drawer.replies_one": "{{count}} réponse",
   "comment.drawer.replies_other": "{{count}} réponses"
 }

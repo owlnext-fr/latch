@@ -13,6 +13,8 @@ export interface PinPosition {
   status: AnchorStatus
   rect: ShellRect
   offset: Point
+  /** Élément résolu mais non affiché (rect à aire nulle → scène `display:none` du proto). */
+  hidden?: boolean
 }
 
 type FrameFn = (cb: () => void) => void
@@ -73,10 +75,12 @@ export class FollowController {
     this.dirty = false
     const positions: PinPosition[] = this.pins.map((pin) => {
       const res = this.picker.resolve(pin.anchor)
-      const rect =
-        (res.element ? this.picker.toShellRect(res.element) : null) ??
-        this.picker.fallbackRect(pin.anchor)
-      return { id: pin.id, status: res.status, rect, offset: pin.anchor.offset }
+      const found = res.element ? this.picker.toShellRect(res.element) : null
+      // Élément résolu mais rect à aire nulle = vue/scène masquée (display:none) du proto :
+      // on le signale `hidden` pour ne pas coller le pin en (0,0) ni ouvrir un fil fantôme.
+      const hidden = found != null && found.width === 0 && found.height === 0
+      const rect = found ?? this.picker.fallbackRect(pin.anchor)
+      return { id: pin.id, status: res.status, rect, offset: pin.anchor.offset, hidden }
     })
     for (const cb of this.listeners) cb(positions)
   }

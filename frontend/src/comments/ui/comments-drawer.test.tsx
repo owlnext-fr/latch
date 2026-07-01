@@ -46,6 +46,7 @@ function renderDrawer(
         open
         pins={pins}
         statusOf={statusOf}
+        hiddenOf={() => false}
         onClose={vi.fn()}
         onSelect={vi.fn()}
         {...over}
@@ -87,6 +88,20 @@ describe('CommentsDrawer', () => {
     expect(within(row as HTMLElement).queryByText('orphaned')).toBeNull()
     const avatar = row?.querySelector('span.rounded-full.border-2')
     expect(avatar).toHaveStyle({ background: 'rgb(245, 158, 11)' })
+  })
+
+  it('marque « hors écran » un pin hidden et affiche une note au clic (sans ouvrir le fil)', async () => {
+    const onSelect = vi.fn()
+    renderDrawer({ hiddenOf: (id) => id === 1, onSelect })
+    const badge = screen.getByTestId('offscreen-badge')
+    expect(badge).toBeInTheDocument()
+    const row = badge.closest(
+      'button[data-testid="drawer-row"]',
+    ) as HTMLElement
+    await userEvent.click(row)
+    // clic sur une ligne hors écran : pas d'ouverture de fil, juste la note inline
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(screen.getByTestId('offscreen-notice')).toBeInTheDocument()
   })
 
   it('affiche l’état vide', () => {

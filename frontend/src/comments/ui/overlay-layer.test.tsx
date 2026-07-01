@@ -108,6 +108,23 @@ describe('OverlayLayer', () => {
     expect(root.className).toContain('fixed')
     expect(root.className).not.toContain('absolute')
   })
+
+  it('ne rend pas les pins hors écran (hidden) — évite le pin collé en (0,0)', () => {
+    render(
+      <OverlayLayer
+        picker={fakePicker()}
+        positions={[
+          { id: 9, status: 'anchored', rect: { x: 0, y: 0, width: 0, height: 0 }, offset: { x: 0.5, y: 0.5 }, hidden: true },
+        ]}
+        pickMode={false}
+        onPick={vi.fn()}
+        onPinClick={vi.fn()}
+        activePinId={null}
+        labelOf={() => 'A'}
+      />,
+    )
+    expect(screen.queryByTestId('pin-badge')).toBeNull()
+  })
 })
 
 describe('ciblage DOM (glow)', () => {
