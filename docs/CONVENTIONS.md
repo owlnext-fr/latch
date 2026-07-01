@@ -1364,3 +1364,12 @@ server: {
 2. **Proxy `/assets`** : la page visiteur `/c/<slug>` (shell HTML depuis `dist/`) référence `/assets/unlock-*.js`. Sans proxy `/assets`, Vite renvoie son `index.html` de fallback SPA → `Content-Type: text/html` → **le navigateur rejette le module JS (MIME mismatch)** → page blanche.
 
 **Note** : `server.proxy` est ignoré par `vite build` — ces fixes n'existent pas dans le bundle de prod et n'ont aucun impact sur la CI e2e principale (qui teste `:5150` directly, same-origin natif). Le smoke `pnpm test:vite` vérifie que ces deux fixes sont toujours actifs.
+
+## Couleur fluo commentaires — constante fixe, jamais un token thème (Refactor UX commentaires, 2026-07-01)
+
+`COMMENT_FLUO = '#18A0FB'` dans `comments/ui/colors.ts` : couleur de pin/ciblage **fixe**, jamais dérivée de
+`--primary` ou d'un autre token CSS. L'overlay de commentaires est rendu par-dessus un proto au thème
+arbitraire (contrôlé par le client, pas par latch) — un token thème hériterait de ce CSS et pourrait devenir
+invisible ou clasher. Une constante hex fixe garantit un contraste stable quel que soit le proto ciblé.
+L'ambre `#f59e0b` reste réservé aux pins `orphaned`/`moved` (statut, pas décoratif) — ne pas le fusionner
+avec `COMMENT_FLUO`.

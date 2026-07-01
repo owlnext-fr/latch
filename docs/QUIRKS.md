@@ -3,6 +3,16 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Overlay commentaires = espace viewport (2026-07-01)
+
+`SameOriginPicker.toShellRect` renvoie des coordonnées **viewport**. L'`OverlayLayer` (pins + ciblage) DOIT
+être `position: fixed` inset-0 ; en `absolute` dans un conteneur décalé (topbar admin `h-14`=56px), les pins
+se décalent vers le bas de la hauteur du décalage (double-comptage : le conteneur `absolute` ajoute déjà
+l'offset du parent, puis les coordonnées viewport le rajoutent une seconde fois). Repéré en review sur la
+page Review admin (pins visiblement décalés vers le bas par rapport au proto dans l'iframe). **Fix** : root
+d'`OverlayLayer` passé de `absolute inset-0` à `fixed inset-0`. Les popups (`useFloatingRect`, déjà `fixed`)
+étaient déjà correctes — seul le calque de ciblage/pins avait le bug.
+
 ## Deux modèles de serving en dev — angle mort de la suite e2e principale (2026-07-01)
 
 L'app a **deux modèles de serving** distincts selon l'environnement :

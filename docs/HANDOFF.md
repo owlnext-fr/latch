@@ -4,6 +4,50 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — **Refactor UX commentaires LIVRÉ — Task 8 (gate finale + mémoire)**
+
+### Dernière chose faite
+Refactor UX de la couche commentaires (frontend-only, 7 tasks code + Task 8 vérification) livré sur
+`feat/prototype-comments` :
+- **Pins** : couleur bleu fluo **fixe** `COMMENT_FLUO = '#18A0FB'` (`comments/ui/colors.ts`) + label = 1ʳᵉ
+  lettre de l'auteur (`firstLetter`). Ambre `#f59e0b` conservé pour `orphaned`/`moved`.
+- **Ciblage DOM** : bordure fluo + inset glow capé (`glowShadow`, cap 30px) dans `overlay-layer.tsx`.
+- **Popups bornés au viewport** : `use-floating-rect.ts`, pipeline `offset→flip→shift(crossAxis+limitShift)→size(maxHeight+overflowY:auto)`.
+- **Fix décalage pins admin** : root `OverlayLayer` passé de `absolute inset-0` à `fixed inset-0` — les
+  coordonnées de `toShellRect` sont en espace VIEWPORT, un conteneur `absolute` décalé sous la topbar admin
+  (`h-14`=56px) causait un double-comptage. Cf. `docs/QUIRKS.md`.
+- **`CommentsDrawer`** (`comments/ui/comments-drawer.tsx`) : liste des threads, tri orphelins en bas, clic →
+  scroll+ouverture du thread ; helper `timeAgo`. Câblé dans `comments-app.tsx` (bouton « My comments »
+  toggle, `focusPinFromList`).
+- e2e : drawer visiteur + assertion d'alignement des pins admin.
+
+Gate finale (Task 8), toute verte :
+- `pnpm lint` : 0 erreur.
+- `pnpm typecheck` : 0 erreur.
+- `pnpm test` (Vitest) : **212 passed** (52 fichiers).
+- `pnpm exec playwright test` : **8 passed / 2 skipped** (screenshots.capture.ts, skip volontaire hors `CAPTURE=1`), 0 failed.
+- `cargo nextest run` (backend inchangé, vérifié quand même) : **181 passed** (15 binaires).
+
+### Trucs en suspens
+- Décision merge/PR `feat/prototype-comments` → `main` à prendre par l'humain (rien poussé).
+- Gate SonarCloud CI reste l'autorité finale après push (non relancée en local pour cette tâche mémoire-only).
+
+### Prochaine chose à creuser
+Merge `feat/prototype-comments` → `main` (ou nouvelle PR) + 1ᵉʳ déploiement prod avec le refactor UX. Pas
+de suite fonctionnelle identifiée côté commentaires — la feature est fonctionnellement complète (backend
+Plan 1 + visiteur Plan 2 + admin Plan 3 + refactor UX).
+
+### Notes pour future Claude
+- **Overlay commentaires = espace viewport** : si tu retouches `OverlayLayer` ou tout composant qui
+  positionne des pins par-dessus un iframe/proto, vérifie que le conteneur racine est `position: fixed`
+  (pas `absolute`) — cf. `docs/QUIRKS.md` pour le pourquoi exact (double-comptage d'offset).
+- `COMMENT_FLUO` est une constante hex fixe, volontairement **jamais** un token `--primary` — l'overlay est
+  rendu sur un proto au thème arbitraire (cf. `docs/CONVENTIONS.md`).
+- Le gate de cette tâche n'a pas touché `vite.config.ts` → `pnpm test:vite` (smoke Vite dedie) non requis
+  par la règle du CLAUDE.md ; seule la suite Playwright par défaut faisait partie du scope.
+
+---
+
 ## 2026-07-01 — **Consolidation mémoire — fin de session (Plan 3 + P1/P2 + DX Vite + P3)**
 
 ### Dernière chose faite
