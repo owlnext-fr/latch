@@ -92,6 +92,57 @@ pub struct DeployResult {
     pub code_protected: bool,
 }
 
+/// Arguments du tool `pull_prototype`.
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct PullArgs {
+    /// Slug public du projet (doit exister).
+    slug: String,
+    /// Numéro de version à récupérer ; omis → version active.
+    #[serde(default)]
+    version: Option<i32>,
+    /// Secret de déploiement (validé contre DEPLOY_TOKEN).
+    deploy_token: String,
+}
+
+/// Un message d'un fil de commentaires (sans `owner_token` — §9.7).
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct PullMessage {
+    /// Nom auto-déclaré de l'auteur (côté admin : "admin").
+    pub author_name: String,
+    /// `true` si le message vient du compte admin (dérivé, sans exposer le token).
+    pub is_admin: bool,
+    /// Corps du message (texte brut).
+    pub body: String,
+    /// Date de création (ISO 8601).
+    pub created_at: String,
+}
+
+/// Un fil de commentaires ancré (pin + messages).
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct PullThread {
+    /// Descripteur d'ancrage JSON brut (non interprété serveur — §3).
+    pub anchor: String,
+    pub messages: Vec<PullMessage>,
+}
+
+/// Résultat de `pull_prototype` : HTML de la version + tous ses fils de commentaires.
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct PullResult {
+    pub slug: String,
+    /// Numéro de la version renvoyée.
+    pub version: i32,
+    /// URL publique stable du prototype.
+    pub url: String,
+    /// `true` si les commentaires sont activés sur le projet (informatif).
+    pub comments_enabled: bool,
+    /// Notes de version en markdown brut, ou `null`.
+    pub release_notes: Option<String>,
+    /// HTML brut du prototype (cible d'édition).
+    pub html: String,
+    /// Fils de commentaires non supprimés (visiteurs + admin).
+    pub threads: Vec<PullThread>,
+}
+
 #[tool_router]
 impl LatchMcp {
     pub fn new(
@@ -182,6 +233,77 @@ impl LatchMcp {
 
         Ok(Json(ProjectListResult { projects: items }))
     }
+
+    #[tool(
+        description = "Récupère le HTML d'une version d'un prototype et TOUS ses fils de \
+                       commentaires (visiteurs + admin), pour itérer dessus. `version` optionnel : \
+                       défaut = version active. Gardé par `deploy_token`."
+    )]
+    async fn pull_prototype(
+        &self,
+        Parameters(args): Parameters<PullArgs>,
+    ) -> Result<Json<PullResult>, ErrorData> {
+        self.check_token(&args.deploy_token)?;
+
+        let projects = ProjectsService::new(self.db.clone());
+        let project = projects
+            .get_by_slug(&args.slug)
+            .await
+            .map_err(map_core_err)?;
+
+        let version = match args.version {
+            Some(n) => projects
+                .get_version(project.id, n)
+                .await
+                .map_err(|e| map_version_err(e, "version inconnue"))?,
+            None => projects
+                .get_active_version(&project)
+                .await
+                .map_err(|e| map_version_err(e, "aucune version active"))?,
+        };
+
+        let html = self
+            .storage
+            .read(&version.html_path)
+            .await
+            .map_err(|e| match e {
+                CoreError::NotFound => ErrorData::internal_error("erreur interne", None),
+                other => map_core_err(other),
+            })?;
+
+        let comments = crate::services::comments::CommentsService::new(self.db.clone());
+        let rows = comments
+            .list_for_version(version.id)
+            .await
+            .map_err(map_core_err)?;
+
+        let threads = rows
+            .into_iter()
+            .map(|pwm| PullThread {
+                anchor: pwm.pin.anchor,
+                messages: pwm
+                    .messages
+                    .into_iter()
+                    .map(|msg| PullMessage {
+                        is_admin: crate::services::comments::is_admin_owner(&msg.owner_token),
+                        author_name: msg.author_name,
+                        body: msg.body,
+                        created_at: msg.created_at.to_rfc3339(),
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        Ok(Json(PullResult {
+            url: format!("{}/c/{}", self.public_base_url, project.slug),
+            slug: project.slug,
+            version: version.n,
+            comments_enabled: project.comments_enabled,
+            release_notes: version.release_notes,
+            html,
+            threads,
+        }))
+    }
 }
 
 #[tool_handler]
@@ -195,7 +317,7 @@ impl ServerHandler for LatchMcp {
         info = info.with_server_info(Implementation::new("latch", env!("CARGO_PKG_VERSION")));
         info.with_instructions(
             "latch — déploiement de prototypes HTML. Outils : deploy_prototype, \
-             list_projects. Chaque appel exige le deploy_token.",
+             list_projects, pull_prototype. Chaque appel exige le deploy_token.",
         )
     }
 }
@@ -206,6 +328,14 @@ fn map_core_err(e: CoreError) -> ErrorData {
         CoreError::NotFound => ErrorData::invalid_params("projet inconnu", None),
         CoreError::Validation(msg) => ErrorData::invalid_params(msg, None),
         CoreError::Db(_) | CoreError::Io(_) => ErrorData::internal_error("erreur interne", None),
+    }
+}
+
+/// `NotFound` sur une résolution de version → message dédié ; autres erreurs → `map_core_err`.
+fn map_version_err(e: CoreError, not_found_msg: &'static str) -> ErrorData {
+    match e {
+        CoreError::NotFound => ErrorData::invalid_params(not_found_msg, None),
+        other => map_core_err(other),
     }
 }
 
@@ -251,7 +381,41 @@ mod tests {
     use crate::services::storage::FsStorage;
     use crate::services::test_support::test_db;
 
+    use crate::services::comments::{CommentsService, ADMIN_OWNER_TOKEN};
+
     const TOKEN: &str = "test-deploy-token";
+
+    /// Déploie une version v1 (HTML donné) sur `project_id` et l'active. Renvoie le n.
+    async fn deploy_v1(db: &DatabaseConnection, dir: &TempDir, project_id: i32, html: &str) {
+        let storage: Arc<dyn Storage> = Arc::new(FsStorage::new(dir.path().to_path_buf()));
+        DeployService::new(db.clone(), storage)
+            .deploy(project_id, html, true, None)
+            .await
+            .unwrap();
+    }
+
+    /// Appelle `pull_prototype` avec des arguments concis (évite de répéter le littéral).
+    async fn call_pull(
+        m: &LatchMcp,
+        slug: &str,
+        version: Option<i32>,
+        token: &str,
+    ) -> Result<Json<PullResult>, ErrorData> {
+        m.pull_prototype(Parameters(PullArgs {
+            slug: slug.to_string(),
+            version,
+            deploy_token: token.to_string(),
+        }))
+        .await
+    }
+
+    /// Extrait l'erreur d'un résultat de tool (les `Json<_>` n'implémentent pas `Debug`).
+    fn expect_err<T>(res: Result<T, ErrorData>) -> ErrorData {
+        match res {
+            Err(e) => e,
+            Ok(_) => panic!("un résultat d'erreur était attendu"),
+        }
+    }
 
     fn mcp(db: DatabaseConnection, dir: &TempDir) -> LatchMcp {
         let storage: Arc<dyn Storage> = Arc::new(FsStorage::new(dir.path().to_path_buf()));
@@ -441,6 +605,129 @@ mod tests {
         assert!(
             !json.contains("\"pin\""),
             "pas de champ pin dans le résumé MCP"
+        );
+    }
+
+    #[tokio::test]
+    async fn pull_rejects_bad_token() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, false).await;
+        let m = mcp(db, &dir);
+        let err = expect_err(call_pull(&m, &p.slug, None, "WRONG").await);
+        assert_eq!(err.message, "deploy_token invalide");
+    }
+
+    #[tokio::test]
+    async fn pull_unknown_slug_is_error() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let m = mcp(db, &dir);
+        let res = call_pull(&m, "nope-xxxxxxxx", None, TOKEN).await;
+        assert!(res.is_err(), "slug inconnu → erreur");
+    }
+
+    #[tokio::test]
+    async fn pull_no_active_version_is_error() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, false).await; // créé mais jamais déployé
+        let m = mcp(db, &dir);
+        let err = expect_err(call_pull(&m, &p.slug, None, TOKEN).await);
+        assert_eq!(err.message, "aucune version active");
+    }
+
+    #[tokio::test]
+    async fn pull_returns_html_and_default_active_version() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, false).await;
+        deploy_v1(&db, &dir, p.id, "<h1>hello</h1>").await;
+        let m = mcp(db, &dir);
+        let Json(out) = call_pull(&m, &p.slug, None, TOKEN).await.unwrap();
+        assert_eq!(out.version, 1);
+        assert_eq!(out.html, "<h1>hello</h1>");
+        assert_eq!(out.slug, p.slug);
+        assert_eq!(out.url, format!("https://demo.test/c/{}", p.slug));
+        assert!(out.threads.is_empty());
+    }
+
+    #[tokio::test]
+    async fn pull_explicit_unknown_version_is_error() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, false).await;
+        deploy_v1(&db, &dir, p.id, "<h1>hello</h1>").await;
+        let m = mcp(db, &dir);
+        let err = expect_err(call_pull(&m, &p.slug, Some(99), TOKEN).await);
+        assert_eq!(err.message, "version inconnue");
+    }
+
+    #[tokio::test]
+    async fn pull_returns_threads_with_is_admin_and_no_owner_token() {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let p = make_project(&db, true).await; // code activé, PIN 123456
+        deploy_v1(&db, &dir, p.id, "<h1>hello</h1>").await;
+
+        // Résoudre la version 1 pour semer des commentaires dessus.
+        let version = ProjectsService::new(db.clone())
+            .get_version(p.id, 1)
+            .await
+            .unwrap();
+        let comments = CommentsService::new(db.clone());
+        // Un fil visiteur (owner_token ULID opaque) + un fil admin (sentinelle).
+        let visitor_token = "01VISITORTOKENxxxxxxxxxxxx";
+        comments
+            .create_pin(
+                version.id,
+                visitor_token,
+                "Alice",
+                "hello from visitor",
+                "{\"v\":1}",
+            )
+            .await
+            .unwrap();
+        comments
+            .create_pin(
+                version.id,
+                ADMIN_OWNER_TOKEN,
+                "admin",
+                "note admin",
+                "{\"v\":1}",
+            )
+            .await
+            .unwrap();
+
+        let m = mcp(db, &dir);
+        let Json(out) = call_pull(&m, &p.slug, None, TOKEN).await.unwrap();
+
+        assert_eq!(out.threads.len(), 2);
+        let all_msgs: Vec<&PullMessage> = out.threads.iter().flat_map(|t| &t.messages).collect();
+        // is_admin correct : exactement 1 message admin.
+        assert_eq!(all_msgs.iter().filter(|m| m.is_admin).count(), 1);
+        assert_eq!(all_msgs.iter().filter(|m| !m.is_admin).count(), 1);
+        // anchor brut présent.
+        assert!(out.threads.iter().all(|t| t.anchor.contains("\"v\"")));
+
+        // Invariants : owner_token (visiteur ET sentinelle) et PIN jamais sérialisés.
+        let json = serde_json::to_string(&out).unwrap();
+        assert!(
+            !json.contains(visitor_token),
+            "owner_token visiteur ne doit pas fuiter"
+        );
+        assert!(
+            !json.contains(ADMIN_OWNER_TOKEN),
+            "sentinelle admin ne doit pas fuiter"
+        );
+        assert!(!json.contains("owner_token"), "pas de champ owner_token");
+        assert!(
+            !json.contains("123456"),
+            "le PIN ne doit jamais fuiter via MCP"
+        );
+        assert!(
+            !json.contains("\"id\""),
+            "pas de champ id DB dans la réponse MCP"
         );
     }
 }

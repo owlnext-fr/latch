@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use utoipa::ToSchema;
 
 use crate::models::_entities::{comment_pins, comments, projects, versions};
+use crate::services::comments::is_admin_owner;
 
 /// Item de liste — **sans PIN** (invariant §9.2 : structurellement absent).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -351,11 +352,6 @@ pub struct AdminCommentPin {
 pub struct AdminCommentList {
     pub version: i32,
     pub pins: Vec<AdminCommentPin>,
-}
-
-/// `true` si l'`owner_token` est celui de l'admin (identité sentinelle).
-fn is_admin_owner(owner_token: &str) -> bool {
-    owner_token == crate::services::comments::ADMIN_OWNER_TOKEN
 }
 
 /// Champs communs à `CommentMessage` et `AdminCommentMessage` : `(id, author_name, body, created_at, updated_at)`.

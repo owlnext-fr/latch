@@ -25,6 +25,11 @@ pub const ADMIN_OWNER_TOKEN: &str = "__admin__";
 /// `author_name` stocké pour les messages admin — jamais affiché (l'UI rend un libellé i18n via `is_admin`).
 pub const ADMIN_AUTHOR: &str = "admin";
 
+/// `true` si le token est la sentinelle admin (`ADMIN_OWNER_TOKEN`).
+pub fn is_admin_owner(owner_token: &str) -> bool {
+    owner_token == ADMIN_OWNER_TOKEN
+}
+
 /// Un pin et ses messages non supprimés, triés du plus ancien au plus récent.
 #[derive(Debug, Clone)]
 pub struct PinWithMessages {

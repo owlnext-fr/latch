@@ -4,6 +4,41 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (septies) — Issue #2 : MCP `pull_prototype` (HTML + fils de commentaires)
+
+### Dernière chose faite
+Troisième tool MCP `pull_prototype(slug, version?, deploy_token)`, en lecture seule, ajouté à côté
+de `deploy_prototype`/`list_projects`. Implémenté en 4 tâches TDD via subagents (spec → plan →
+core (`get_version`/`get_active_version`) → handler + tests unitaires → e2e HTTP → doc), branche
+`feat/2-mcp-pull-prototype` :
+- `PullResult { slug, version, url, comments_enabled, release_notes?, html, threads[] }`,
+  `PullThread { anchor (brut), messages[] }`, `PullMessage { author_name, is_admin, body, created_at }`.
+- Réutilise `CommentsService::list_for_version` et `Storage::read` déjà existants — aucun nouveau
+  chemin de lecture HTML/commentaires créé.
+- `version` optionnel : omis → `get_active_version` ; fourni → `get_version(project.id, n)`. Slug
+  inconnu, version inconnue, aucune version active → erreur (`map_core_err`/`map_version_err`).
+- Renvoie TOUS les fils non supprimés (visiteurs + admin), sans gater sur `comments_enabled`
+  (informatif seulement).
+- Invariants §9 respectés : `owner_token` jamais sérialisé (seul `is_admin` dérivé par comparaison
+  à `ADMIN_OWNER_TOKEN`), jamais de PIN/hash/`id` DB. Testé explicitement
+  (`pull_returns_threads_with_is_admin_and_no_owner_token`, `pull_rejects_bad_token`).
+- Doc : contrat §5 (surface minimale) + §5.1 (forme de réponse) mis à jour ; section EN
+  `pull_prototype` ajoutée dans `public_docs/.../tools-reference.mdx` (build vérifié :
+  `fumadocs-mdx` + `types:check` verts).
+Tests verts : 204 nextest (backend, dont l'e2e HTTP MCP `tools/list` à 3 entrées).
+
+### Trucs en suspens
+Aucun côté implémentation. La PR reste à ouvrir (`Closes #2`) — cf. workflow standard board →
+PR → merge du `CLAUDE.md`.
+
+### Notes pour future Claude
+- Le tool ne touche à rien d'écriture : c'est purement une lecture composée
+  (`ProjectsService::get_by_slug` → `get_version`/`get_active_version` → `Storage::read` →
+  `CommentsService::list_for_version`). Si un futur tool a besoin du HTML + méta d'une version,
+  ce handler est le patron à suivre.
+- `anchor` est renvoyé **brut** (le JSON du descripteur d'ancrage tel que stocké) : ne pas le
+  réinterpréter côté serveur, c'est un contrat délibéré avec le client (Claude/`/latch-pull`).
+
 ## 2026-07-01 (sexies) — Issue #3 : traitement des maintainability issues Sonar (13 code smells)
 
 ### Dernière chose faite

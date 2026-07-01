@@ -100,6 +100,31 @@ impl ProjectsService {
             .ok_or(CoreError::NotFound)
     }
 
+    /// Version d'un projet par numéro `n`. `NotFound` si absente.
+    pub async fn get_version(&self, project_id: i32, n: i32) -> Result<versions::Model, CoreError> {
+        versions::Entity::find()
+            .filter(versions::Column::ProjectId.eq(project_id))
+            .filter(versions::Column::N.eq(n))
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)
+    }
+
+    /// Version active d'un projet via `active_version_id`. `NotFound` si aucun pointeur
+    /// ou si le pointeur référence une version disparue.
+    pub async fn get_active_version(
+        &self,
+        project: &projects::Model,
+    ) -> Result<versions::Model, CoreError> {
+        let Some(active_id) = project.active_version_id else {
+            return Err(CoreError::NotFound);
+        };
+        versions::Entity::find_by_id(active_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)
+    }
+
     pub async fn set_code(&self, id: i32, pin: &str) -> Result<projects::Model, CoreError> {
         if !pin::is_valid_pin(pin) {
             return Err(CoreError::Validation("pin must be 6 digits".to_string()));
@@ -298,5 +323,69 @@ mod tests {
             .await
             .unwrap();
         assert!(p.comments_enabled);
+    }
+
+    /// Socle des tests de résolution de version : (db, tempdir, service, projet libre).
+    async fn version_fixture() -> (
+        DatabaseConnection,
+        tempfile::TempDir,
+        ProjectsService,
+        projects::Model,
+    ) {
+        let db = test_db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let service = ProjectsService::new(db.clone());
+        let p = service
+            .create(CreateProject {
+                name: "P".to_string(),
+                brand_name: None,
+                code_enabled: false,
+                pin: None,
+                comments_enabled: false,
+            })
+            .await
+            .unwrap();
+        (db, dir, service, p)
+    }
+
+    /// Déploie et active une v1 minimale sur `project_id`.
+    async fn deploy_active_v1(db: &DatabaseConnection, dir: &tempfile::TempDir, project_id: i32) {
+        let storage: std::sync::Arc<dyn crate::services::storage::Storage> = std::sync::Arc::new(
+            crate::services::storage::FsStorage::new(dir.path().to_path_buf()),
+        );
+        crate::services::deploy::DeployService::new(db.clone(), storage)
+            .deploy(project_id, "<h1>v1</h1>", true, None)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn get_version_by_n_and_missing() {
+        let (db, dir, service, p) = version_fixture().await;
+        deploy_active_v1(&db, &dir, p.id).await;
+
+        let v = service.get_version(p.id, 1).await.unwrap();
+        assert_eq!(v.n, 1);
+        assert!(matches!(
+            service.get_version(p.id, 99).await,
+            Err(CoreError::NotFound)
+        ));
+    }
+
+    #[tokio::test]
+    async fn get_active_version_via_pointer_and_none() {
+        let (db, dir, service, p) = version_fixture().await;
+
+        // Aucune version déployée → NotFound.
+        assert!(matches!(
+            service.get_active_version(&p).await,
+            Err(CoreError::NotFound)
+        ));
+
+        deploy_active_v1(&db, &dir, p.id).await;
+        // Recharger le projet pour avoir active_version_id à jour.
+        let p = service.get_by_slug(&p.slug).await.unwrap();
+        let v = service.get_active_version(&p).await.unwrap();
+        assert_eq!(v.n, 1);
     }
 }
