@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { Capabilities, CommentMessage, CommentPin } from '../data/adapter'
@@ -69,7 +70,14 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
           return (
             <li key={m.id} className="flex flex-col gap-1">
               <div className="flex items-start justify-between gap-2">
-                <span className="text-xs font-semibold">{m.author_name}</span>
+                <span className="flex items-center gap-1 text-xs font-semibold">
+                  {m.is_admin ? t('comment.admin_author') : m.author_name}
+                  {m.is_admin && (
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px] leading-tight">
+                      {t('comment.admin_badge')}
+                    </Badge>
+                  )}
+                </span>
                 {editingId !== m.id && canDeleteMsg && (
                   <div className="flex shrink-0 gap-0.5">
                     {canEditMsg && (

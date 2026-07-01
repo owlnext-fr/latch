@@ -12,7 +12,7 @@ const pin: CommentPin = {
   anchor: '{}',
   created_at: 'now',
   messages: [
-    { id: 1, author_name: 'Léa', body: 'First', created_at: 'n', updated_at: 'n', editable: true, is_admin: true },
+    { id: 1, author_name: 'Léa', body: 'First', created_at: 'n', updated_at: 'n', editable: true, is_admin: false },
     { id: 2, author_name: 'Max', body: 'Reply', created_at: 'n', updated_at: 'n', editable: false, is_admin: false },
   ],
 }
@@ -141,5 +141,19 @@ describe('ThreadPopup', () => {
     expect(
       screen.getByRole('button', { name: 'Delete thread' }),
     ).toHaveAttribute('data-variant', 'destructive')
+  })
+
+  it('affiche le libellé Admin + badge sur un message is_admin', () => {
+    const adminPin = {
+      id: 1, anchor: '{}', created_at: 'n',
+      messages: [
+        { id: 9, author_name: 'admin', body: 'note', created_at: '', updated_at: '', editable: true, is_admin: true },
+      ],
+    }
+    renderThread({ pin: adminPin, capabilities: { canAuthor: true, canEditOwn: true, canModerate: true } })
+    // 'Admin' apparaît deux fois : le libellé auteur ET le badge (même wording i18n).
+    expect(screen.getAllByText('Admin')).toHaveLength(2)
+    // Le nom brut 'admin' (stocké) ne doit PAS s'afficher tel quel comme auteur.
+    expect(screen.queryByText('admin')).not.toBeInTheDocument()
   })
 })

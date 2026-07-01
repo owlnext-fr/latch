@@ -74,7 +74,8 @@ export function CommentsDrawer({
       ) : (
         <ul className="flex-1 overflow-y-auto">
           {ordered.map((pin) => {
-            const author = pin.messages[0]?.author_name ?? ''
+            const firstMsg = pin.messages[0]
+            const author = firstMsg?.is_admin ? t('comment.admin_author') : (firstMsg?.author_name ?? '')
             const status = statusOf(pin.id)
             const warning = status === 'orphaned' || status === 'approximate'
             const offscreen = hiddenOf(pin.id)
