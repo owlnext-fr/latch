@@ -100,6 +100,11 @@ Une tâche n'est terminée que si **tout** ce qui suit est vrai :
   > Vitest. `eslint-plugin-react-hooks` v7 est strict (ex. `react-hooks/refs`,
   > `set-state-in-effect`) et `tsconfig` a `erasableSyntaxOnly` — ces erreurs **passent à
   > travers Vitest** mais cassent la CI. Cf. `docs/QUIRKS.md`.
+  >
+  > **E2E frontend** : la suite Playwright par défaut teste le BUILD servi par le backend (`:5150`,
+  > same-origin) et n'exerce PAS le dev-server Vite. Le parcours Vite (`:5173`, proxy CSRF + assets)
+  > est couvert par `pnpm test:vite` (smoke). Si `vite.config.ts` a été touché, les **deux suites**
+  > font partie de « terminé ».
 - tests **substantiels** — la gate SonarCloud `new_coverage ≥ 80%` sur le code neuf est bloquante (CI) et fait partie de « terminé » ; vérifiable en local via le scan Sonar (cf. `docs/ENVIRONMENT.md §Scan local`) ;
 - les critères de sortie de la phase ROADMAP sont remplis ;
 - la doc reste cohérente avec le code (si une décision a changé, le contrat est mis à jour) ;

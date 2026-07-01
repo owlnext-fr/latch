@@ -4,6 +4,37 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — **Consolidation mémoire — fin de session (Plan 3 + P1/P2 + DX Vite + P3)**
+
+### Dernière chose faite
+Consolidation de la mémoire projet en fin de session + commit docs.
+
+Session complète résumée :
+- **Plan 3 (admin commentaires)** livré : `CommentsApp` adaptateur injectable (`{cacheKey, frame, adapter}`) ; `createAdminAdapter` (maps `AdminCommentMessage`→`CommentMessage`, `editable:false`, `canModerate:true`) ; modération dans `ThreadPopup` ; toggle `comments_enabled` dans `ProjectForm` (smart default + warning) ; hooks `useVersionComments`/`useModerateComment` + `VersionCommentsPanel` ; page Review `/admin/projects/{id}/versions/{n}/review` (iframe + overlay lazy) ; `frame-ancestors 'self'` sur `preview_version` ; i18n partagé via `src/i18n/locales/comments/` + `mergeFragmentGlob` ; e2e admin `comments-admin.spec.ts` ; docs Fumadocs `admin/comments.mdx`. Gate verte (vitest 195, e2e 8, lint/typecheck clean, nextest 181, Sonar local PASSED). Revue finale whole-branch = **Ready to merge YES**.
+- **P1** : rate-limit login `/api/login` rendu tunable (`LATCH_LOGIN_RL_BURST`/`LATCH_LOGIN_RL_PER_SECOND`, défauts 5/2 inchangés) ; webServer Playwright pose `LATCH_LOGIN_RL_BURST=100000` ; retry-on-429 retiré des helpers e2e.
+- **P2** : lot cosmétique (garde redondante, 5 clés i18n mortes retirées, `mergeFragmentGlob` refactoré, `data-testid="pin-badge"`, doc "My comments" corrigée).
+- **Fix dev-server Vite** (commit `550560c`) : `vite.config.ts` — `changeOrigin+setHeader origin` (corrige CSRF 403 en dev) + proxy `/assets` → backend (corrige MIME assets visiteur en dev). 100% dev-only, sans impact prod.
+- **P3** : config Playwright isolée `playwright.vite.config.ts` + smoke `e2e-vite/vite-smoke.spec.ts` + script `pnpm test:vite` + job CI `e2e-vite`. Couvre l'angle mort du proxy Vite.
+- **Feature commentaires ancrés TERMINÉE bout-en-bout** : backend (Plan 1) + frontend visiteur (Plan 2) + admin (Plan 3).
+
+### Trucs en suspens
+- Décision merge/PR `feat/prototype-comments` → `main` à prendre par l'humain (rien poussé).
+- **Minors différés** (non bloquants) : G1 return type JSX.Element sur CommentsApp (moot si moduleDetection:force) ; G2 garde redondante (moot P2) ; I1 warning aussi en create/assertion redondante/commentaire ref-dep ; J2 `open={x!==null}` redondant + pas d'`onError` sur `moderate.mutate` + `toLocaleDateString` sans locale ; L2 `mergeFragmentGlob` filter+cast vs destructure + `codeFromPath` dupliqué inline.
+- **Backlog** : item `onError` sur la modération (J2).
+- Gate SonarCloud CI reste l'autorité finale après push.
+
+### Prochaine chose à creuser
+**FIXES UX** (demandé par l'humain — focus de la prochaine session).
+
+### Notes pour future Claude
+- **Deux modèles de serving en dev** : admin SPA = Vite `:5173` (HMR) ; visiteur/unlock/shell/error = backend `:5150` (sert `dist/`). La suite e2e principale teste le BUILD sur `:5150` — elle NE voit PAS les bugs du proxy Vite.
+- **Lancer le backend** : `cd backend && ADMIN_USER=admin ADMIN_PASS=secret LATCH_BINDING=127.0.0.1 cargo loco start` (port :5150).
+- **Lancer le frontend dev** : `cd frontend && pnpm dev` (port :5173, proxy → :5150).
+- **Pour couvrir le parcours Vite** : `cd frontend && pnpm test:vite` (smoke :5173). À lancer EN PLUS de la suite principale.
+- La feature est terminée. La branche `feat/prototype-comments` est en avance sur `main` de ~25 commits. Merge + CI SonarCloud = prochaines étapes opérationnelles.
+
+---
+
 ## 2026-07-01 — Task P3 : **smoke e2e Vite dev-server (:5173) — couvre proxy CSRF + assets MIME**
 
 ### Dernière chose faite
@@ -97,7 +128,7 @@ Plan 3 Task K3 : connecter le champ `comments_enabled` dans `ProjectForm` (front
 
 ### Notes pour future Claude
 - `pageLogin(page)` est le helper à utiliser pour tous les tests e2e admin qui naviguent dans le SPA. `apiLogin(request)` seul ne suffit pas pour la navigation browser (voir QUIRKS).
-- Les clés `comment.thread.*` / `comment.bar.*` viennent du locale `shell`, absent du bundle admin. En Review admin, ces clés s'affichent en texte littéral. C'est connu et documenté dans `comments-admin.spec.ts`.
+- ~~Les clés `comment.thread.*` / `comment.bar.*` s'affichaient en texte littéral en Review admin.~~ **OBSOLÈTE depuis L2** : corrigé par `mergeFragmentGlob` (commit `49dc0f2`, cf. QUIRKS §i18n "RÉSOLU par L2"). Les clés `comment.*` sont désormais fusionnées dans le bundle admin via `src/i18n/locales/comments/`.
 - `delete_message` côté backend supprime aussi le pin si c'était le dernier message (`soft_delete_pin_if_empty`).
 
 ## 2026-06-30 — Task K2 : **Page Review admin livrée**

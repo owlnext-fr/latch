@@ -108,8 +108,33 @@ Cf. QUIRKS pour le détail du piège chemin absolu/`/usr/src`.
   CWD → impératif depuis `backend/`, cf. QUIRKS). `fmt`/`clippy`/`test` : depuis la racine.
 - **Frontend dev** : `cd frontend && pnpm dev` (Vite HMR, port 5173 par défaut).
 - **Frontend build** : `cd frontend && pnpm build` (bundle → `frontend/dist/`).
-- **Tests frontend** : `cd frontend && pnpm test` (Vitest) ; `pnpm exec playwright test` (e2e).
+- **Tests frontend** : `cd frontend && pnpm test` (Vitest) ; `pnpm exec playwright test` (e2e principal, teste le BUILD sur `:5150`) ; `pnpm test:vite` (smoke Playwright contre Vite dev-server `:5173`, couvre proxy CSRF + MIME assets — à lancer EN PLUS pour valider le dev-server).
 - **Build image locale** : `docker build -t ghcr.io/owlnext-fr/latch:dev .` (multi-stage Node + Rust + runtime).
+
+### Dev local — deux modèles de serving
+
+L'app a **deux modèles de serving distincts** selon le contexte :
+
+| Surface | Dev (`pnpm dev`) | Prod / e2e principal |
+|---|---|---|
+| Admin SPA + mutations | Vite dev-server **:5173** (HMR, proxy → :5150) | Backend Loco :5150 sert `dist/` |
+| Visiteur `/c`, assets, unlock, shell, error | Proxy Vite → backend **:5150** | Servis directement par le backend |
+
+**Commandes pour un dev local complet :**
+```bash
+# Terminal 1 — backend
+cd backend
+ADMIN_USER=admin ADMIN_PASS=secret LATCH_BINDING=127.0.0.1 cargo loco start
+# → http://127.0.0.1:5150
+
+# Terminal 2 — frontend HMR
+cd frontend && pnpm dev
+# → http://127.0.0.1:5173 (proxy vers :5150)
+```
+
+**Ce que teste chaque suite :**
+- `pnpm exec playwright test` : teste le **BUILD** servi par le backend (:5150, same-origin natif). Ne passe **jamais** par Vite → n'attrape pas les bugs du proxy dev.
+- `pnpm test:vite` : teste le navigateur contre **Vite :5173** (proxy CSRF + proxy /assets). Complémentaire, à lancer si `vite.config.ts` a changé.
 - **DB e2e** : `LATCH_E2E_DB=/tmp/latch-e2e.sqlite` (SQLite de test pour Playwright, séparée de la dev).
 
 ## Serving

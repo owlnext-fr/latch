@@ -1332,3 +1332,35 @@ createBundleI18n(shellResources, commentResources)
 ```
 
 **Règle** : tout nouveau consommateur du module partagé DOIT fusionner le glob `locales/comments/`. Oublier cette étape → clés affichées en texte brut (cf. QUIRKS "RÉSOLU par L2").
+
+## Proxy dev-server Vite — Origin rewriting + proxy /assets (Fix-DX, 2026-07-01)
+
+En dev, le navigateur charge le SPA admin depuis Vite `:5173` qui proxie vers le backend `:5150`. Deux fixes sont **load-bearing** dans `vite.config.ts` pour que le parcours visiteur et les mutations admin fonctionnent via Vite :
+
+```ts
+// frontend/vite.config.ts — server.proxy (ignoré par vite build, 100% dev-only)
+const BACKEND = 'http://127.0.0.1:5150'
+
+server: {
+  proxy: {
+    '/api': {
+      target: BACKEND,
+      changeOrigin: true,                           // Fix CSRF : réécrit Host vers :5150
+      configure: (proxy) => {
+        proxy.on('proxyReq', (proxyReq) => {
+          proxyReq.setHeader('origin', BACKEND)    // Fix CSRF : réécrit Origin (garde require_same_origin)
+        })
+      },
+    },
+    '/c': { target: BACKEND, changeOrigin: true },
+    '/assets': { target: BACKEND },               // Fix MIME : assets visiteur servis par le backend
+    // ...autres routes backend
+  },
+}
+```
+
+**Pourquoi ces deux fixes :**
+1. **Origin rewriting** (`changeOrigin + setHeader origin`) : sans lui, le navigateur envoie `Origin: http://127.0.0.1:5173`. Vite proxie vers `:5150` mais conserve l'`Origin` d'origine → `require_same_origin` compare `:5173` vs Host `:5150` → **403 sur toute mutation admin**.
+2. **Proxy `/assets`** : la page visiteur `/c/<slug>` (shell HTML depuis `dist/`) référence `/assets/unlock-*.js`. Sans proxy `/assets`, Vite renvoie son `index.html` de fallback SPA → `Content-Type: text/html` → **le navigateur rejette le module JS (MIME mismatch)** → page blanche.
+
+**Note** : `server.proxy` est ignoré par `vite build` — ces fixes n'existent pas dans le bundle de prod et n'ont aucun impact sur la CI e2e principale (qui teste `:5150` directly, same-origin natif). Le smoke `pnpm test:vite` vérifie que ces deux fixes sont toujours actifs.
