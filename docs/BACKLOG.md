@@ -3,6 +3,18 @@
 > Idées et durcissements écartés *consciemment* de la v1, gardés pour ne pas les
 > redécouvrir. Rien ici n'est un manque : ce sont des choix de périmètre.
 
+## Commentaires « hors écran » — améliorations reportées (2026-07-01)
+Le fix des ancres sur écran non affiché (cf. QUIRKS) détecte + dégrade proprement, mais reste minimal :
+- **`visibility:hidden` / `content-visibility`** : la détection `hidden` repose sur un rect d'aire nulle
+  (couvre `display:none`, cas dominant). Un élément à rect non nul mais invisible n'est pas détecté.
+  Piste : `element.checkVisibility()` (dispo navigateur moderne, pas jsdom → tester le prédicat isolé).
+- **Retour automatique sur la bonne vue** : écarté — infaisable génériquement (latch ne pilote pas le
+  routing JS propriétaire du proto ; pas de hash ici). Envisageable seulement pour les protos à routing
+  par hash (best-effort, fragile) — non prioritaire.
+- **Couverture e2e** : le bug est couvert en unit (détection `hidden`, overlay, drawer) + vérifié à la
+  main au navigateur sur un proto multi-vues. Pas de fixture e2e multi-vues dédiée (les protos e2e sont
+  mono-vue). À ajouter si on veut un garde-fou e2e.
+
 ## Clustering des pastilles denses (spec §8.5) — Plan 2 commentaires, 2026-06-30
 Non implémenté en v1. Quand plusieurs pins sont très proches visuellement, regrouper les pastilles
 en cluster (bulle avec compteur) pour éviter la surcharge visuelle. À traiter si l'usage montre

@@ -13,6 +13,19 @@ page Review admin (pins visiblement décalés vers le bas par rapport au proto d
 d'`OverlayLayer` passé de `absolute inset-0` à `fixed inset-0`. Les popups (`useFloatingRect`, déjà `fixed`)
 étaient déjà correctes — seul le calque de ciblage/pins avait le bug.
 
+## Commentaires ancrés sur un écran non affiché d'un proto multi-vues (2026-07-01)
+
+Les protos SPA mono-fichier changent de « page » par du JS qui met la vue en **`display:none`**
+(l'élément reste dans le DOM). Un commentaire ancré sur cette vue : `resolve()` retrouve l'élément
+(donc statut `anchored`, **trompeur**) mais `element.getBoundingClientRect()` renvoie un rect **à aire
+nulle** → sans garde, le pin se colle en `(0,0)` et cliquer le commentaire depuis la liste ouvre un fil
+fantôme en haut-gauche, sans possibilité de revenir sur la bonne vue (latch ne connaît pas le routing
+interne du proto). **Fix** : `FollowController` marque `PinPosition.hidden` quand l'élément résolu a un
+rect d'aire nulle (recalculé à chaque mutation → dynamique). Conséquences : `OverlayLayer` ne rend pas les
+pins `hidden` ; le drawer affiche un badge « hors écran » + une note inline au clic (pas d'ouverture de
+fil) ; `ThreadPopup` se ferme si son ancre passe hors écran. Détection basée sur `width===0 && height===0`
+(couvre `display:none`) ; le cas `visibility:hidden` (rect non nul) n'est pas couvert → cf. BACKLOG.
+
 ## Deux modèles de serving en dev — angle mort de la suite e2e principale (2026-07-01)
 
 L'app a **deux modèles de serving** distincts selon l'environnement :

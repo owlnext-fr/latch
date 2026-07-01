@@ -4,6 +4,32 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — **Fix commentaires « hors écran » (proto multi-vues)**
+
+### Dernière chose faite
+Bug remonté par l'humain (testé sur un vrai proto CRM multi-vues, code protégé) : commenter sur une vue,
+changer de « page » (JS `switchScene` → `display:none`), ouvrir la liste, cliquer le commentaire → popup
+en (0,0) et pas de retour sur la bonne vue. **Reproduit au navigateur (Playwright) + cause racine + fix
+livré** (commit `1338163`) :
+- `FollowController` marque `PinPosition.hidden` (élément résolu mais rect d'aire nulle = vue masquée).
+- `OverlayLayer` ne rend plus les pins `hidden` ; `CommentsDrawer` : badge « hors écran » + note inline
+  au clic (pas de fil fantôme) ; `ThreadPopup` se ferme si l'ancre passe hors écran. i18n EN/FR.
+- Gate : vitest **216**, e2e comments **3/3**, lint+typecheck clean. Vérifié end-to-end au navigateur
+  (pin disparaît hors vue, badge + note, retour vue → pin réapparaît et clic ouvre le fil normalement).
+
+### Trucs en suspens
+- Serveur build de démo tourne sur `:5150` (DB/stockage jetables `/tmp/latch-judge.*`) — projet démo
+  `Mon Projet` (id 1) + le proto réel de l'humain (id 2, protégé). À stopper quand plus utile.
+- Fix `hidden` non commité dans une branche séparée : il est **sur `feat/prototype-comments`** à la suite
+  du refactor UX. Décision merge/PR de toute la branche = humain (cf. entrée suivante).
+
+### Prochaine chose à creuser
+Cf. BACKLOG : `visibility:hidden` non détecté (rect non nul), e2e multi-vues, retour-sur-vue best-effort.
+
+### Notes pour future Claude
+Confidentialité : le proto réel porte un nom client → **jamais dans le repo** (tests/fixtures = placeholders).
+Les captures de repro/fix ont été gardées **hors** du working-tree (scratchpad).
+
 ## 2026-07-01 — **Refactor UX commentaires LIVRÉ — Task 8 (gate finale + mémoire)**
 
 ### Dernière chose faite
