@@ -3,6 +3,26 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Deux modèles de serving en dev — angle mort de la suite e2e principale (2026-07-01)
+
+L'app a **deux modèles de serving** distincts selon l'environnement :
+
+| Surface | Dev (`pnpm dev`) | Prod / e2e principal |
+|---|---|---|
+| Admin SPA | Vite dev-server **:5173** (HMR) | Backend Loco :5150 sert `dist/` |
+| Assets (`/assets/*`) | Proxié par Vite → backend :5150 | Servis directement par le backend |
+| Routes `/api`, `/c` | Proxié par Vite → backend :5150 | Servis directement par le backend |
+
+La suite e2e principale (`playwright.config.ts` + `e2e/*.spec.ts`) pilote le **build servi par le backend** (:5150). Elle ne passe **jamais** par Vite en dev, donc elle n'a pas vu deux bugs de DX corrigés en commit `550560c` :
+
+**Bug 1 — CSRF (Origin/Host mismatch)** : en dev, le navigateur envoie `Origin: http://127.0.0.1:5173`. Vite proxie vers `:5150` mais conservait l'`Origin` d'origine → backend : `Origin :5173 ≠ Host :5150` → **403 sur toute mutation admin** (create/update/delete projet, commentaires). Fix : `changeOrigin: true + proxyReq.setHeader('origin', BACKEND)` dans `vite.config.ts`.
+
+**Bug 2 — MIME assets visiteur** : la page visiteur `/c/<slug>` (shell HTML depuis `dist/`) référence `/assets/unlock-*.js`. Le navigateur charge `/assets/...` depuis `:5173`. Sans proxy `/assets` dans Vite, la réponse était l'`index.html` de fallback SPA → `Content-Type: text/html` → le navigateur rejette le module JS (MIME mismatch) → **page blanche**. Fix : proxy `/assets` → backend ajouté à `vite.config.ts`.
+
+**Pourquoi ces bugs échappent à la suite e2e principale** : elle appelle directement `:5150` — same-origin natif, pas de proxy. Les deux bugs ne sont reproductibles qu'en passant par Vite `:5173`.
+
+**Smoke dédié** : `frontend/playwright.vite.config.ts` + `frontend/e2e-vite/vite-smoke.spec.ts` (lancé par `pnpm test:vite`). Il pilote le navigateur contre `:5173` et échouerait si l'un des deux fixes était retiré. CI : job `e2e-vite` (miroir du job `e2e`).
+
 ## Session `axum_session` non partagée entre `request` et `page` en e2e (2026-06-30)
 
 Dans les tests Playwright, le cookie de session admin posé par `apiLogin(request)` (via `APIRequestContext`) **n'est pas automatiquement visible** dans le contexte navigateur (`page`). Les routes admin protégées par `AdminAuth` renvoient 401 quand navigué via `page.goto('/admin/...')` même après `apiLogin(request)`.
