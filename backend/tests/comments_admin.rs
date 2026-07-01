@@ -364,6 +364,16 @@ async fn admin_edit_comment_and_delete_pin_are_scoped_to_project() {
             .await;
         assert_eq!(edit_wrong.status_code(), 404);
 
+        // Le body n'a PAS changé après la tentative 404 (symétrie avec `still_there` plus bas).
+        let unchanged = request
+            .get(&format!("/api/projects/{id_a}/versions/1/comments"))
+            .await;
+        assert_eq!(
+            unchanged.json::<serde_json::Value>()["pins"][0]["messages"][0]["body"],
+            "note interne",
+            "le body ne doit pas être modifié par une édition 404 cross-projet"
+        );
+
         // Edition via le bon projet → 200.
         let edit_ok = request
             .put(&format!("/api/projects/{id_a}/comments/messages/{cid}"))
@@ -411,19 +421,102 @@ async fn admin_edit_comment_and_delete_pin_are_scoped_to_project() {
     drop(tmp);
 }
 
+/// Les 4 mutations admin d'authoring (create pin / reply / edit / delete pin) doivent
+/// toutes renvoyer 401 sans session (ids bidons : `AdminAuth` rejette avant toute
+/// logique handler, pas besoin de créer de projet réel).
 #[tokio::test]
 #[serial]
 async fn admin_write_endpoints_require_session() {
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
     request::<App, _, _>(|request, _ctx| async move {
-        // Sans login : 401.
+        // create pin
         let r = request
             .post("/api/projects/1/versions/1/comments")
             .add_header("origin", "http://127.0.0.1")
             .json(&serde_json::json!({"anchor":"{}","body":"x"}))
             .await;
-        assert_eq!(r.status_code(), 401);
+        assert_eq!(r.status_code(), 401, "create pin sans session ⇒ 401");
+
+        // reply
+        let r = request
+            .post("/api/projects/1/comments/pins/1/replies")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"body":"x"}))
+            .await;
+        assert_eq!(r.status_code(), 401, "reply sans session ⇒ 401");
+
+        // edit message
+        let r = request
+            .put("/api/projects/1/comments/messages/1")
+            .add_header("origin", "http://127.0.0.1")
+            .json(&serde_json::json!({"body":"x"}))
+            .await;
+        assert_eq!(r.status_code(), 401, "edit message sans session ⇒ 401");
+
+        // delete pin
+        let r = request
+            .delete("/api/projects/1/comments/pins/1")
+            .add_header("origin", "http://127.0.0.1")
+            .await;
+        assert_eq!(r.status_code(), 401, "delete pin sans session ⇒ 401");
+    })
+    .await;
+    drop(tmp);
+}
+
+/// Les 4 mutations admin d'authoring doivent renvoyer 403 quand l'origin est étranger,
+/// même avec une session admin valide (garde `require_same_origin`, contrat §4/§9.6).
+/// Calque le style de `mutation_rejected_on_cross_origin` (`admin_api.rs`).
+#[tokio::test]
+#[serial]
+async fn admin_write_endpoints_rejected_on_cross_origin() {
+    std::env::set_var("ADMIN_USER", "admin");
+    std::env::set_var("ADMIN_PASS", "s3cret");
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let config = RequestConfigBuilder::new().save_cookies(true).build();
+    request_with_config::<App, _, _>(config, |request, _ctx| async move {
+        request
+            .post("/api/login")
+            .json(&serde_json::json!({"user":"admin","pass":"s3cret"}))
+            .await;
+
+        let evil = (
+            axum::http::HeaderName::from_static("origin"),
+            axum::http::HeaderValue::from_static("http://evil.example"),
+        );
+
+        // create pin
+        let r = request
+            .post("/api/projects/1/versions/1/comments")
+            .add_header(evil.0.clone(), evil.1.clone())
+            .json(&serde_json::json!({"anchor":"{}","body":"x"}))
+            .await;
+        assert_eq!(r.status_code(), 403, "create pin cross-origin ⇒ 403");
+
+        // reply
+        let r = request
+            .post("/api/projects/1/comments/pins/1/replies")
+            .add_header(evil.0.clone(), evil.1.clone())
+            .json(&serde_json::json!({"body":"x"}))
+            .await;
+        assert_eq!(r.status_code(), 403, "reply cross-origin ⇒ 403");
+
+        // edit message
+        let r = request
+            .put("/api/projects/1/comments/messages/1")
+            .add_header(evil.0.clone(), evil.1.clone())
+            .json(&serde_json::json!({"body":"x"}))
+            .await;
+        assert_eq!(r.status_code(), 403, "edit message cross-origin ⇒ 403");
+
+        // delete pin
+        let r = request
+            .delete("/api/projects/1/comments/pins/1")
+            .add_header(evil.0, evil.1)
+            .await;
+        assert_eq!(r.status_code(), 403, "delete pin cross-origin ⇒ 403");
     })
     .await;
     drop(tmp);

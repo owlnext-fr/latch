@@ -144,7 +144,7 @@ describe('ThreadPopup', () => {
   })
 
   it('affiche le libellé Admin + badge sur un message is_admin', () => {
-    const adminPin = {
+    const adminPin: CommentPin = {
       id: 1, anchor: '{}', created_at: 'n',
       messages: [
         { id: 9, author_name: 'admin', body: 'note', created_at: '', updated_at: '', editable: true, is_admin: true },

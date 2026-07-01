@@ -4,6 +4,42 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 (ter) — Fix-wave revue finale commentaires admin (DRY, doc, tests durcis)
+
+### Dernière chose faite
+Lot de correctifs cosmétiques/couverture issus de la revue finale de l'authoring admin, aucun
+changement de comportement produit :
+- **Backend** : helper privé `is_admin_owner(owner_token: &str) -> bool` (`backend/src/dto/mod.rs`)
+  factorise la comparaison `owner_token == ADMIN_OWNER_TOKEN` dupliquée dans `to_comment_pin` et
+  `to_admin_comment_message`. `backend/tests/comments_admin.rs` : assertion intermédiaire prouvant
+  que le `body` ne change pas après une édition 404 cross-projet (symétrie avec `still_there` sur la
+  suppression) ; nouveau test `admin_write_endpoints_rejected_on_cross_origin` (403 sur les 4
+  mutations d'authoring avec origin étranger) + extension de `admin_write_endpoints_require_session`
+  aux 3 mutations restantes (reply/edit/delete pin, 401 sans session).
+- **Frontend** : docstring périmée de `CommentsAdapter` corrigée (mentionnait encore « et plus tard
+  l'admin, Plan 3 » — l'admin authoring est livré) ; fixture `adminPin` de `thread-popup.test.tsx`
+  annotée `CommentPin` (cohérence avec les autres fixtures du fichier) ; `data-testid="comment-message"`
+  ajouté sur le `<li>` de message dans `thread-popup.tsx`, utilisé par `comments-admin.spec.ts` à la
+  place d'un scoping par texte (`page.locator('li', { hasText })`) — sélecteur robuste.
+- `docs/BACKLOG.md` : entrée ajoutée pour la convergence différée des 3 walks `pin → version →
+  projet` vers `assert_version_in_project` (référencée par le fix précédent, absente du backlog
+  jusqu'ici).
+
+### Trucs en suspens
+Aucun — lot 100% cosmétique/couverture, aucune route/DTO/OpenAPI changée (pas de régén
+openapi.json/schema.d.ts).
+
+### Prochaine chose à creuser
+Rien d'ouvert sur ce fix-wave. Sujet naturel suivant, inchangé : décider du sort de la branche
+`feat/prototype-comments` (merge dans `main` ou PR) — décision humaine.
+
+### Notes pour future Claude
+Gate complète relancée : backend (`cargo fmt` + `cargo clippy --all-targets -- -D warnings` 0 warning
++ `cargo nextest run` → 195 passed, +1 vs les 194 précédents) ; frontend (`pnpm lint` + `pnpm
+typecheck` clean, Vitest → 233 passed) ; e2e (`pnpm exec playwright test comments-admin` → 3 passed,
+dont le test utilisant le nouveau `data-testid`). Rapport détaillé :
+`.superpowers/sdd/fixwave-report.md`.
+
 ## 2026-07-01 (bis) — Fix : scope projet sur edit/delete-pin admin (parité reply/moderate)
 
 ### Dernière chose faite

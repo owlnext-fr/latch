@@ -353,6 +353,11 @@ pub struct AdminCommentList {
     pub pins: Vec<AdminCommentPin>,
 }
 
+/// `true` si l'`owner_token` est celui de l'admin (identité sentinelle).
+fn is_admin_owner(owner_token: &str) -> bool {
+    owner_token == crate::services::comments::ADMIN_OWNER_TOKEN
+}
+
 /// Champs communs à `CommentMessage` et `AdminCommentMessage` : `(id, author_name, body, created_at, updated_at)`.
 fn message_base_fields(m: &comments::Model) -> (i32, String, String, String, String) {
     (
@@ -385,7 +390,7 @@ pub fn to_comment_pin(
                     created_at,
                     updated_at,
                     editable: m.owner_token == caller_owner_token,
-                    is_admin: m.owner_token == crate::services::comments::ADMIN_OWNER_TOKEN,
+                    is_admin: is_admin_owner(&m.owner_token),
                 }
             })
             .collect(),
@@ -401,7 +406,7 @@ pub fn to_admin_comment_message(m: &comments::Model) -> AdminCommentMessage {
         body,
         created_at,
         updated_at,
-        is_admin: m.owner_token == crate::services::comments::ADMIN_OWNER_TOKEN,
+        is_admin: is_admin_owner(&m.owner_token),
     }
 }
 

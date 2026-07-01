@@ -15,6 +15,15 @@ Le fix des ancres sur écran non affiché (cf. QUIRKS) détecte + dégrade propr
   main au navigateur sur un proto multi-vues. Pas de fixture e2e multi-vues dédiée (les protos e2e sont
   mono-vue). À ajouter si on veut un garde-fou e2e.
 
+## Converger les 3 walks pin → version → projet vers `assert_version_in_project` (2026-07-01)
+Le fix de scope projet sur `admin_edit_message`/`admin_delete_own_pin` (`backend/src/services/comments.rs`)
+a introduit le helper privé `assert_version_in_project` pour vérifier la chaîne `pin → version → projet`.
+`admin_add_reply` et `moderate_delete_message` gardent chacun leur propre walk inline équivalent, non
+migré vers le helper commun (diff minimal au moment du fix). Converger les 3 chemins vers
+`assert_version_in_project` réduirait le risque de divergence si l'un des trois évolue sans les autres
+(ex. un changement de la condition de scoping oublié sur un seul des trois). Non bloquant : les 3 chemins
+sont aujourd'hui fonctionnellement équivalents et testés indépendamment.
+
 ## Clustering des pastilles denses (spec §8.5) — Plan 2 commentaires, 2026-06-30
 Non implémenté en v1. Quand plusieurs pins sont très proches visuellement, regrouper les pastilles
 en cluster (bulle avec compteur) pour éviter la surcharge visuelle. À traiter si l'usage montre

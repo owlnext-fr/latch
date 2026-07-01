@@ -68,7 +68,7 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
           const canEditMsg = capabilities.canEditOwn && m.editable
           const canDeleteMsg = canEditMsg || capabilities.canModerate
           return (
-            <li key={m.id} className="flex flex-col gap-1">
+            <li key={m.id} data-testid="comment-message" className="flex flex-col gap-1">
               <div className="flex items-start justify-between gap-2">
                 <span className="flex items-center gap-1 text-xs font-semibold">
                   {m.is_admin ? t('comment.admin_author') : m.author_name}

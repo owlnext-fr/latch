@@ -11,7 +11,7 @@ export interface Capabilities {
   canModerate: boolean
 }
 
-/** Façade de données partagée par le visiteur (et plus tard l'admin, Plan 3). */
+/** Façade de données partagée par le visiteur et l'admin. */
 export interface CommentsAdapter {
   readonly capabilities: Capabilities
   /** Nom d'auteur imposé (admin) ; `null` = l'appelant saisit son nom (visiteur). */

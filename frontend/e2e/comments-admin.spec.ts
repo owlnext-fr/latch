@@ -232,7 +232,7 @@ test('admin répond à un fil visiteur depuis la Review', async ({ page, request
   //    badge, tous deux littéralement "Admin" — cf. clés comment.admin_author /
   //    comment.admin_badge). On scope au message qui contient notre texte pour
   //    éviter toute ambiguïté avec l'existant commentaire visiteur de Léa.
-  const replyMessage = page.locator('li', { hasText: 'Réponse de l’équipe' })
+  const replyMessage = page.getByTestId('comment-message').filter({ hasText: 'Réponse de l’équipe' })
   await expect(replyMessage).toBeVisible()
   await expect(replyMessage.getByText('Admin').first()).toBeVisible()
 })
