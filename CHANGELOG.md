@@ -1,6 +1,145 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v1.3.0] — 2026-07-01
+
+### Ajouts
+
+- Schéma comment_pins/comments + projects.comments_enabled
+- CommentsService — create_pin/add_reply/list/count
+- Edit/delete/delete_pin/moderation (soft-delete + owner check)
+- Toggle comments_enabled par projet (service + DTO + admin)
+- Identité visiteur (cookie signé latch_comment) + garde X-Comment-Client
+- DTOs commentaires + comment_count (owner_token jamais sérialisé)
+- Endpoints publics GET/POST + gate + identité + rate-limit
+- Endpoints publics reply/edit/delete/delete-pin
+- Endpoints admin + comment_count + openapi
+- Deps (@medv/finder, @floating-ui/dom) + scaffold module + i18n shell
+- Descripteur d'ancrage v1 (type + parse/serialize)
+- Describe() — capture sélecteur+empreinte+textQuote+offset
+- Scorer de similarité d'empreinte (tag/texte/rôle)
+- Resolve() — cascade sélecteur→empreinte→textQuote→orphaned
+- Seam Picker + SameOriginPicker (hit-test, transposition, subscribe)
+- Contrôleur de suivi (rAF dirty-flag, lecture groupée des rects)
+- Adaptateur de données + impl visiteur (X-Comment-Client)
+- Hooks React Query (list + mutations, invalidation liste)
+- Composant Textarea (shadcn) pour le corps des commentaires
+- Machine à états du mode pick (idle/pick/compose)
+- Nom pré-rempli (localStorage, fail-safe)
+- Hook useFollow (FollowController → état React)
+- PinBadge (pastille positionnée, état approximate/orphaned)
+- ComposePopup (nouveau commentaire, nom lazy, floating-ui)
+- ThreadPopup (fil, reply/edit/delete gardés par editable)
+- ThreadPopup — câble bouton fermer + supprimer le fil
+- OverlayLayer (surlignage pick, rendu pastilles, clics)
+- ActionBar (3 boutons, compteur, gated par canAuthor)
+- Comments-app (racine du module, QueryClient confiné) + export lazy
+- Shell lit PublicMeta + monte la couche commentaire en lazy
+- Suppression de modération dans ThreadPopup (canModerate)
+- Adaptateur admin (list mappé + modération, canModerate)
+- Toggle comments_enabled au formulaire projet (smart default + warning)
+- Hooks useVersionComments + modération
+- Panneau liste de commentaires par version + modération
+- Page Review (proto encadré + overlay commentaires admin)
+- Pin fluo + label 1re lettre auteur
+- Ciblage DOM en bleu fluo + glow intérieur capé
+- Composant CommentsDrawer (liste des threads)
+- Drawer branché — ouverture + focus/scroll vers le pin
+- Helper pur anchorPoint (point du pin)
+- Popups ancrés au pin (Figma-like)
+- Statut commentaires dans la carte Configuration (détail projet)
+- Admin_add_reply + sentinelle owner_token admin
+- Champ derive is_admin + DTO requetes admin
+- Endpoints admin create/reply/edit/delete + OpenAPI
+- Adaptateur admin authoring + seam fixedAuthorName
+- Compose admin sans champ nom (identite imposee) + i18n
+- Scope projet sur edit/delete-pin admin (parite reply/moderate)
+
+### Corrections
+
+- Annule les timers input-otp pendants après chaque test (flaky CI)
+- OperationId admin unique (list_version_comments) + test modération cross-projet
+- UseFollow lint react-hooks (retire pinsRef, dérive [] si picker null)
+- Type de retour explicite useModerateComment
+- Proxy Vite réaligne Origin + sert /assets (dev-only)
+- Popups de thread bornés au viewport (shift crossAxis + size)
+- MaxHeight popup clipping + strengthen middleware test
+- Pins admin alignés — overlay en espace viewport (fixed)
+- Drawer aligne approximate/orphaned sur PinBadge (M-T5-2)
+- Gère les ancres sur écran non affiché (proto multi-vues)
+- Réinitialise la note « hors écran » (drawer)
+- Stabilise useFloatingPoint (dép primitives x/y, anti-boucle)
+
+### Divers
+
+- Frame-ancestors 'self' sur la preview (encadrement Review same-origin)
+- Clés du module partagées entre admin et shell (fix clés brutes en Review)
+- Rate-limit login tunable par env + désarmement e2e (retire le retry-429)
+- Actions du fil en icônes + suppression rouge, dates date+heure
+- Format de date lisible (mois en lettres + zéros)
+- Libelle + badge Admin sur les messages admin
+
+### Documentation
+
+- Design des commentaires ancrés sur les prototypes
+- Plan d'implémentation backend des commentaires (Plan 1/3)
+- Commentaires ancrés — modèle, surface /c, invariant owner_token
+- Task 10 — admin comments endpoints + openapi
+- Resitue l'état réel — Plan 1 backend livré, frontend (Plans 2-3) à venir
+- Notes post-revue commentaires (401 OpenAPI, cleanups, orphelins bénins)
+- Resync mémoire projet post-Plan 1 commentaires (backend)
+- Plan 2 commentaires (frontend visiteur) livré — gate verte + resync mémoire
+- Plan d'implémentation Plan 2 (commentaires frontend visiteur)
+- Corrige chemins/noms réels du module commentaires + enrichit CLAUDE.md
+- K2 livré — HANDOFF + INDEX mis à jour
+- L1 livré — session pageLogin, clés i18n admin
+- Commentaires ancrés — page visiteur + passe architecture/sécurité/admin
+- Plan 3 commentaires (admin Review + toggle + docs) livré + corrections i18n
+- Resync mémoire Task P1 (rate-limit login + désarmement e2e)
+- Task P3 livrée — smoke Vite e2e + resync mémoire
+- Consolidation fin de session — Plan 3 + P1/P2 + DX Vite + P3 ; prochaine session UX
+- Design refactor UX commentaires (/c + /admin)
+- Plan d'implémentation refactor UX commentaires (8 tâches TDD)
+- Refactor UX commentaires livré (drawer + pins + positionnement)
+- Fix commentaires hors écran (QUIRKS + BACKLOG + HANDOFF)
+- Spec ancrage popups au pin (Figma-like)
+- Plan d'implémentation popups ancrés au pin
+- Popups ancrés au pin livré (INDEX/HANDOFF/QUIRKS)
+- Statut commentaires carte Configuration (INDEX + HANDOFF)
+- Polish fil + dates commentaires (INDEX + HANDOFF)
+- Spec authoring commentaires côté admin
+- Plan d'implémentation authoring admin (9 tâches TDD)
+- Authoring admin (contrat + doc publique + memoire)
+
+### Interne
+
+- Batch list_pins (no N+1) + test du plafond 200 pins
+- Dédup helpers (admin detail/version lookup, dto conversions, serve write prefix) — gate Sonar
+- Dédup find_project + fixtures de test DTO — gate Sonar
+- Dédup roleOf (export depuis describe, réutilisé par similarity)
+- Nettoyage post-revue (gate delete-thread, dead code/keys, fuite test, countOf)
+- Adaptateur injectable dans CommentsApp (réutilisation admin)
+- Retire reviewPath mort + clé i18n review.title inutilisée
+- Lot de nettoyage cosmétique post-revue (gardes, dead i18n, sélecteur e2e, doc)
+- PinBadge utilise anchorPoint (dédup)
+- Regen schema.d.ts (is_admin + endpoints admin)
+- Fix-wave revue finale (DRY is_admin_owner, doc, tests 401/403, testid e2e)
+
+### Tests
+
+- Invariants owner_token jamais sérialisé + gate verrouillé
+- Couvre textQuote + cap 120 chars de describe()
+- Shim jsdom IntersectionObserver pour le contrôleur de suivi
+- Couvre addReply/editMessage/deletePin + fige VISITOR_CAPS
+- Couvre body_too_long + reset erreur à la frappe + memo ref floating
+- E2e visiteur desktop (cibler/écrire/persister)
+- Durcit l'assertion e2e post-reload (anchored)
+- Parcours admin Review + modération des commentaires
+- Retry login sur 429 (rate-limit) — suite déterministe
+- Smoke Vite dev-server (:5173) — couvre proxy CSRF + assets
+- Drawer visiteur + alignement pins admin (régression topbar)
+- Garde référence zéro-size + cas anchorPoint asymétrique
+- E2e authoring admin (reponse a un fil visiteur)
 ## [v1.2.0] — 2026-06-30
 
 ### Ajouts
@@ -14,6 +153,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 ### Documentation
 
 - Resync post-release v1.1.0 + nettoyage repo
+- Régénère pour v1.2.0 (redirection GET / → /admin)
 ## [v1.1.0] — 2026-06-29
 
 ### Ajouts
