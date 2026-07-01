@@ -266,7 +266,10 @@ impl LatchMcp {
             .storage
             .read(&version.html_path)
             .await
-            .map_err(map_core_err)?;
+            .map_err(|e| match e {
+                CoreError::NotFound => ErrorData::internal_error("erreur interne", None),
+                other => map_core_err(other),
+            })?;
 
         let comments = crate::services::comments::CommentsService::new(self.db.clone());
         let rows = comments
@@ -282,7 +285,7 @@ impl LatchMcp {
                     .messages
                     .into_iter()
                     .map(|msg| PullMessage {
-                        is_admin: msg.owner_token == crate::services::comments::ADMIN_OWNER_TOKEN,
+                        is_admin: crate::services::comments::is_admin_owner(&msg.owner_token),
                         author_name: msg.author_name,
                         body: msg.body,
                         created_at: msg.created_at.to_rfc3339(),
@@ -748,6 +751,10 @@ mod tests {
         assert!(
             !json.contains("123456"),
             "le PIN ne doit jamais fuiter via MCP"
+        );
+        assert!(
+            !json.contains("\"id\""),
+            "pas de champ id DB dans la réponse MCP"
         );
     }
 }
