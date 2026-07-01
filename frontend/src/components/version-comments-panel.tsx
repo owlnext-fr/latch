@@ -56,15 +56,19 @@ export function VersionCommentsPanel(
         </SheetHeader>
 
         <div className="flex flex-col gap-4 p-4">
-          {isLoading ? (
+          {isLoading && (
             <p className="text-muted-foreground text-sm">
               {t('version_comments.loading')}
             </p>
-          ) : !data || data.pins.length === 0 ? (
+          )}
+          {!isLoading && (!data || data.pins.length === 0) && (
             <p className="text-muted-foreground text-sm">
               {t('version_comments.empty')}
             </p>
-          ) : (
+          )}
+          {!isLoading &&
+            data &&
+            data.pins.length > 0 &&
             data.pins.map((pin: AdminCommentPin) => (
               <div
                 key={pin.id}
@@ -128,8 +132,7 @@ export function VersionCommentsPanel(
                   ))}
                 </ul>
               </div>
-            ))
-          )}
+            ))}
         </div>
       </SheetContent>
     </Sheet>

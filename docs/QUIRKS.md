@@ -236,6 +236,14 @@ SonarCloud consomme la couverture Rust via le format **lcov** (`sonar.rust.lcov.
 ## Gate Sonar new-code 80% ≠ `cargo-llvm-cov --fail-under` (2026-06-25)
 La gate SonarQube configurée est `new_coverage >= 80%` — elle porte sur le **new-code uniquement** (lignes modifiées depuis la référence de branche). Ce n'est PAS équivalent à `--fail-under=80` de `cargo-llvm-cov` (qui porte sur la couverture totale). Ne pas mélanger les deux mécanismes. Le `--fail-under` n'est PAS utilisé dans ce projet (la gate Sonar est l'autorité).
 
+## Sonar S3863 (imports dupliqués) — ne flag que les imports de même *kind* (2026-07-01)
+Sonar `typescript:S3863` (« imported multiple times ») se déclenche quand un même module est importé
+deux fois **du même kind** — typiquement deux `import type { A }` / `import type { B }` séparés (ex.
+`comments-app.tsx` : `FrameRef` et `ShellRect` depuis `./picker/picker`). Il **ne flag PAS** un split
+`import type { X }` + `import { y }` du même module (kinds différents type-only vs valeur), qui reste
+donc légitime (ex. `comments-app.tsx` garde `import type { AnchorDescriptor }` + `import { parseAnchor }`
+depuis `./anchor/descriptor`). Fix du cas flaggé : fusionner en un seul `import type { A, B } from '…'`.
+
 ## `void` (S3735) supprimable sans risque si `no-floating-promises` inactif (2026-06-25)
 La règle ESLint `@typescript-eslint/no-floating-promises` est inactive dans la config `recommended` non type-checked (`eslint:recommended` + `tseslint.configs.recommended` sans `strictTypeChecked`). Les `void fn()` ajoutés pour satisfaire cette règle deviennent donc des dead-weight que Sonar signale en S3735. Ils peuvent être retirés sans risque. **Si `no-floating-promises` est activé** (config type-checked), les `void` redeviennent obligatoires — vérifier la config ESLint avant de les retirer.
 

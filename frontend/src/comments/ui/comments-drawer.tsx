@@ -29,7 +29,7 @@ export function sortPins(
   }
   return [...pins].sort((a, b) => {
     const delta = isWarning(a) - isWarning(b)
-    return delta !== 0 ? delta : b.created_at.localeCompare(a.created_at)
+    return delta === 0 ? b.created_at.localeCompare(a.created_at) : delta
   })
 }
 
