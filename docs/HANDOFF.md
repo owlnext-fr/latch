@@ -4,6 +4,43 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-01 — Popups commentaires ancrés au pin
+
+### Dernière chose faite
+Popups de commentaires (`ThreadPopup`+`ComposePopup`) ancrés au **point du pin** plutôt qu'au bounding box
+de l'élément ciblé (Tasks 1-3, commits `42ca948`, `ecc2c03`, `f7ed17c`, `ab7ca45`) : helper pur `anchorPoint`
+(dédup avec `PinBadge`), nouveau hook `useFloatingPoint` (VirtualElement de taille nulle au point du pin
+via `@floating-ui/dom`), câblage dans `ThreadPopup`/`ComposePopup`/`comments-app`, offset =
+`PIN_RADIUS + GAP` pour garder le pin visible à côté du popup, fix anti-boucle (dépendance sur les
+primitives `[x, y]` plutôt que sur la référence de l'objet `point`). Cette Task 4 clôt avec la gate finale :
+- `pnpm lint` → 0 erreur.
+- `pnpm typecheck` → 0 erreur (« TypeScript: No errors found »).
+- `pnpm test` (Vitest) → **222 passed** (53 fichiers), inclut `anchor-point.test.ts`,
+  `use-floating-point.test.ts` (dont le test anti-boucle).
+- `pnpm exec playwright test` → **8 passed / 2 skipped** (suite commentaires inchangée, pas de régression).
+- `cargo nextest run` (backend, contrôle) → **181 passed** (inchangé).
+
+### Trucs en suspens
+- Branche `feat/prototype-comments` toujours **non mergée** dans `main` — décision de merge/PR = humain.
+- **Vérification au navigateur** (Step 3 du brief : clic sur gros conteneur → popup collé au clic ; clic
+  pin → `ThreadPopup` collé avec pin visible ; pin près d'un bord → flip/shift sans sortir de l'écran ;
+  même comportement côté admin/Review) **non automatisable en jsdom, reste à faire par l'humain**.
+
+### Prochaine chose à creuser
+Si la vérif navigateur (Step 3) révèle un écart visuel (offset insuffisant, flip qui recouvre le pin sur
+un cas de bord réel), ajuster `POPUP_OFFSET` ou la stratégie `flip`/`shift` de `useFloatingPoint` — mais
+d'abord constater le problème au navigateur avant de retoucher le code.
+
+### Notes pour future Claude
+- Pattern **`VirtualElement` de taille nulle** : pour ancrer un popup `@floating-ui/dom` sur un point
+  plutôt qu'un élément réel, fournir une `reference` dont `getBoundingClientRect()` renvoie un rect
+  `width:0, height:0` centré sur le point — floating-ui gère ça nativement (cf. `useFloatingPoint`).
+- `POPUP_OFFSET = PIN_RADIUS + GAP` est **load-bearing** pour que le pin reste « visible à côté » du
+  popup (choix Figma) — ne pas le réduire sans revalider visuellement.
+- Le hook dépend des **primitives `[x, y]`** (pas de la référence de l'objet `point`) dans son
+  `useEffect`/`useMemo` : sinon un `anchorPoint()` recréé à chaque rendu (nouvel objet `{x,y}`) reboucle
+  l'effet en continu (repro RED : 220 appels vs GREEN : 1 appel).
+
 ## 2026-07-01 — **Fix commentaires « hors écran » (proto multi-vues)**
 
 ### Dernière chose faite

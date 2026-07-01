@@ -3,6 +3,18 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Popup de commentaire = ancré au POINT du pin, pas au rect de l'élément (2026-07-01)
+
+`ThreadPopup`/`ComposePopup` se positionnent via `useFloatingPoint(point)` contre un
+`VirtualElement` de **taille nulle** au point du pin (`anchorPoint(rect, offset)`), PAS
+contre le bounding box de l'élément. Ancrer au rect complet (ancien `useFloatingRect`)
+faisait ouvrir le popup au bord d'un gros conteneur, loin du pin. L'`offset(POPUP_OFFSET)`
+(= `PIN_RADIUS 14 + GAP 8`) est **load-bearing** : il dégage le rayon du pin pour qu'il
+reste visible à côté du fil (choix Figma). Baisser l'offset sous 14 recouvre le pin.
+Anti-boucle : `useFloatingPoint` dépend des **primitives `x`/`y`** (pas de la référence
+`point`) — sinon un `anchorPoint()` inline recréé à chaque rendu (nouvel objet `{x,y}`)
+reboucle l'effet en continu (repro RED : 220 appels / GREEN : 1 appel).
+
 ## Overlay commentaires = espace viewport (2026-07-01)
 
 `SameOriginPicker.toShellRect` renvoie des coordonnées **viewport**. L'`OverlayLayer` (pins + ciblage) DOIT
