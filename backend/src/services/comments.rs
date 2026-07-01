@@ -19,6 +19,11 @@ pub const MAX_BODY_LEN: usize = 2000;
 pub const MAX_AUTHOR_NAME_LEN: usize = 80;
 /// Plafond anti-flood : pins par (version, owner_token).
 pub const MAX_PINS_PER_VERSION_PER_OWNER: usize = 200;
+/// Identité de propriété de l'unique compte admin (jamais sérialisée : voir `is_admin`).
+/// Non-collision avec un ULID visiteur (26 chars Crockford base32, sans underscore).
+pub const ADMIN_OWNER_TOKEN: &str = "__admin__";
+/// `author_name` stocké pour les messages admin — jamais affiché (l'UI rend un libellé i18n via `is_admin`).
+pub const ADMIN_AUTHOR: &str = "admin";
 
 /// Un pin et ses messages non supprimés, triés du plus ancien au plus récent.
 #[derive(Debug, Clone)]
@@ -133,6 +138,40 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(owner_token.to_string()),
             author_name: Set(author),
+            body: Set(body),
+            ..Default::default()
+        }
+        .insert(&self.db)
+        .await?)
+    }
+
+    /// Ajoute une réponse admin à **n'importe quel** pin du projet `project_id`
+    /// (sans owner-check — l'admin ne possède pas les pins des visiteurs).
+    /// Vérifie pin → version → projet avant d'insérer (NotFound sinon).
+    pub async fn admin_add_reply(
+        &self,
+        project_id: i32,
+        pin_id: i32,
+        body: &str,
+    ) -> Result<comments::Model, CoreError> {
+        use crate::models::_entities::versions;
+        let body = validate_body(body)?;
+        let pin = comment_pins::Entity::find_by_id(pin_id)
+            .filter(comment_pins::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        let version = versions::Entity::find_by_id(pin.version_id)
+            .one(&self.db)
+            .await?
+            .ok_or(CoreError::NotFound)?;
+        if version.project_id != project_id {
+            return Err(CoreError::NotFound);
+        }
+        Ok(comments::ActiveModel {
+            pin_id: Set(pin.id),
+            owner_token: Set(ADMIN_OWNER_TOKEN.to_string()),
+            author_name: Set(ADMIN_AUTHOR.to_string()),
             body: Set(body),
             ..Default::default()
         }
@@ -463,6 +502,45 @@ mod tests {
 
         let err = svc
             .add_reply(pwm.pin.id, OWNER_B, "Max", "intrus")
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CoreError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn admin_add_reply_appends_to_any_pin_with_sentinel_owner() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        // Un visiteur crée un fil ; l'admin y répond sans le posséder.
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un", "{}")
+            .await
+            .unwrap();
+
+        let reply = svc
+            .admin_add_reply(v.project_id, pwm.pin.id, "réponse admin")
+            .await
+            .unwrap();
+
+        assert_eq!(reply.pin_id, pwm.pin.id);
+        assert_eq!(reply.body, "réponse admin");
+        assert_eq!(reply.owner_token, ADMIN_OWNER_TOKEN);
+    }
+
+    #[tokio::test]
+    async fn admin_add_reply_wrong_project_is_not_found() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "un", "{}")
+            .await
+            .unwrap();
+
+        // project_id qui ne possède pas ce pin → NotFound (ne révèle pas l'existence).
+        let err = svc
+            .admin_add_reply(v.project_id + 999, pwm.pin.id, "intrus")
             .await
             .unwrap_err();
         assert!(matches!(err, CoreError::NotFound));
