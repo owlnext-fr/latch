@@ -61,7 +61,10 @@ export function CommentsDrawer({
           variant="ghost"
           size="sm"
           aria-label={t('comment.drawer.close')}
-          onClick={onClose}
+          onClick={() => {
+            setNoticeId(null)
+            onClose()
+          }}
         >
           <X className="size-4" />
         </Button>
@@ -83,9 +86,14 @@ export function CommentsDrawer({
                 <button
                   type="button"
                   data-testid="drawer-row"
-                  onClick={() =>
-                    offscreen ? setNoticeId(pin.id) : onSelect(pin.id)
-                  }
+                  onClick={() => {
+                    if (offscreen) {
+                      setNoticeId(pin.id)
+                    } else {
+                      setNoticeId(null)
+                      onSelect(pin.id)
+                    }
+                  }}
                   className="hover:bg-muted flex w-full gap-3 border-b px-4 py-3 text-left"
                 >
                   <span
@@ -131,7 +139,7 @@ export function CommentsDrawer({
                     </span>
                   </span>
                 </button>
-                {noticeId === pin.id && (
+                {offscreen && noticeId === pin.id && (
                   <p
                     data-testid="offscreen-notice"
                     className="text-muted-foreground bg-muted/40 border-b px-4 py-2 text-[11px]"

@@ -104,6 +104,19 @@ describe('CommentsDrawer', () => {
     expect(screen.getByTestId('offscreen-notice')).toBeInTheDocument()
   })
 
+  it('efface la note « hors écran » quand on sélectionne ensuite une ligne visible', async () => {
+    const onSelect = vi.fn()
+    renderDrawer({ hiddenOf: (id) => id === 1, onSelect })
+    const rows = screen.getAllByTestId('drawer-row')
+    const aliceRow = rows.find((r) => r.textContent?.includes('Alice'))!
+    const maxRow = rows.find((r) => r.textContent?.includes('Max'))!
+    await userEvent.click(aliceRow) // ligne hors écran → note affichée
+    expect(screen.getByTestId('offscreen-notice')).toBeInTheDocument()
+    await userEvent.click(maxRow) // ligne visible → ouvre le fil + efface la note
+    expect(onSelect).toHaveBeenCalledWith(2)
+    expect(screen.queryByTestId('offscreen-notice')).toBeNull()
+  })
+
   it('affiche l’état vide', () => {
     renderDrawer({ pins: [] })
     expect(screen.getByText('No comments yet')).toBeInTheDocument()
