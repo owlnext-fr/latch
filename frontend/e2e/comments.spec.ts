@@ -95,6 +95,13 @@ test('visiteur : cibler un élément, écrire et persister un commentaire', asyn
   // Un badge de pin ancré doit apparaître sur l'overlay.
   await expect(page.locator('[data-status="anchored"]').first()).toBeVisible()
 
+  // Ouvrir le drawer de liste et focus le thread depuis une ligne.
+  await page.getByRole('button', { name: /My comments|Mes commentaires/ }).click()
+  await expect(page.getByTestId('comments-drawer')).toBeVisible()
+  await page.getByTestId('drawer-row').first().click()
+  // Le clic ferme le drawer et ouvre le thread (bouton Répondre visible).
+  await expect(page.getByRole('button', { name: /^(Reply|Répondre)$/ })).toBeVisible()
+
   // Reload : le cookie d'identité visiteur + GET /comments reconstruit les pins.
   // Le proto HTML est identique → le pin doit se ré-ancrer sur `anchored` (pas `approximate` ni `orphaned`).
   await page.reload()

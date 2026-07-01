@@ -135,6 +135,17 @@ test('admin : page Review affiche le pin, la modération depuis le fil le suppri
   const pinBadge = page.locator('[data-testid="pin-badge"]').first()
   await expect(pinBadge).toBeVisible({ timeout: 10_000 })
 
+  // Régression : le pin doit s'aligner verticalement sur #cta (offset 0.5,0.5 → centre),
+  // et NON être décalé vers le bas de la hauteur de la topbar (bug corrigé par l'overlay fixed).
+  const ctaBox = await page
+    .frameLocator('iframe[title="Prototype preview"]')
+    .locator('#cta')
+    .boundingBox()
+  const pinBox = await pinBadge.boundingBox()
+  const ctaCenterY = ctaBox!.y + ctaBox!.height / 2
+  const pinCenterY = pinBox!.y + pinBox!.height / 2
+  expect(Math.abs(pinCenterY - ctaCenterY)).toBeLessThan(20)
+
   // 7. Ouvrir le fil en cliquant sur la pastille
   await pinBadge.click()
 
