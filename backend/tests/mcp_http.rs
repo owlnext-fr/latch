@@ -112,7 +112,7 @@ async fn mcp_initialize_handshake() {
 
 #[tokio::test]
 #[serial]
-async fn mcp_tools_list_exposes_two_tools() {
+async fn mcp_tools_list_exposes_three_tools() {
     let _dir = setup_env();
     request::<App, _, _>(|request, _ctx| async move {
         let (headers, _) = mcp_post(&request, init_body(), None).await;
@@ -128,7 +128,7 @@ async fn mcp_tools_list_exposes_two_tools() {
         let (_, value) = mcp_post(&request, body, Some(&sid)).await;
         let tools = value["result"]["tools"].as_array().expect("tools array");
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
-        assert_eq!(names.len(), 2, "nombre de tools inattendu : {names:?}");
+        assert_eq!(names.len(), 3, "nombre de tools inattendu : {names:?}");
         assert!(
             names.contains(&"deploy_prototype"),
             "deploy_prototype absent : {names:?}"
@@ -136,6 +136,10 @@ async fn mcp_tools_list_exposes_two_tools() {
         assert!(
             names.contains(&"list_projects"),
             "list_projects absent : {names:?}"
+        );
+        assert!(
+            names.contains(&"pull_prototype"),
+            "pull_prototype absent : {names:?}"
         );
     })
     .await;
