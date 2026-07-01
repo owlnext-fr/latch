@@ -52,3 +52,24 @@ describe('useFloatingPoint — anti-boucle', () => {
     expect(computePosition).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('useFloatingPoint — référence zéro-size (contrat du positionnement au pin)', () => {
+  it('passe à computePosition une référence ponctuelle (width/height = 0) au point exact', async () => {
+    vi.mocked(computePosition).mockClear()
+    const rect = { x: 100, y: 50, width: 400, height: 300 }
+    const offset = { x: 0.5, y: 0.5 }
+    render(<Harness rect={rect} offset={offset} />)
+    await vi.waitFor(() => expect(computePosition).toHaveBeenCalled())
+
+    const reference = vi.mocked(computePosition).mock.calls[0][0] as { getBoundingClientRect: () => DOMRect }
+    const domRect = reference.getBoundingClientRect()
+    expect(domRect.width).toBe(0)
+    expect(domRect.height).toBe(0)
+    expect(domRect.left).toBe(300)
+    expect(domRect.top).toBe(200)
+    expect(domRect.right).toBe(300)
+    expect(domRect.bottom).toBe(200)
+    expect(domRect.x).toBe(300)
+    expect(domRect.y).toBe(200)
+  })
+})

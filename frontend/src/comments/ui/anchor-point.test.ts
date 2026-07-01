@@ -15,4 +15,8 @@ describe('anchorPoint', () => {
   it('coin bas-droit pour offset {1,1}', () => {
     expect(anchorPoint(rect, { x: 1, y: 1 })).toEqual({ x: 180, y: 90 })
   })
+
+  it('offset asymétrique {0.25, 0.75} distingue x et y', () => {
+    expect(anchorPoint(rect, { x: 0.25, y: 0.75 })).toEqual({ x: 120, y: 80 })
+  })
 })
