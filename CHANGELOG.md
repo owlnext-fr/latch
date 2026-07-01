@@ -1,6 +1,16 @@
 # Changelog
 
 Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; versionnage SemVer.
+## [v1.3.1] — 2026-07-01
+
+### Documentation
+
+- Board GitHub = source de suivi, BACKLOG en icebox, ROADMAP en journal
+
+### Interne
+
+- Publier GH Pages seulement après un push Docker réussi (#14)
+- Ne builder l'image que sur push (skip sur les PR) (#15)
 ## [v1.3.0] — 2026-07-01
 
 ### Ajouts
@@ -69,6 +79,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Gère les ancres sur écran non affiché (proto multi-vues)
 - Réinitialise la note « hors écran » (drawer)
 - Stabilise useFloatingPoint (dép primitives x/y, anti-boucle)
+- Force Vite en IPv4 127.0.0.1 dans le smoke e2e-vite
 
 ### Divers
 
@@ -110,6 +121,7 @@ Toutes les évolutions notables de latch. Format inspiré de Keep a Changelog ; 
 - Spec authoring commentaires côté admin
 - Plan d'implémentation authoring admin (9 tâches TDD)
 - Authoring admin (contrat + doc publique + memoire)
+- Régénère pour v1.3.0 (commentaires ancrés + authoring admin)
 
 ### Interne
 
