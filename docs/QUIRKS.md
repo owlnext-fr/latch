@@ -217,6 +217,11 @@ réécrire le fichier sur le volume. **Vérif** sur la box : `ls -laR ./data` do
 À CÔTÉ de `latch.sqlite` ; s'il n'y a que la base, le storage part sur la couche éphémère.
 `.env.example` corrigé (`/data` + commentaire « chemin absolu obligatoire »).
 
+**Depuis #9 (2026-07-02)** : un **garde-fou de boot** (`web::validate_path_config`, appelé
+en tête de `after_routes`) refuse désormais de démarrer en prod si `LATCH_STORAGE_ROOT` ou
+`LATCH_SPA_DIST` est relatif/absent — cette mauvaise config casse le boot au lieu de perdre
+des données silencieusement. `DATABASE_URL` reste hors garde-fou (URI, défaut absolu).
+
 ## Tous les protos en iframe via le shell — impacts (2026-06-29)
 
 Depuis la Phase 9 (notes de version), `GET /c/<slug>` sert **toujours** un shell HTML qui

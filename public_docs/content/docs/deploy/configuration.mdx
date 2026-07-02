@@ -68,3 +68,12 @@ limiters, independent from the unlock ones — a per-IP bucket and a global per-
 A prototype larger than `LATCH_BODY_LIMIT` is rejected with **HTTP 413**. Raise the limit if your
 single-file HTML is bigger than the default 5 MB — see [Troubleshooting](/docs/troubleshooting).
 </Callout>
+
+<Callout type="warn">
+`LATCH_STORAGE_ROOT` and `LATCH_SPA_DIST` **must be absolute paths in production** — the boot
+refuses to start outside development/test if either is relative or missing (fail-secure). A
+relative path resolves against the container's ephemeral write layer, not the mounted volume,
+which silently loses version HTML on the next redeploy. `DATABASE_URL` is not covered by this
+guard (it is already an absolute SQLite URI by default) but must point at the same persistent
+volume as `LATCH_STORAGE_ROOT`.
+</Callout>

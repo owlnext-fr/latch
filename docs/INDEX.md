@@ -4,6 +4,10 @@
 > d'une phase sont verts, on coche ici avec une ligne par livrable (+ entrée HANDOFF).
 > Format : `- [x] <livrable> — <phase> — <date>`.
 
+## Robustesse config #9 (feat/9-robustesse-config, 2026-07-02)
+
+- [x] Garde-fou de boot fail-secure : refuse un chemin FS relatif en prod (LATCH_STORAGE_ROOT + LATCH_SPA_DIST) — #9 — 2026-07-02
+
 ## Nettoyages techniques #13 (feat/13-nettoyages-tech, 2026-07-02)
 
 - [x] Code-splitting des 4 routes TanStack (`lazyRouteComponent` + `defaultPendingComponent`) — #13 — 2026-07-02
