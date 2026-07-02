@@ -664,7 +664,7 @@ pub(crate) fn env_u64(name: &str, default: u64) -> u64 {
 pub fn routes() -> Routes {
     // Burst & période réglables par env (défauts : IP+slug 5/1s, slug global 20/3s).
     let ip_burst: u32 = env_u32("LATCH_UNLOCK_RL_IP_BURST", 5);
-    let ip_per_sec: u64 = env_u64("LATCH_UNLOCK_RL_IP_PER_SECOND", 1);
+    let ip_per_sec: u64 = env_u64("LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC", 1);
     let slug_burst: u32 = env_u32("LATCH_UNLOCK_RL_SLUG_BURST", 20);
     let slug_period: u64 = env_u64("LATCH_UNLOCK_RL_SLUG_PERIOD_SECS", 3);
 

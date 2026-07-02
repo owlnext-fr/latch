@@ -33,7 +33,7 @@ In development the cookie secrets fall back to deterministic dev keys, so a loca
 | --- | --- | --- |
 | `LATCH_UNLOCK_TTL_DAYS` | `30` | Lifetime of the unlock cookie, in days. |
 | `LATCH_UNLOCK_RL_IP_BURST` | `5` | Per-IP burst allowance on `/unlock`. |
-| `LATCH_UNLOCK_RL_IP_PER_SECOND` | `1` | Per-IP refill rate (requests/second). |
+| `LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC` | `1` | Per-IP refill rate (requests/second). |
 | `LATCH_UNLOCK_RL_SLUG_BURST` | `20` | Global per-slug burst allowance. |
 | `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` | `3` | Global per-slug refill period, in seconds. |
 
