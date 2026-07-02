@@ -491,6 +491,26 @@ mod tests {
         assert!(ok.validate().is_ok());
     }
 
+    #[test]
+    fn deploy_args_reject_release_notes_over_max_len() {
+        let a = DeployArgs {
+            slug: "s".into(),
+            html: "<h1>x</h1>".into(),
+            deploy_token: "t".into(),
+            activate: None,
+            release_notes: Some("x".repeat(10_001)),
+        };
+        assert!(a.validate().is_err());
+        let ok = DeployArgs {
+            slug: "s".into(),
+            html: "<h1>x</h1>".into(),
+            deploy_token: "t".into(),
+            activate: None,
+            release_notes: Some("x".repeat(10_000)),
+        };
+        assert!(ok.validate().is_ok());
+    }
+
     #[tokio::test]
     async fn deploy_rejects_bad_token() {
         let db = test_db().await;

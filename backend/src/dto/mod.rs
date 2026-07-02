@@ -536,6 +536,64 @@ mod tests {
     }
 
     #[test]
+    fn create_project_req_rejects_brand_name_over_max_len() {
+        assert!(CreateProjectReq {
+            name: "ok".into(),
+            brand_name: Some("x".repeat(129)),
+            code_enabled: false,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_err());
+        assert!(CreateProjectReq {
+            name: "ok".into(),
+            brand_name: Some("x".repeat(128)),
+            code_enabled: false,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_ok());
+    }
+
+    #[test]
+    fn update_project_req_rejects_brand_name_over_max_len() {
+        assert!(UpdateProjectReq {
+            name: None,
+            brand_name: Some(Some("x".repeat(129))),
+            comments_enabled: None,
+        }
+        .validate()
+        .is_err());
+        assert!(UpdateProjectReq {
+            name: None,
+            brand_name: Some(Some("x".repeat(128))),
+            comments_enabled: None,
+        }
+        .validate()
+        .is_ok());
+    }
+
+    #[test]
+    fn deploy_req_rejects_release_notes_over_max_len() {
+        assert!(DeployReq {
+            html: "<h1>x</h1>".into(),
+            activate: false,
+            notes: Some("x".repeat(10_001)),
+        }
+        .validate()
+        .is_err());
+        assert!(DeployReq {
+            html: "<h1>x</h1>".into(),
+            activate: false,
+            notes: Some("x".repeat(10_000)),
+        }
+        .validate()
+        .is_ok());
+    }
+
+    #[test]
     fn create_pin_req_validates_body_author_anchor() {
         let ok = CreatePinReq {
             anchor: "{}".into(),

@@ -96,7 +96,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(owner_token.to_string()),
             author_name: Set(author),
-            body: Set(body.to_string()),
+            body: Set(body.trim().to_string()),
             ..Default::default()
         }
         .insert(&txn)
@@ -124,7 +124,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(owner_token.to_string()),
             author_name: Set(author),
-            body: Set(body.to_string()),
+            body: Set(body.trim().to_string()),
             ..Default::default()
         }
         .insert(&self.db)
@@ -157,7 +157,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(ADMIN_OWNER_TOKEN.to_string()),
             author_name: Set(ADMIN_AUTHOR.to_string()),
-            body: Set(body.to_string()),
+            body: Set(body.trim().to_string()),
             ..Default::default()
         }
         .insert(&self.db)
@@ -286,7 +286,7 @@ impl CommentsService {
     ) -> Result<comments::Model, CoreError> {
         let msg = self.owned_live_message(comment_id, owner_token).await?;
         let mut active: comments::ActiveModel = msg.into();
-        active.body = Set(body.to_string());
+        active.body = Set(body.trim().to_string());
         active.updated_at = Set(chrono::Utc::now().into());
         Ok(active.update(&self.db).await?)
     }
@@ -373,7 +373,7 @@ impl CommentsService {
         self.assert_version_in_project(pin.version_id, project_id)
             .await?;
         let mut active: comments::ActiveModel = msg.into();
-        active.body = Set(body.to_string());
+        active.body = Set(body.trim().to_string());
         active.updated_at = Set(chrono::Utc::now().into());
         Ok(active.update(&self.db).await?)
     }
@@ -507,6 +507,38 @@ mod tests {
         assert_eq!(pwm.messages.len(), 1);
         assert_eq!(pwm.messages[0].author_name, "Léa");
         assert_eq!(pwm.messages[0].body, "Le bouton est trop petit");
+    }
+
+    #[tokio::test]
+    async fn create_pin_trims_body_before_store() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "  \n  padded body  \n  ", "{}")
+            .await
+            .unwrap();
+
+        assert_eq!(pwm.messages[0].body, "padded body");
+    }
+
+    #[tokio::test]
+    async fn edit_message_trims_body_before_store() {
+        let db = test_db().await;
+        let v = version(&db).await;
+        let svc = CommentsService::new(db);
+        let pwm = svc
+            .create_pin(v.id, OWNER_A, "Léa", "avant", "{}")
+            .await
+            .unwrap();
+        let id = pwm.messages[0].id;
+
+        let edited = svc
+            .edit_message(id, OWNER_A, "  \n  après  \n  ")
+            .await
+            .unwrap();
+        assert_eq!(edited.body, "après");
     }
 
     #[tokio::test]
