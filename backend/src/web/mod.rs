@@ -16,17 +16,23 @@ pub type SessionPool = axum_session_sqlx::SessionSqlitePool;
 /// Extracteur de session injectable dans les handlers.
 pub type AdminSession = axum_session::Session<SessionPool>;
 
+/// Défaut relatif au CWD `backend/` (dev). En prod l'image pose une valeur absolue.
+const STORAGE_ROOT_DEFAULT: &str = "data";
+/// Défaut relatif au CWD `backend/` (dev). En prod l'image pose `/app/frontend/dist`.
+const SPA_DIST_DEFAULT: &str = "../frontend/dist";
+
 /// Racine des assets buildés de la SPA (`frontend/dist`). Surclassable par
 /// `LATCH_SPA_DIST` (posée dans l'image Docker). Défaut relatif au CWD `backend/`.
 pub fn spa_dist_dir() -> PathBuf {
     std::env::var("LATCH_SPA_DIST")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("../frontend/dist"))
+        .unwrap_or_else(|_| PathBuf::from(SPA_DIST_DEFAULT))
 }
 
 /// Racine de stockage des HTML de versions (volume). `LATCH_STORAGE_ROOT`, défaut `data`.
 pub fn storage_from_ctx(_ctx: &AppContext) -> Arc<dyn Storage> {
-    let root = std::env::var("LATCH_STORAGE_ROOT").unwrap_or_else(|_| "data".to_string());
+    let root =
+        std::env::var("LATCH_STORAGE_ROOT").unwrap_or_else(|_| STORAGE_ROOT_DEFAULT.to_string());
     Arc::new(FsStorage::new(root.into()))
 }
 
@@ -88,6 +94,34 @@ fn resolve_required(
         ))),
         _ => Ok(dev_fallback.to_string()),
     }
+}
+
+/// Valide qu'un chemin de configuration est ABSOLU en production (fail-secure).
+/// Un chemin relatif hors Dev/Test résout depuis le WORKDIR `/app` du conteneur →
+/// couche d'écriture éphémère → perte de données au redéploiement (incident
+/// 2026-06-29, cf. `docs/QUIRKS.md`). Une valeur absente ou vide retombe sur le
+/// défaut (relatif) → échoue donc aussi en prod, ce qui est voulu.
+// TODO(#9 Task 2) : câblé par `validate_paths`/`validate_path_config` dans la tâche
+// suivante de ce plan — retirer cet `allow` une fois consommé en production.
+#[allow(dead_code)]
+fn resolve_abs_path(
+    env_value: Option<String>,
+    is_prod: bool,
+    default: &str,
+    label: &str,
+) -> Result<PathBuf> {
+    let raw = env_value
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| default.to_string());
+    let path = PathBuf::from(&raw);
+    if is_prod && !path.is_absolute() {
+        return Err(loco_rs::Error::Message(format!(
+            "{label} doit être un chemin ABSOLU en production (reçu : {raw:?}). \
+             Un chemin relatif résout vers la couche éphémère /app/… du conteneur \
+             et perd les données au redéploiement (cf. incident 2026-06-29)."
+        )));
+    }
+    Ok(path)
 }
 
 /// Secret partagé validé par TOUS les tools MCP (contrat §5, §9.3). Fail-secure :
@@ -230,7 +264,10 @@ pub async fn build_session_store(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    use super::{host_authority, resolve_cookie_secret, resolve_required, session_cookie_names};
+    use super::{
+        host_authority, resolve_abs_path, resolve_cookie_secret, resolve_required,
+        session_cookie_names, SPA_DIST_DEFAULT, STORAGE_ROOT_DEFAULT,
+    };
 
     // Garde anti-régression du contournement du bug axum_session 0.16.0 (cf. QUIRKS) :
     // en prod, le préfixe `__Host-` doit être posé DANS le nom (et jamais via
@@ -372,5 +409,87 @@ mod tests {
             "localhost:5150"
         );
         assert_eq!(host_authority("latch.owlnext.fr"), "latch.owlnext.fr");
+    }
+
+    // --- resolve_abs_path : garde-fou chemin relatif/absolu (#9) ---
+
+    const PATH_LABEL: &str = "LATCH_STORAGE_ROOT";
+
+    #[test]
+    fn abs_path_prod_relative_returns_err() {
+        let result = resolve_abs_path(
+            Some("data".to_string()),
+            true,
+            STORAGE_ROOT_DEFAULT,
+            PATH_LABEL,
+        );
+        assert!(result.is_err(), "prod + chemin relatif doit échouer");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains(PATH_LABEL),
+            "message doit mentionner la var : {msg}"
+        );
+        assert!(
+            msg.contains("ABSOLU"),
+            "message doit mentionner ABSOLU : {msg}"
+        );
+    }
+
+    #[test]
+    fn abs_path_prod_dot_relative_returns_err() {
+        let result = resolve_abs_path(
+            Some("./data".to_string()),
+            true,
+            STORAGE_ROOT_DEFAULT,
+            PATH_LABEL,
+        );
+        assert!(result.is_err(), "prod + ./relatif doit échouer");
+    }
+
+    #[test]
+    fn abs_path_prod_absolute_returns_ok() {
+        let result = resolve_abs_path(
+            Some("/data".to_string()),
+            true,
+            STORAGE_ROOT_DEFAULT,
+            PATH_LABEL,
+        );
+        assert!(result.is_ok(), "prod + chemin absolu doit réussir");
+        assert_eq!(result.unwrap(), std::path::PathBuf::from("/data"));
+    }
+
+    #[test]
+    fn abs_path_prod_unset_uses_relative_default_and_errs() {
+        // Défaut relatif → en prod, unset échoue (fail-secure voulu).
+        let result = resolve_abs_path(None, true, SPA_DIST_DEFAULT, "LATCH_SPA_DIST");
+        assert!(
+            result.is_err(),
+            "prod + unset (défaut relatif) doit échouer"
+        );
+    }
+
+    #[test]
+    fn abs_path_dev_relative_returns_ok() {
+        let result = resolve_abs_path(
+            Some("data".to_string()),
+            false,
+            STORAGE_ROOT_DEFAULT,
+            PATH_LABEL,
+        );
+        assert!(
+            result.is_ok(),
+            "dev + chemin relatif doit réussir (comportement dev inchangé)"
+        );
+    }
+
+    #[test]
+    fn abs_path_empty_value_falls_back_to_default() {
+        // Une valeur vide est traitée comme unset → défaut ; en dev le défaut relatif passe.
+        let result = resolve_abs_path(Some(String::new()), false, STORAGE_ROOT_DEFAULT, PATH_LABEL);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            std::path::PathBuf::from(STORAGE_ROOT_DEFAULT)
+        );
     }
 }
