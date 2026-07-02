@@ -9,6 +9,8 @@ use loco_rs::Result;
 
 use crate::services::storage::{FsStorage, Storage};
 
+pub mod extract;
+
 /// Store de session adossé au pool SQLite de Loco.
 pub type SessionPool = axum_session_sqlx::SessionSqlitePool;
 /// Extracteur de session injectable dans les handlers.
