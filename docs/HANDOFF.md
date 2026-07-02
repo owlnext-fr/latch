@@ -4,6 +4,45 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-02 — Issue #9 : garde-fou de boot fail-secure (chemins FS relatifs en prod)
+
+### Dernière chose faite
+Implémenté et documenté le garde-fou de boot de l'issue #9 sur branche
+`feat/9-robustesse-config` (3 tâches) :
+- **Task 1** : helper `resolve_abs_path` + constantes de défaut (`STORAGE_ROOT_DEFAULT`,
+  `SPA_DIST_DEFAULT`) dans `backend/src/web/mod.rs`, testés table-driven.
+- **Task 2** : `validate_paths` + `web::validate_path_config(ctx)`, appelé en **tête**
+  de `after_routes` (`app.rs`) — hors `Development`/`Test`, le boot **refuse de démarrer**
+  si `LATCH_STORAGE_ROOT` ou `LATCH_SPA_DIST` est un chemin relatif (ou absent → défaut
+  relatif), avec message d'erreur explicite. `DATABASE_URL` est volontairement **hors
+  garde-fou** (URI sqlite, défaut prod déjà absolu) — juste documenté comme devant
+  pointer le même volume.
+- **Task 3** (documentation seule, pas de code) : `.env.example` (bloc `LATCH_SPA_DIST`
+  complété, miroir `LATCH_STORAGE_ROOT`), `docs/ENVIRONMENT.md` (note garde-fou + couplage
+  `LATCH_STORAGE_ROOT`/`DATABASE_URL`/volume Docker), `docs/QUIRKS.md` (complément à
+  l'entrée incident 2026-06-29 « chemin relatif → couche éphémère »), `public_docs`
+  (`deploy/configuration.mdx` — Callout chemin absolu obligatoire en prod).
+
+### Trucs en suspens
+Gate finale + PR pas encore faites : QA humaine sur `:5150` (déclencher volontairement le
+refus de boot avec un `LATCH_STORAGE_ROOT` relatif hors Dev/Test), ouverture PR `Closes #9`,
+gate CI/Sonar, merge.
+
+### Prochaine chose à creuser
+Ouvrir la PR de #9 après QA locale. Puis board : #21 (revue UX distribution), #10/#11/#8.
+
+### Notes pour future Claude
+- Le garde-fou ne couvre que `LATCH_STORAGE_ROOT`/`LATCH_SPA_DIST` (chemins FS) — pas
+  `DATABASE_URL` (c'est une URI sqlite, pas un chemin nu, et son défaut prod est déjà
+  absolu). Ne pas confondre avec les autres fail-secure existants (`DEPLOY_TOKEN`,
+  `SESSION_SECRET`, `UNLOCK_COOKIE_SECRET`, `LATCH_PUBLIC_BASE_URL`) qui portent sur des
+  secrets/URLs, pas des chemins.
+- L'incident réel qui motive ce garde-fou est documenté dans `docs/QUIRKS.md`
+  (« `LATCH_STORAGE_ROOT` relatif → HTML écrits sur la couche éphémère du conteneur »,
+  2026-06-29) : avant #9, une mauvaise config perdait des données silencieusement au
+  premier redéploiement ; après #9, elle casse le boot immédiatement (fail loud, pas
+  fail silent).
+
 ## 2026-07-02 — Issue #23 : consolidation de la validation d'entrée (back-centric)
 
 ### Dernière chose faite

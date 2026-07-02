@@ -83,6 +83,9 @@ impl Hooks for App {
         // tasks-inject (do not remove)
     }
     async fn after_routes(router: AxumRouter, ctx: &AppContext) -> Result<AxumRouter> {
+        // Fail-fast : un chemin FS relatif en prod (→ couche éphémère /app) casse le
+        // boot, pas les données au redéploiement (incident 2026-06-29, cf. QUIRKS).
+        crate::web::validate_path_config(ctx)?;
         let store = crate::web::build_session_store(ctx).await?;
         // Fail-fast : un UNLOCK_COOKIE_SECRET trop court en prod doit casser le boot,
         // pas produire un 500 à la première requête /c protégée.
