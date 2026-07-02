@@ -4,6 +4,35 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-02 — Issue #4 : revalidation doc (commentaires + MCP `pull_prototype`)
+
+### Dernière chose faite
+Passe de mise à jour de la doc fumadocs (`public_docs/`) sur branche `feat/4-doc-revalidation`.
+Audit vérifié dans le code (3 explorations + relecture manuelle — 2 audits s'étaient trompés :
+Review page « inexistante » et vars dans `.env.example`). Livré :
+- **Texte** : `index.mdx` carte MCP 2→3 tools ; `configuration.mdx` `DEPLOY_TOKEN` inclut
+  `pull_prototype` + nouvelle section **Comments rate-limit** (4 vars `LATCH_COMMENT_RL_*`,
+  valeurs vérifiées `serve.rs:703-706`) ; `quickstart.mdx` étape « Gather feedback and iterate ».
+- **5 captures** produites en étendant `frontend/e2e/screenshots.capture.ts` (harness `CAPTURE=1`) :
+  compose visiteur + barre flottante, fil + réponse Admin/badge, Review page (pins), panel
+  Comments par version, toggle `comments_enabled`. Copiées `docs/assets/` → `public_docs/public/img/`,
+  câblées dans `comments.mdx` (×3), `versions.mdx`, `projects.mdx`.
+- Gates locales vertes : `tsc`+ESLint (harness), `types:check`+`next build`+ESLint (fumadocs).
+- QA visuelle humaine OK sur le dev-server fuma (`:3000/latch`).
+
+### Trucs en suspens
+- **Follow-up** : les 4 vars `LATCH_COMMENT_RL_*` sont lues par le code mais **absentes de
+  `.env.example`** (le template ne les liste pas). Issue de suivi créée (cf. board).
+- Reste à faire sur cette branche : PR `Closes #4`, gate CI/Sonar, merge.
+
+### Prochaine chose à creuser
+Board : après #4, la colonne Ready se vide → triage `docs/BACKLOG.md` / promotion d'un item.
+
+### Notes pour future Claude
+- Le harness de capture (`screenshots.capture.ts`, `CAPTURE=1`) est LA voie pour toute capture
+  doc — ne pas piloter un navigateur à la main. Images = copie manuelle `docs/assets/` → `public_docs/public/img/`.
+- Piège Sheet Radix + `fullPage` : cf. QUIRKS (2026-07-02).
+
 ## 2026-07-01 (septies) — Issue #2 : MCP `pull_prototype` (HTML + fils de commentaires)
 
 ### Dernière chose faite

@@ -3,6 +3,24 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## Capture d'un Sheet Radix : `fullPage:true` casse l'overlay `fixed` (2026-07-02)
+Les side-panels admin (`ProjectForm`, `VersionCommentsPanel`) sont des `Sheet` Radix rendus
+en overlay `position: fixed`. Un `page.screenshot({ fullPage: true })` redimensionne le
+document → l'overlay fixed est **absent ou rendu en cours d'animation** (ghosting) sur la
+capture, alors même que l'assertion `toBeVisible()` passe (Playwright considère l'élément
+visible dès `opacity>0`, avant la fin de la transition CSS). **Deux contournements combinés**
+dans `screenshots.capture.ts` : (1) capturer l'élément lui-même via `page.getByRole('dialog').screenshot()`
+(crop propre, sans la liste grisée derrière) plutôt que la page entière ; (2) `await page.waitForTimeout(500)`
+après `toBeVisible()` pour laisser l'animation d'ouverture se stabiliser. Idem pour les popups
+`floating-ui` côté visiteur : préférer une capture viewport (`fullPage:false`) à `fullPage`.
+
+## Captures des commentaires : DB e2e partagée entre tests d'un même run (2026-07-02)
+Le webServer Playwright démarre **une** DB e2e pour tout le run (pas de reset par test). La
+capture `admin-list.png` (test en tête de fichier) est donc propre (2 projets), mais les tests
+de commentaires suivants accumulent des projets « Mon Projet ». Sans importance tant qu'on
+capture une surface ciblée (form, panel, proto) et pas la liste globale à ce moment-là. Chaque
+test navigue vers un projet par `id` retourné à la création → pas de collision.
+
 ## Popup de commentaire = ancré au POINT du pin, pas au rect de l'élément (2026-07-01)
 
 `ThreadPopup`/`ComposePopup` se positionnent via `useFloatingPoint(point)` contre un
