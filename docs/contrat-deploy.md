@@ -28,6 +28,15 @@ adaptateurs interchangeables au-dessus du même cœur, et le cœur testable sans
 Chaque adaptateur le mappe : web → status + JSON ; MCP → tool error. Loco garde son
 `Error` pour sa plomberie ; le cœur a le sien et ignore Loco.
 
+**Validation de forme = frontière, pas cœur.** La validation de *forme* des entrées
+(bornes de longueur, formats, champs requis) vit à la frontière : extracteur
+`ValidatedJson<T>` côté web (`web/extract.rs`, désérialise puis `.validate()`, 400 sur
+échec), `args.validate()` côté MCP (juste après `check_token`, dans chaque tool). Le
+cœur **suppose son input déjà validé** — il n'appelle plus jamais `.validate()`. Les
+invariants **métier** (unicité, cohérence transactionnelle) et les **transformations**
+(ex. `sanitize_author_name`, trim du corps avant stockage) restent au cœur : la
+frontière ne fait que de la forme.
+
 ## 2. Structure du repo (workspace 2 crates)
 
 Workspace à deux membres. Le **cœur vit comme module dans l'app backend**, pas en
@@ -446,6 +455,10 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
    lui-même. Anti-usurpation : les écritures visiteur lisent l'owner uniquement depuis le cookie
    signé `latch_comment` (un client ne peut pas se forger `owner_token = "__admin__"`) ; les
    écritures admin sont derrière `AdminAuth` et pose la sentinelle côté serveur (§6.4/§7).
+8. **Toute entrée franchissant une frontière (web, MCP) est validée via `Validate`**
+   (source de vérité back, `backend/src/services/validation.rs`) : extracteur
+   `ValidatedJson` côté web, `args.validate()` côté MCP. Un DTO de frontière sans
+   `impl Validate` ne compile pas. Couvert par `backend/tests/validation_invariant.rs`.
 
 ### Note (hors-invariants) — `GET /api/settings` et le `deploy_token`
 

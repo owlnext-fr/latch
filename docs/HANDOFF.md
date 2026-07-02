@@ -4,6 +4,47 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-02 — Issue #23 : consolidation de la validation d'entrée (back-centric)
+
+### Dernière chose faite
+Consolidé la validation de forme des entrées sur un modèle back-centric, à la frontière,
+sur branche `feat/23-validation-audit` (TDD, 9 tâches) :
+- Crate `validator` + `#[derive(Validate)]` sur tous les DTOs de frontière (`dto/mod.rs`)
+  et les structs d'arguments MCP (`mcp/mod.rs`).
+- Module central `backend/src/services/validation.rs` : bornes (`MAX_NAME_LEN=128`,
+  `MAX_BODY_LEN=2000`, `MAX_AUTHOR_NAME_LEN=80`, `MAX_RELEASE_NOTES_LEN=10000`) + limites
+  octets env-configurables (`LATCH_MAX_HTML_BYTES` défaut 5 Mo, `LATCH_MAX_ANCHOR_BYTES`
+  défaut 8 Ko) + fns `custom` validator.
+- `.validate()` invoqué aux deux frontières : extracteur `ValidatedJson<T>` (`web/extract.rs`)
+  côté web (désérialise puis valide, 400 sur échec) ; `args.validate()` dans chaque tool MCP,
+  **juste après** `check_token`.
+- Validation de forme **migrée du cœur vers la frontière** : le cœur suppose désormais son
+  input déjà validé. Restent au cœur les invariants métier + transformations
+  (`sanitize_author_name`, trim du corps avant stockage).
+- Invariant build-breaking `backend/tests/validation_invariant.rs` (table-driven : chaque
+  DTO de frontière rejette une entrée hors-borne) + contrat §1/§9 mis à jour (nouvel
+  invariant §9.8).
+- Front : `maxLength` indicatif (UX seule, pas de sync avec le back) sur les champs texte.
+Specs/plan : `docs/superpowers/specs/` et `docs/superpowers/plans/` (préfixe #23).
+
+### Trucs en suspens
+Task 10 (gate finale + PR) reste à faire : QA `:5150`, ouverture PR `Closes #23`, gate
+CI/Sonar, merge.
+
+### Prochaine chose à creuser
+Ouvrir la PR de #23 après QA locale. Puis board : #21 (revue UX distribution), #10/#11/#8.
+
+### Notes pour future Claude
+- **Piège `validator 0.20`** : une fn `custom` sur un champ `Option<String>`/`Option<Option<String>>`
+  reçoit l'**inner déballé** (jamais appelée sur `None`) — on ne peut pas pointer `custom`
+  directement sur une fn prenant `&Option<String>`. Contournement : petit adaptateur local
+  qui rewrap puis délègue à `services::validation::validate_optional_*`/`validate_opt_opt_*`
+  (voir `dto/mod.rs` lignes ~94-113, `mcp/mod.rs` lignes ~61-68). Détail dans QUIRKS.
+- Si un futur endpoint/tool ajoute un input de frontière : `#[derive(Validate)]` + bornes/règles
+  dans `services/validation.rs` + brancher `ValidatedJson` (web) ou `args.validate()` (MCP) —
+  sinon ça ne compile pas (invariant §9.8), donc l'oubli est impossible côté web/MCP, mais la
+  **borne elle-même** (valeur du max) reste une décision humaine à documenter.
+
 ## 2026-07-02 — Issue #13 : nettoyages techniques (parapluie, 4 lots)
 
 ### Dernière chose faite
