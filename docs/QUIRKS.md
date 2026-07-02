@@ -221,6 +221,11 @@ réécrire le fichier sur le volume. **Vérif** sur la box : `ls -laR ./data` do
 en tête de `after_routes`) refuse désormais de démarrer en prod si `LATCH_STORAGE_ROOT` ou
 `LATCH_SPA_DIST` est relatif/absent — cette mauvaise config casse le boot au lieu de perdre
 des données silencieusement. `DATABASE_URL` reste hors garde-fou (URI, défaut absolu).
+La vérification (`PathBuf::is_absolute()`) est purement lexicale : elle ferme le cas
+« chemin relatif » (le plus fréquent, celui de cet incident) mais pas tout mauvais usage
+de la couche éphémère — un chemin **absolu** qui pointe quand même sous `/app` (ex.
+`LATCH_STORAGE_ROOT=/app/data`, hors volume monté) passe `is_absolute()` sans broncher et
+perdrait toujours les HTML au redéploiement.
 
 ## Tous les protos en iframe via le shell — impacts (2026-06-29)
 

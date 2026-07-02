@@ -32,6 +32,13 @@
 > `LATCH_STORAGE_ROOT=/data` ET `DATABASE_URL=sqlite:///data/latch.sqlite?mode=rwc`
 > doivent pointer ce **même volume** — sinon base et HTML divergent (l'un persiste,
 > l'autre non).
+>
+> **⚠️ Mise à niveau** : un déploiement prod **hors image** (backend + dist déployés
+> à la main) déjà en place qui omettait jusqu'ici `LATCH_SPA_DIST` (comptant sur le
+> défaut relatif) **refusera de démarrer** après mise à niveau vers cette build — il
+> faut désormais poser `LATCH_SPA_DIST` explicitement en chemin absolu. Les
+> déploiements par image Docker ne sont pas concernés : l'image pose toujours les
+> deux variables en absolu.
 
 - `DATABASE_URL` — URI SQLite. Dev (défaut) : `sqlite://latch_development.sqlite?mode=rwc`.
   Prod (image) : `sqlite:///data/latch.sqlite?mode=rwc` (volume monté). Modèle : `.env.example`.
