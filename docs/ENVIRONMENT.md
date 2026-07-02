@@ -82,8 +82,8 @@ Cf. QUIRKS pour le détail du piège chemin absolu/`/usr/src`.
 ## Toolchain CHANGELOG (git-cliff)
 - **`git-cliff`** : installé via Cargo (`cargo install git-cliff`). Utilisé pour générer `CHANGELOG.md` depuis l'historique git.
 - **Configuration** : `cliff.toml` à la racine du repo (2 passes preprocessor gitmoji : retire les émojis en tête et en milieu de sujet, parsers réordonnés : Sécurité avant `^feat`).
-- **Régénérer** : `git cliff --output CHANGELOG.md` (depuis la racine). Ajouter `--tag vX.Y.Z` pour un nouveau tag.
-- **Note** : git-cliff n'est pas en CI (génération manuelle avant chaque release). Entrée BACKLOG si on veut l'automatiser.
+- **Régénérer `CHANGELOG.md`** : `git cliff --output CHANGELOG.md` (depuis la racine). Ajouter `--tag vX.Y.Z` pour un nouveau tag. **Toujours manuel avant le tag** — `CHANGELOG.md` reste la source commitée.
+- **CI (depuis #11)** : le job `release` de `ci.yml` (sur push de tag `v*`, après `docker`) lance `git cliff --current --strip all` et **publie/met à jour la GitHub Release** avec ces notes. Il ne touche PAS au `CHANGELOG.md` commité (pas de commit-back depuis un build de tag détaché). Résumé : `CHANGELOG.md` = manuel/source ; GitHub Release = automatique.
 
 ## Captures Playwright (screenshots)
 - **Condition** : les tests de capture (`e2e/screenshots.capture.ts`) sont skippés par défaut.
