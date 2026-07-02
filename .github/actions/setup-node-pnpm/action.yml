@@ -1,0 +1,33 @@
+name: Setup Node + pnpm
+description: >-
+  Installe pnpm (version épinglée) + Node (cache pnpm), puis
+  `pnpm install --frozen-lockfile --ignore-scripts` dans `working-directory`.
+inputs:
+  node-version-file:
+    description: Fichier .nvmrc à lire pour la version Node.
+    required: false
+    default: frontend/.nvmrc
+  cache-dependency-path:
+    description: Lockfile pnpm servant de clé de cache.
+    required: false
+    default: frontend/pnpm-lock.yaml
+  working-directory:
+    description: Répertoire où lancer `pnpm install`.
+    required: false
+    default: "."
+runs:
+  using: composite
+  steps:
+    # L'action tourne à la racine → ne lit pas le `packageManager` du package.json
+    # du sous-projet. On épingle explicitement la version pnpm (source unique).
+    - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271  # v6.0.9
+      with:
+        version: 9.15.9
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+      with:
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: pnpm
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+    - run: pnpm install --frozen-lockfile --ignore-scripts
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}

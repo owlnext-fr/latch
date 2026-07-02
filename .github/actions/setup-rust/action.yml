@@ -1,0 +1,18 @@
+name: Setup Rust
+description: >-
+  Toolchain Rust stable (pin dtolnay par SHA) + cache cargo (Swatinem).
+  `toolchain: stable` est explicite : ne pas dépendre de `github.action_ref`,
+  ambigu et cassant dans un composite.
+inputs:
+  components:
+    description: Composants rustup, séparés par des virgules (ex. "rustfmt, clippy").
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+      with:
+        toolchain: stable
+        components: ${{ inputs.components }}
+    - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
