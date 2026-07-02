@@ -296,6 +296,44 @@ async fn unlock_rate_limited_after_burst() {
 
 #[tokio::test]
 #[serial]
+async fn unlock_rate_limited_by_slug_global_across_ips() {
+    // Isole le plafond SLUG-global (§9.5), que le test IP ci-dessus ne couvre pas :
+    // on fait varier l'IP à CHAQUE requête (1 seule requête par IP) pour que le
+    // plafond per-IP (burst 5) ne soit jamais atteint, et on dépasse le burst slug
+    // (réglé bas via env) → le 429 est imputable au SEUL limiter slug-global.
+    std::env::set_var("LATCH_UNLOCK_RL_SLUG_BURST", "3");
+    let _dist = fake_dist();
+    request::<App, _, _>(|request, ctx| async move {
+        let p = make_project(&ctx.db, "prot-ffffffff", true, Some("123456"), None).await;
+        let _storage = deploy_active(&ctx.db, &p, "<h1>x</h1>").await;
+        let mut got_429 = false;
+        for i in 0..8u8 {
+            // IP unique à chaque tour → le plafond per-IP ne peut pas être la cause.
+            let ip = format!("10.0.0.{}", i + 1);
+            let res = request
+                .post("/c/prot-ffffffff/unlock")
+                .add_header(
+                    axum::http::HeaderName::from_static("x-forwarded-for"),
+                    axum::http::HeaderValue::from_str(&ip).unwrap(),
+                )
+                .json(&serde_json::json!({ "pin": "000000" }))
+                .await;
+            if res.status_code() == 429 {
+                got_429 = true;
+                break;
+            }
+        }
+        assert!(
+            got_429,
+            "le plafond slug-global doit déclencher un 429 même à IP variable (§9.5)"
+        );
+    })
+    .await;
+    std::env::remove_var("LATCH_UNLOCK_RL_SLUG_BURST");
+}
+
+#[tokio::test]
+#[serial]
 async fn missing_error_html_falls_back_to_inline_text() {
     // dist sans error.html → fallback inline (pas de JSON brut), toujours no-store.
     let dir = tempfile::tempdir().expect("tempdir");

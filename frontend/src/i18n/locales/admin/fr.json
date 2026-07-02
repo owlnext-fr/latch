@@ -75,6 +75,8 @@
   "form.comments_help": "Permettre aux relecteurs de laisser des commentaires ancrés sur le prototype.",
   "form.comments_warn_code_off": "Sans code d'accès, les commentaires sont publics en écriture (protégés par anti-spam).",
   "form.err_name": "Le nom est requis.",
+  "form.err_name_long": "Le nom ne doit pas dépasser 128 caractères.",
+  "form.err_brand_long": "Le nom de marque ne doit pas dépasser 128 caractères.",
   "form.err_pin": "Le PIN doit faire 6 chiffres.",
   "deploy.title": "Déployer une version",
   "deploy.file": "Fichier HTML",

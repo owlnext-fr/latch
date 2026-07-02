@@ -160,12 +160,13 @@ async fn update(
     let mut active: projects::ActiveModel = model.into();
 
     if let Some(name) = body.name {
-        if name.trim().is_empty() {
-            return Err(loco_rs::Error::BadRequest("name is required".to_string()));
-        }
+        crate::services::projects::validate_project_name(&name).map_err(into_response)?;
         active.name = Set(name);
     }
     if let Some(brand) = body.brand_name {
+        if let Some(b) = &brand {
+            crate::services::projects::validate_brand_name(b).map_err(into_response)?;
+        }
         active.brand_name = Set(brand);
     }
     if let Some(ce) = body.comments_enabled {
