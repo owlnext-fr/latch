@@ -8,7 +8,18 @@ yanked = "deny"
 # error tirées par Loco/sea-orm) qu'on ne contrôle pas. Une vraie *vulnérabilité*, elle,
 # casse toujours (advisories de sécurité non filtrées).
 unmaintained = "workspace"
-# ignore = ["RUSTSEC-XXXX-XXXX"]  # à documenter au cas par cas si justifié
+# Ignores d'advisories — au cas par cas, TOUJOURS justifiés + datés, à réévaluer
+# quand la chaîne de deps bouge (suivi : issue #11 dette supply-chain).
+ignore = [
+  # quick-xml 0.38.4 — DoS au parsing XML (temps quadratique / alloc namespace non bornée).
+  # Fix en >= 0.41.0, hors de portée : transitif via opendal 0.54.1 ← loco-rs 0.16.4,
+  # contraint en ^0.38 (pas bumpable sans monter loco/opendal). NON-ATTEIGNABLE ici :
+  # latch n'utilise PAS opendal (stockage = trait Storage/FsStorage maison, fichiers
+  # locaux) ; quick-xml n'est nourri par aucune entrée non-fiable. À lever dès que
+  # loco-rs tire quick-xml >= 0.41. (2026-07-02)
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+]
 
 [licenses]
 # Repo dual-license MIT / Apache-2.0 ; on n'accepte que des licences permissives.
