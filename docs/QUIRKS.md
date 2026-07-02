@@ -3,6 +3,33 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## `validator 0.20` auto-unwrappe `Option`/`Option<Option>` avant d'appeler une fn `custom` (2026-07-02)
+
+Découvert en câblant `#[validate(custom(...))]` sur les champs optionnels (#23,
+`brand_name: Option<String>`, `UpdateProjectReq.brand_name: Option<Option<String>>`,
+`release_notes: Option<String>`). `validator` **déballe** automatiquement les couches
+`Option` du champ **avant** d'invoquer la fonction `custom` : elle reçoit directement le
+`&str` interne (jamais appelée du tout si la valeur est `None`, à n'importe quel niveau
+d'imbrication). Conséquence : on ne peut **pas** pointer `custom` directement sur une fn
+prenant `&Option<String>` (type mismatch — le déballage laisse `&str`, pas `&Option<String>`)
+— pointer une fn de signature `services::validation::validate_optional_brand(&Option<String>)`
+échoue à la compilation ou au runtime selon la forme. **Contournement** : un petit adaptateur
+local par champ, qui **rewrap** le `&str` reçu en `Some(...)` (ou `Some(Some(...))`) puis
+délègue à la fn `validate_optional_*`/`validate_opt_opt_*` de `services/validation.rs` (source
+de vérité des bornes) :
+
+```rust
+// dto/mod.rs
+fn validate_brand_name_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_optional_brand(&Some(v.to_owned()))
+}
+#[validate(custom(function = "validate_brand_name_field"))]
+pub brand_name: Option<String>,
+```
+
+Voir `backend/src/dto/mod.rs` (`validate_brand_name_field`, `validate_opt_opt_brand_field`)
+et `backend/src/mcp/mod.rs` (`validate_release_notes_field`) pour les adaptateurs réels.
+
 ## SQLite n'enforce PAS `VARCHAR(n)` — la borne de longueur vit dans l'app (2026-07-02)
 Découvert en câblant la validation de longueur `name`/`brand_name` (#13). Par **affinité
 de type**, SQLite stocke la longueur déclarée d'une colonne `.string_len(128)` mais ne

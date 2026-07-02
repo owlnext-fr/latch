@@ -105,7 +105,11 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
               </div>
               {editingId === m.id ? (
                 <div className="flex flex-col gap-1">
-                  <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} />
+                  <Textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    maxLength={2000} /* indicatif ; borne réelle côté back */
+                  />
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>
                       {t('comment.thread.cancel')}
@@ -128,6 +132,7 @@ export function ThreadPopup(props: Readonly<ThreadPopupProps>) {
             value={reply}
             placeholder={t('comment.thread.reply_placeholder')}
             onChange={(e) => setReply(e.target.value)}
+            maxLength={2000} /* indicatif ; borne réelle côté back */
           />
           <div className="flex justify-end">
             <Button

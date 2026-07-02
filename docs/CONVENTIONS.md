@@ -872,6 +872,50 @@ pub struct ApiDoc;
 - Régénérer `openapi.json` : `UPDATE_OPENAPI=1 cargo test --test openapi_drift` (écrit à la racine du workspace).
 - Garder les doc-comments des handlers **concis et orientés API** : utoipa les déverse en `description` dans le JSON → fuite dans le client TS généré (Plan 2).
 
+## Validation d'un nouvel input de frontière (`validator`) — #23
+
+Contrat §1/§9.8 : la validation de *forme* vit à la frontière, jamais au cœur. Pattern
+pour tout nouveau champ/DTO/argument MCP entrant :
+
+1. Poser la borne/règle dans `backend/src/services/validation.rs` (const `MAX_*_LEN` +
+   fn `validate_*` retournant `Result<(), validator::ValidationError>`), pas inline dans
+   le DTO.
+2. `#[derive(Validate)]` sur le DTO (`dto/mod.rs`) ou la struct d'arguments MCP
+   (`mcp/mod.rs`), `#[validate(custom(function = "..."))]` (ou `length(...)` pour un cas
+   trivial) sur le champ.
+3. Brancher l'appel : côté web, le handler prend `ValidatedJson<T>` (`web/extract.rs`) au
+   lieu de `Json<T>` — validation + 400 automatiques. Côté MCP, appeler `args.validate()`
+   **juste après** `check_token` (jamais avant — le token est le premier geste).
+
+```rust
+// services/validation.rs
+pub const MAX_FOO_LEN: usize = 256;
+pub fn validate_foo(v: &str) -> Result<(), validator::ValidationError> {
+    if v.chars().count() > MAX_FOO_LEN { return Err(ValidationError::new("foo_too_long")); }
+    Ok(())
+}
+
+// dto/mod.rs
+#[derive(Validate, Deserialize)]
+pub struct FooReq {
+    #[validate(custom(function = "crate::services::validation::validate_foo"))]
+    pub foo: String,
+}
+
+// controllers/*.rs
+async fn create_foo(ValidatedJson(body): ValidatedJson<FooReq>, ...) -> Result<Response> { ... }
+```
+
+**Règles :**
+- Un DTO/struct de frontière **sans** `impl Validate` ne compile pas contre `ValidatedJson<T>`
+  (borne de compilateur `T: Validate`) — la garantie est structurelle côté web. Côté MCP,
+  rien n'empêche d'oublier `args.validate()` : c'est un appel explicite, vérifié par
+  `backend/tests/validation_invariant.rs` (comportemental, pas structurel).
+- Pour un champ `Option<String>`/`Option<Option<String>>`, `validator` ne peut pas pointer
+  `custom` directement sur une fn `services::validation::validate_optional_*` (elle prend
+  `&Option<String>`) — passer par un petit adaptateur local `fn foo_field(v: &str) -> ...`
+  qui rewrap en `Some(...)` puis délègue. Voir `dto/mod.rs`/`mcp/mod.rs`, et QUIRKS.
+
 ## Accessibilité : `<a onclick>` sans href → `<button class="linkish">`
 
 Une cellule/élément cliquable qui navigue via le router (pas une vraie URL) doit être un

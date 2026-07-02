@@ -15,9 +15,6 @@ use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::storage::Storage;
 
-/// Longueur maximale des notes de version (caractères). Au-delà → Validation.
-pub const MAX_RELEASE_NOTES_LEN: usize = 10_000;
-
 pub struct DeployService {
     db: DatabaseConnection,
     storage: Arc<dyn Storage>,
@@ -37,14 +34,8 @@ impl DeployService {
         activate: bool,
         release_notes: Option<&str>,
     ) -> Result<versions::Model, CoreError> {
-        // 0. Validation des notes (barrière de fond : le rendu reste restreint côté client).
-        if let Some(notes) = release_notes {
-            if notes.chars().count() > MAX_RELEASE_NOTES_LEN {
-                return Err(CoreError::Validation(format!(
-                    "release_notes trop longues (max {MAX_RELEASE_NOTES_LEN} caractères)"
-                )));
-            }
-        }
+        // `html`/`release_notes` : forme déjà validée à la frontière (contrat §1,
+        // `ValidatedJson<DeployReq>` côté admin, `args.validate()` côté MCP).
 
         // 1. n = max(n)+1 pour ce projet (hors transaction ; UNIQUE(project_id,n)
         //    est le backstop si deux deploys concurrents calculaient le même n).
@@ -184,17 +175,5 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(v.release_notes.as_deref(), Some("# Salut\n\n- a\n- b"));
-    }
-
-    #[tokio::test]
-    async fn deploy_rejects_too_long_release_notes() {
-        let db = test_db().await;
-        let dir = tempfile::tempdir().unwrap();
-        let p = make_project(&db).await;
-        let svc = DeployService::new(db.clone(), storage(&dir));
-
-        let long = "x".repeat(super::MAX_RELEASE_NOTES_LEN + 1);
-        let err = svc.deploy(p.id, "x", true, Some(&long)).await.unwrap_err();
-        assert!(matches!(err, CoreError::Validation(_)));
     }
 }

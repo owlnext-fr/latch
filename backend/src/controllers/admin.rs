@@ -19,6 +19,7 @@ use crate::dto::{
 use crate::models::_entities::{projects, versions};
 use crate::services::deploy::DeployService;
 use crate::services::projects::{CreateProject, ProjectsService};
+use crate::web::extract::ValidatedJson;
 
 /// Charge les versions d'un projet + compte de commentaires et renvoie le détail JSON complet.
 /// Partagé par `detail` et `update` (toute handler retournant `ProjectDetail` avec versions).
@@ -112,7 +113,7 @@ async fn detail(
 async fn create(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
-    Json(body): Json<CreateProjectReq>,
+    ValidatedJson(body): ValidatedJson<CreateProjectReq>,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let comments_enabled = body.comments_enabled.unwrap_or(body.code_enabled);
@@ -153,20 +154,18 @@ async fn update(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
-    Json(body): Json<UpdateProjectReq>,
+    ValidatedJson(body): ValidatedJson<UpdateProjectReq>,
 ) -> Result<Response> {
     let model = find_project(&ctx, id).await?;
 
     let mut active: projects::ActiveModel = model.into();
 
+    // Forme (non-vide, bornes de longueur) déjà validée à la frontière
+    // (`ValidatedJson<UpdateProjectReq>`, contrat §1).
     if let Some(name) = body.name {
-        crate::services::projects::validate_project_name(&name).map_err(into_response)?;
         active.name = Set(name);
     }
     if let Some(brand) = body.brand_name {
-        if let Some(b) = &brand {
-            crate::services::projects::validate_brand_name(b).map_err(into_response)?;
-        }
         active.brand_name = Set(brand);
     }
     if let Some(ce) = body.comments_enabled {
@@ -238,7 +237,7 @@ async fn set_code(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
-    Json(body): Json<SetCodeReq>,
+    ValidatedJson(body): ValidatedJson<SetCodeReq>,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     let project = svc.set_code(id, &body.pin).await.map_err(into_response)?;
@@ -287,7 +286,7 @@ async fn deploy(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path(id): Path<i32>,
-    Json(body): Json<DeployReq>,
+    ValidatedJson(body): ValidatedJson<DeployReq>,
 ) -> Result<Response> {
     let storage = crate::web::storage_from_ctx(&ctx);
     let svc = DeployService::new(ctx.db.clone(), storage);
@@ -504,7 +503,7 @@ async fn admin_create_pin(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path((id, n)): Path<(i32, i32)>,
-    Json(body): Json<crate::dto::AdminCreatePinReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::AdminCreatePinReq>,
 ) -> Result<Response> {
     use crate::services::comments::{ADMIN_AUTHOR, ADMIN_OWNER_TOKEN};
     let version = find_version(&ctx, id, n).await?;
@@ -538,7 +537,7 @@ async fn admin_reply(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path((id, pin)): Path<(i32, i32)>,
-    Json(body): Json<crate::dto::AdminReplyReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::AdminReplyReq>,
 ) -> Result<Response> {
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let msg = svc
@@ -564,7 +563,7 @@ async fn admin_edit_comment(
     _auth: AdminAuth,
     State(ctx): State<AppContext>,
     Path((id, cid)): Path<(i32, i32)>,
-    Json(body): Json<crate::dto::EditMessageReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::EditMessageReq>,
 ) -> Result<Response> {
     let svc = crate::services::comments::CommentsService::new(ctx.db.clone());
     let msg = svc

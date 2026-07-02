@@ -15,6 +15,24 @@
 - [x] Test isolant le plafond rate-limit slug-global (§9.5, IP variable) — #13 — 2026-07-02
 - [x] Rename `LATCH_UNLOCK_RL_IP_PER_SECOND` → `…_REPLENISH_PER_SEC` (token bucket = refill) — #13 — 2026-07-02
 
+## Validation consolidée #23 (feat/23-validation-audit, 2026-07-02)
+
+- [x] Module central `backend/src/services/validation.rs` : bornes (`MAX_NAME_LEN=128`,
+  `MAX_BODY_LEN=2000`, `MAX_AUTHOR_NAME_LEN=80`, `MAX_RELEASE_NOTES_LEN=10000`) + limites
+  octets env-configurables (`LATCH_MAX_HTML_BYTES` 5 Mo, `LATCH_MAX_ANCHOR_BYTES` 8 Ko) +
+  fns `custom` `validator` — #23 — 2026-07-02
+- [x] `#[derive(Validate)]` sur tous les DTOs de frontière (`dto/mod.rs`) et les structs
+  d'arguments MCP (`mcp/mod.rs`) — #23 — 2026-07-02
+- [x] Extracteur `ValidatedJson<T>` (`web/extract.rs`) : désérialise puis `.validate()`,
+  400 sur échec, branché sur tous les handlers web mutants — #23 — 2026-07-02
+- [x] `args.validate()` invoqué dans chaque tool MCP juste après `check_token` — #23 — 2026-07-02
+- [x] Validation de forme migrée du cœur vers la frontière ; le cœur garde les invariants
+  métier + transformations (`sanitize_author_name`, trim du corps avant stockage) — #23 — 2026-07-02
+- [x] Invariant build-breaking `backend/tests/validation_invariant.rs` (table-driven,
+  chaque DTO de frontière rejette une entrée hors-borne) — #23 — 2026-07-02
+- [x] Front : `maxLength` indicatif (UX) sur les champs texte, non synchronisé avec le back
+  (source de vérité inchangée) — #23 — 2026-07-02
+
 ## Backend (cœur + adaptateurs)
 - [x] Scaffold app Loco (`backend/`, crate `latch`, bin `latch-cli`) — SQLite `bundled`,
   sans users/JWT, sans worker (`--bg none`) — Phase 0 — 2026-06-24

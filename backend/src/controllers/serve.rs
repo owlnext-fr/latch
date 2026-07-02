@@ -23,6 +23,7 @@ use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::projects::ProjectsService;
 use crate::services::unlock_cookie::{issue_token, verify_token};
+use crate::web::extract::ValidatedJson;
 
 /// Nom du cookie de déverrouillage (scopé par `Path=/c/{slug}` → nom constant OK).
 pub(crate) const UNLOCK_COOKIE_NAME: &str = "latch_unlock";
@@ -305,7 +306,7 @@ pub(crate) async fn unlock(
     State(ctx): State<AppContext>,
     Path(slug): Path<String>,
     headers: HeaderMap,
-    Json(body): Json<UnlockReq>,
+    ValidatedJson(body): ValidatedJson<UnlockReq>,
 ) -> Result<Response> {
     let svc = ProjectsService::new(ctx.db.clone());
     // Slug inconnu → 404 ; PIN faux → 401.
@@ -469,7 +470,7 @@ pub(crate) async fn create_comment(
     State(ctx): State<AppContext>,
     Path(slug): Path<String>,
     headers: HeaderMap,
-    Json(body): Json<crate::dto::CreatePinReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::CreatePinReq>,
 ) -> Result<Response> {
     let project = match comments_gate(&ctx, &headers, &slug).await {
         Ok(p) => p,
@@ -538,7 +539,7 @@ pub(crate) async fn reply_comment(
     State(ctx): State<AppContext>,
     Path((slug, pin)): Path<(String, i32)>,
     headers: HeaderMap,
-    Json(body): Json<crate::dto::ReplyReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::ReplyReq>,
 ) -> Result<Response> {
     let token = match comment_write_owner(&ctx, &headers, &slug).await {
         Ok(t) => t,
@@ -575,7 +576,7 @@ pub(crate) async fn edit_comment(
     State(ctx): State<AppContext>,
     Path((slug, id)): Path<(String, i32)>,
     headers: HeaderMap,
-    Json(body): Json<crate::dto::EditMessageReq>,
+    ValidatedJson(body): ValidatedJson<crate::dto::EditMessageReq>,
 ) -> Result<Response> {
     let token = match comment_write_owner(&ctx, &headers, &slug).await {
         Ok(t) => t,
