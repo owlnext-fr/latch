@@ -41,9 +41,12 @@ Ouvrir la PR de #23 après QA locale. Puis board : #21 (revue UX distribution), 
   qui rewrap puis délègue à `services::validation::validate_optional_*`/`validate_opt_opt_*`
   (voir `dto/mod.rs` lignes ~94-113, `mcp/mod.rs` lignes ~61-68). Détail dans QUIRKS.
 - Si un futur endpoint/tool ajoute un input de frontière : `#[derive(Validate)]` + bornes/règles
-  dans `services/validation.rs` + brancher `ValidatedJson` (web) ou `args.validate()` (MCP) —
-  sinon ça ne compile pas (invariant §9.8), donc l'oubli est impossible côté web/MCP, mais la
-  **borne elle-même** (valeur du max) reste une décision humaine à documenter.
+  dans `services/validation.rs` + brancher `ValidatedJson` (web) ou `args.validate()` (MCP)
+  (invariant §9.8). **Côté web** un DTO sans `impl Validate` ne compile pas contre
+  `ValidatedJson<T: Validate>` — l'oubli est structurellement impossible. **Côté MCP**,
+  `args.validate()` reste un appel explicite : rien n'empêche techniquement de l'oublier,
+  c'est couvert par test (`backend/src/mcp/mod.rs`), pas par le compilateur. Dans les deux
+  cas, la **borne elle-même** (valeur du max) reste une décision humaine à documenter.
 
 ## 2026-07-02 — Issue #13 : nettoyages techniques (parapluie, 4 lots)
 

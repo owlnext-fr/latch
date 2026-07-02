@@ -457,8 +457,14 @@ inverse donnerait un pointeur actif vers un fichier absent — le pire état cô
    écritures admin sont derrière `AdminAuth` et pose la sentinelle côté serveur (§6.4/§7).
 8. **Toute entrée franchissant une frontière (web, MCP) est validée via `Validate`**
    (source de vérité back, `backend/src/services/validation.rs`) : extracteur
-   `ValidatedJson` côté web, `args.validate()` côté MCP. Un DTO de frontière sans
-   `impl Validate` ne compile pas. Couvert par `backend/tests/validation_invariant.rs`.
+   `ValidatedJson` côté web, `args.validate()` côté MCP. **Côté web**, un DTO de
+   frontière sans `impl Validate` ne compile pas (borne de compilateur
+   `T: Validate` sur `ValidatedJson<T>`) — garantie **structurelle**. **Côté MCP**,
+   `args.validate()` est un appel explicite dans chaque tool : rien dans le type
+   système ne force son branchement — garantie **comportementale**, pas
+   structurelle, vérifiée par les tests. Couvert par `backend/tests/validation_invariant.rs`
+   (DTOs web, table-driven) et par les tests inline de `backend/src/mcp/mod.rs`
+   (ex. `deploy_args_reject_empty_html`) côté MCP.
 
 ### Note (hors-invariants) — `GET /api/settings` et le `deploy_token`
 
