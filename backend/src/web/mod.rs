@@ -101,9 +101,6 @@ fn resolve_required(
 /// couche d'écriture éphémère → perte de données au redéploiement (incident
 /// 2026-06-29, cf. `docs/QUIRKS.md`). Une valeur absente ou vide retombe sur le
 /// défaut (relatif) → échoue donc aussi en prod, ce qui est voulu.
-// TODO(#9 Task 2) : câblé par `validate_paths`/`validate_path_config` dans la tâche
-// suivante de ce plan — retirer cet `allow` une fois consommé en production.
-#[allow(dead_code)]
 fn resolve_abs_path(
     env_value: Option<String>,
     is_prod: bool,
@@ -122,6 +119,34 @@ fn resolve_abs_path(
         )));
     }
     Ok(path)
+}
+
+/// Applique le garde-fou de chemin aux deux variables filesystem concernées.
+/// Cœur pur (paramétré) pour être testable sans `AppContext` ni env.
+fn validate_paths(
+    storage_root: Option<String>,
+    spa_dist: Option<String>,
+    is_prod: bool,
+) -> Result<()> {
+    resolve_abs_path(
+        storage_root,
+        is_prod,
+        STORAGE_ROOT_DEFAULT,
+        "LATCH_STORAGE_ROOT",
+    )?;
+    resolve_abs_path(spa_dist, is_prod, SPA_DIST_DEFAULT, "LATCH_SPA_DIST")?;
+    Ok(())
+}
+
+/// Fail-fast de boot : refuse de démarrer si `LATCH_STORAGE_ROOT` ou `LATCH_SPA_DIST`
+/// est relatif (ou absent) en production. À appeler en tête de `after_routes`, comme
+/// `unlock_secret`/`deploy_token`. Empêche la reproduction de l'incident 2026-06-29.
+pub fn validate_path_config(ctx: &AppContext) -> Result<()> {
+    validate_paths(
+        std::env::var("LATCH_STORAGE_ROOT").ok(),
+        std::env::var("LATCH_SPA_DIST").ok(),
+        cookie_secure(ctx),
+    )
 }
 
 /// Secret partagé validé par TOUS les tools MCP (contrat §5, §9.3). Fail-secure :
@@ -266,7 +291,7 @@ pub async fn build_session_store(
 mod tests {
     use super::{
         host_authority, resolve_abs_path, resolve_cookie_secret, resolve_required,
-        session_cookie_names, SPA_DIST_DEFAULT, STORAGE_ROOT_DEFAULT,
+        session_cookie_names, validate_paths, SPA_DIST_DEFAULT, STORAGE_ROOT_DEFAULT,
     };
 
     // Garde anti-régression du contournement du bug axum_session 0.16.0 (cf. QUIRKS) :
@@ -490,6 +515,59 @@ mod tests {
         assert_eq!(
             result.unwrap(),
             std::path::PathBuf::from(STORAGE_ROOT_DEFAULT)
+        );
+    }
+
+    // --- validate_paths : applique le garde-fou aux 2 chemins (#9) ---
+
+    #[test]
+    fn validate_paths_prod_all_absolute_ok() {
+        let result = validate_paths(
+            Some("/data".to_string()),
+            Some("/app/frontend/dist".to_string()),
+            true,
+        );
+        assert!(result.is_ok(), "prod + 2 chemins absolus doit réussir");
+    }
+
+    #[test]
+    fn validate_paths_prod_relative_storage_errs() {
+        let result = validate_paths(
+            Some("data".to_string()),
+            Some("/app/frontend/dist".to_string()),
+            true,
+        );
+        assert!(result.is_err(), "storage relatif en prod doit échouer");
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("LATCH_STORAGE_ROOT"));
+    }
+
+    #[test]
+    fn validate_paths_prod_relative_spa_errs() {
+        let result = validate_paths(
+            Some("/data".to_string()),
+            Some("../frontend/dist".to_string()),
+            true,
+        );
+        assert!(result.is_err(), "spa_dist relatif en prod doit échouer");
+        assert!(result.unwrap_err().to_string().contains("LATCH_SPA_DIST"));
+    }
+
+    #[test]
+    fn validate_paths_prod_unset_errs() {
+        // Les deux unset → défauts relatifs → échec (fail-secure).
+        let result = validate_paths(None, None, true);
+        assert!(result.is_err(), "prod + unset doit échouer");
+    }
+
+    #[test]
+    fn validate_paths_dev_relative_ok() {
+        let result = validate_paths(Some("data".to_string()), None, false);
+        assert!(
+            result.is_ok(),
+            "dev + relatif doit réussir (comportement inchangé)"
         );
     }
 }
