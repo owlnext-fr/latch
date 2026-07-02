@@ -15,6 +15,7 @@ use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::{tool, tool_handler, tool_router, ServerHandler};
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::services::deploy::DeployService;
 use crate::services::errors::CoreError;
@@ -37,28 +38,41 @@ pub struct LatchMcp {
 }
 
 /// Arguments du tool `deploy_prototype`.
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, schemars::JsonSchema, Validate)]
 struct DeployArgs {
     /// Slug public du projet (doit déjà exister, créé via /admin).
+    #[validate(length(min = 1))]
     slug: String,
     /// HTML mono-fichier complet du prototype.
+    #[validate(custom(function = "crate::services::validation::validate_html"))]
     html: String,
     /// Secret de déploiement (validé contre DEPLOY_TOKEN).
-    deploy_token: String,
+    deploy_token: String, // exempté (secret) — jamais passé à `validate()`
     /// Activer immédiatement la version déployée (défaut : true).
     #[serde(default)]
     activate: Option<bool>,
     /// Notes de version en markdown léger (titres, gras, italique, listes, citation).
     /// Liens, images et code sont ignorés au rendu. Optionnel.
     #[serde(default)]
+    #[validate(custom(function = "validate_release_notes_field"))]
     release_notes: Option<String>,
 }
 
+// `validator` 0.20 auto-unwrappe les champs `Option<T>` : un validateur `custom` sur un
+// champ `Option<String>` ne reçoit QUE la valeur intérieure (jamais appelé sur `None`,
+// qui passe automatiquement). `services::validation::validate_optional_release_notes`
+// prend volontairement l'`Option` complet (source de vérité indépendante du framework
+// de validation, cf. `dto::mod`). Cet adaptateur re-enveloppe la valeur dans `Some(...)`
+// pour brancher les deux conventions sans dupliquer la logique de longueur.
+fn validate_release_notes_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_optional_release_notes(&Some(v.to_owned()))
+}
+
 /// Arguments du tool `list_projects`.
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, schemars::JsonSchema, Validate)]
 struct ListArgs {
     /// Secret de déploiement (validé contre DEPLOY_TOKEN).
-    deploy_token: String,
+    deploy_token: String, // exempté (secret) — seul champ, `validate()` est un no-op
 }
 
 /// Résumé d'un projet renvoyé par `list_projects` — sans PIN ni hash (§9.1/§9.2).
@@ -93,15 +107,16 @@ pub struct DeployResult {
 }
 
 /// Arguments du tool `pull_prototype`.
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, schemars::JsonSchema, Validate)]
 struct PullArgs {
     /// Slug public du projet (doit exister).
+    #[validate(length(min = 1))]
     slug: String,
     /// Numéro de version à récupérer ; omis → version active.
     #[serde(default)]
     version: Option<i32>,
     /// Secret de déploiement (validé contre DEPLOY_TOKEN).
-    deploy_token: String,
+    deploy_token: String, // exempté (secret)
 }
 
 /// Un message d'un fil de commentaires (sans `owner_token` — §9.7).
@@ -180,6 +195,7 @@ impl LatchMcp {
         Parameters(args): Parameters<DeployArgs>,
     ) -> Result<Json<DeployResult>, ErrorData> {
         self.check_token(&args.deploy_token)?;
+        args.validate().map_err(map_validation_err)?;
 
         let projects = ProjectsService::new(self.db.clone());
         let project = projects
@@ -215,6 +231,7 @@ impl LatchMcp {
         Parameters(args): Parameters<ListArgs>,
     ) -> Result<Json<ProjectListResult>, ErrorData> {
         self.check_token(&args.deploy_token)?;
+        args.validate().map_err(map_validation_err)?;
 
         let projects = ProjectsService::new(self.db.clone());
         let rows = projects.list_with_versions().await.map_err(map_core_err)?;
@@ -244,6 +261,7 @@ impl LatchMcp {
         Parameters(args): Parameters<PullArgs>,
     ) -> Result<Json<PullResult>, ErrorData> {
         self.check_token(&args.deploy_token)?;
+        args.validate().map_err(map_validation_err)?;
 
         let projects = ProjectsService::new(self.db.clone());
         let project = projects
@@ -329,6 +347,12 @@ fn map_core_err(e: CoreError) -> ErrorData {
         CoreError::Validation(msg) => ErrorData::invalid_params(msg, None),
         CoreError::Db(_) | CoreError::Io(_) => ErrorData::internal_error("erreur interne", None),
     }
+}
+
+/// Mappe les erreurs de forme (`validator`) vers une erreur de tool MCP (frontière §1).
+/// Appelé APRÈS `check_token` (§9.3 : le token est validé EN PREMIER).
+fn map_validation_err(e: validator::ValidationErrors) -> ErrorData {
+    ErrorData::invalid_params(format!("arguments invalides: {e}"), None)
 }
 
 /// `NotFound` sur une résolution de version → message dédié ; autres erreurs → `map_core_err`.
@@ -445,6 +469,26 @@ mod tests {
             })
             .await
             .unwrap()
+    }
+
+    #[test]
+    fn deploy_args_reject_empty_html() {
+        let a = DeployArgs {
+            slug: "s".into(),
+            html: "".into(),
+            deploy_token: "t".into(),
+            activate: None,
+            release_notes: None,
+        };
+        assert!(a.validate().is_err());
+        let ok = DeployArgs {
+            slug: "s".into(),
+            html: "<h1>x</h1>".into(),
+            deploy_token: "t".into(),
+            activate: None,
+            release_notes: None,
+        };
+        assert!(ok.validate().is_ok());
     }
 
     #[tokio::test]
