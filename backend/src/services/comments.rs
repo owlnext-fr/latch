@@ -13,10 +13,6 @@ use crate::models::_entities::{comment_pins, comments};
 use crate::services::errors::CoreError;
 use crate::services::security::secure_compare;
 
-/// Longueur max du corps d'un message (caractères).
-pub const MAX_BODY_LEN: usize = 2000;
-/// Longueur max du nom auto-déclaré (caractères).
-pub const MAX_AUTHOR_NAME_LEN: usize = 80;
 /// Plafond anti-flood : pins par (version, owner_token).
 pub const MAX_PINS_PER_VERSION_PER_OWNER: usize = 200;
 /// Identité de propriété de l'unique compte admin (jamais sérialisée : voir `is_admin`).
@@ -37,31 +33,18 @@ pub struct PinWithMessages {
     pub messages: Vec<comments::Model>,
 }
 
-/// Valide le corps : non vide après trim, ≤ MAX_BODY_LEN caractères.
-fn validate_body(body: &str) -> Result<String, CoreError> {
-    let trimmed = body.trim();
-    if trimmed.is_empty() {
-        return Err(CoreError::Validation("body is required".to_string()));
-    }
-    if trimmed.chars().count() > MAX_BODY_LEN {
-        return Err(CoreError::Validation(format!(
-            "body too long (max {MAX_BODY_LEN} chars)"
-        )));
-    }
-    Ok(trimmed.to_string())
-}
-
-/// Nettoie le nom : retire les caractères de contrôle, trim, non vide, ≤ MAX_AUTHOR_NAME_LEN.
+/// Nettoie le nom : retire les caractères de contrôle, trim. La forme (présence,
+/// longueur) du `author_name` BRUT est déjà validée à la frontière (contrat §1) ;
+/// ce qui reste ici est une TRANSFORMATION (pas de la validation de forme) : le
+/// strip des caractères de contrôle peut faire passer un nom valide-en-entrée à
+/// vide — invariant métier propre au cœur, à vérifier après coup.
 fn sanitize_author_name(name: &str) -> Result<String, CoreError> {
     let cleaned: String = name.chars().filter(|c| !c.is_control()).collect();
     let trimmed = cleaned.trim();
     if trimmed.is_empty() {
-        return Err(CoreError::Validation("author_name is required".to_string()));
-    }
-    if trimmed.chars().count() > MAX_AUTHOR_NAME_LEN {
-        return Err(CoreError::Validation(format!(
-            "author_name too long (max {MAX_AUTHOR_NAME_LEN} chars)"
-        )));
+        return Err(CoreError::Validation(
+            "author_name is required after stripping control characters".to_string(),
+        ));
     }
     Ok(trimmed.to_string())
 }
@@ -84,7 +67,6 @@ impl CommentsService {
         body: &str,
         anchor: &str,
     ) -> Result<PinWithMessages, CoreError> {
-        let body = validate_body(body)?;
         let author = sanitize_author_name(author_name)?;
         if anchor.trim().is_empty() {
             return Err(CoreError::Validation("anchor is required".to_string()));
@@ -114,7 +96,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(owner_token.to_string()),
             author_name: Set(author),
-            body: Set(body),
+            body: Set(body.to_string()),
             ..Default::default()
         }
         .insert(&txn)
@@ -135,7 +117,6 @@ impl CommentsService {
         author_name: &str,
         body: &str,
     ) -> Result<comments::Model, CoreError> {
-        let body = validate_body(body)?;
         let author = sanitize_author_name(author_name)?;
         let pin = self.owned_live_pin(pin_id, owner_token).await?;
 
@@ -143,7 +124,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(owner_token.to_string()),
             author_name: Set(author),
-            body: Set(body),
+            body: Set(body.to_string()),
             ..Default::default()
         }
         .insert(&self.db)
@@ -160,7 +141,6 @@ impl CommentsService {
         body: &str,
     ) -> Result<comments::Model, CoreError> {
         use crate::models::_entities::versions;
-        let body = validate_body(body)?;
         let pin = comment_pins::Entity::find_by_id(pin_id)
             .filter(comment_pins::Column::DeletedAt.is_null())
             .one(&self.db)
@@ -177,7 +157,7 @@ impl CommentsService {
             pin_id: Set(pin.id),
             owner_token: Set(ADMIN_OWNER_TOKEN.to_string()),
             author_name: Set(ADMIN_AUTHOR.to_string()),
-            body: Set(body),
+            body: Set(body.to_string()),
             ..Default::default()
         }
         .insert(&self.db)
@@ -304,10 +284,9 @@ impl CommentsService {
         owner_token: &str,
         body: &str,
     ) -> Result<comments::Model, CoreError> {
-        let body = validate_body(body)?;
         let msg = self.owned_live_message(comment_id, owner_token).await?;
         let mut active: comments::ActiveModel = msg.into();
-        active.body = Set(body);
+        active.body = Set(body.to_string());
         active.updated_at = Set(chrono::Utc::now().into());
         Ok(active.update(&self.db).await?)
     }
@@ -384,7 +363,6 @@ impl CommentsService {
         comment_id: i32,
         body: &str,
     ) -> Result<comments::Model, CoreError> {
-        let body = validate_body(body)?;
         let msg = self
             .owned_live_message(comment_id, ADMIN_OWNER_TOKEN)
             .await?;
@@ -395,7 +373,7 @@ impl CommentsService {
         self.assert_version_in_project(pin.version_id, project_id)
             .await?;
         let mut active: comments::ActiveModel = msg.into();
-        active.body = Set(body);
+        active.body = Set(body.to_string());
         active.updated_at = Set(chrono::Utc::now().into());
         Ok(active.update(&self.db).await?)
     }
@@ -623,27 +601,6 @@ mod tests {
 
         let all = svc.list_for_version(v.id).await.unwrap();
         assert_eq!(all.len(), 2);
-    }
-
-    #[tokio::test]
-    async fn create_pin_rejects_empty_and_too_long_body() {
-        let db = test_db().await;
-        let v = version(&db).await;
-        let svc = CommentsService::new(db);
-
-        assert!(matches!(
-            svc.create_pin(v.id, OWNER_A, "Léa", "   ", "{}")
-                .await
-                .unwrap_err(),
-            CoreError::Validation(_)
-        ));
-        let long = "x".repeat(MAX_BODY_LEN + 1);
-        assert!(matches!(
-            svc.create_pin(v.id, OWNER_A, "Léa", &long, "{}")
-                .await
-                .unwrap_err(),
-            CoreError::Validation(_)
-        ));
     }
 
     #[tokio::test]

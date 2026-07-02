@@ -160,14 +160,12 @@ async fn update(
 
     let mut active: projects::ActiveModel = model.into();
 
+    // Forme (non-vide, bornes de longueur) déjà validée à la frontière
+    // (`ValidatedJson<UpdateProjectReq>`, contrat §1).
     if let Some(name) = body.name {
-        crate::services::projects::validate_project_name(&name).map_err(into_response)?;
         active.name = Set(name);
     }
     if let Some(brand) = body.brand_name {
-        if let Some(b) = &brand {
-            crate::services::projects::validate_brand_name(b).map_err(into_response)?;
-        }
         active.brand_name = Set(brand);
     }
     if let Some(ce) = body.comments_enabled {
