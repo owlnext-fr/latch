@@ -66,6 +66,9 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.923 0.003 48.717);
     --input: oklch(0.923 0.003 48.717);
+    /* Bordure des slots OTP : dérivée de --input (hue/chroma identiques) mais
+       lightness abaissée 0.923 → 0.85 pour des cases mieux définies. */
+    --otp-slot-border: oklch(0.85 0.003 48.717);
     --ring: oklch(0.709 0.01 56.259);
     --chart-1: oklch(0.869 0.005 56.366);
     --chart-2: oklch(0.553 0.013 58.071);
@@ -101,6 +104,7 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
+    --otp-slot-border: oklch(1 0 0 / 20%);
     --ring: oklch(0.553 0.013 58.071);
     --chart-1: oklch(0.869 0.005 56.366);
     --chart-2: oklch(0.553 0.013 58.071);
