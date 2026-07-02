@@ -197,6 +197,7 @@
 - [x] Schéma flux Claude (composant `ClaudeFlow` themeable) + captures réutilisées (Phase 6) — Phase 8 T11 — 2026-06-26
 - [x] Finitions : liens internes vérifiés (0 cassé), `README` + `links.ts` `DOCS_URL` → URL Pages, mémoire projet — Phase 8 T12 — 2026-06-26
 - [ ] **Post-merge** : 1ᵉʳ déploiement Pages vert + vérif basePath sur l'URL live (charger une page profonde, confirmer `_next/` chargé)
+- [x] **Revalidation doc commentaires + MCP** (issue #4, `feat/4-doc-revalidation`) : `pull_prototype` reflété (index carte MCP 2→3 tools, `configuration` `DEPLOY_TOKEN` + section **Comments rate-limit** 4 vars `LATCH_COMMENT_RL_*`, `quickstart` boucle pull), **5 captures des commentaires** (compose visiteur, fil+badge admin, Review page, panel par version, toggle) via `screenshots.capture.ts` étendu, câblées dans `comments`/`versions`/`projects`. Spec+plan : `docs/superpowers/{specs,plans}/4-doc-revalidation-comments-mcp.md` — 2026-07-02
 
 ## Phase 9 — Notes de version (feat/release-notes)
 

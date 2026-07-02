@@ -60,6 +60,23 @@ See the [tools reference](/docs/publish-from-claude/tools-reference).
 Visit the returned URL. A protected project shows the styled unlock page; enter the PIN and the
 active version is served — always the latest. See [Access codes](/docs/admin/access-codes).
 </Step>
+
+<Step>
+### Gather feedback and iterate
+
+With [comments](/docs/admin/comments) enabled, reviewers pin feedback straight onto the
+prototype. To fold that feedback back into the loop, ask Claude to pull the version — it calls
+`pull_prototype` with your `deploy_token` and gets back the raw HTML **and every comment thread**
+(visitor and admin), so you can iterate without re-pasting the file or the feedback:
+
+```text
+pull_prototype(slug, version?, deploy_token)
+```
+
+Claude revises the prototype in place, then `deploy_prototype` ships the next version. This is the
+loop a `/latch-pull`-style prompt automates — see the
+[tools reference](/docs/publish-from-claude/tools-reference#pull_prototype).
+</Step>
 </Steps>
 
 <Callout type="info">

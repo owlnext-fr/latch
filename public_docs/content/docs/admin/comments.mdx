@@ -25,6 +25,8 @@ In comment mode the reviewer hovers the prototype to choose an element, then cli
 
 The generated pin **follows the element on scroll** and across scene changes (internal navigation within the prototype). If the element leaves the DOM, the pin hides temporarily and reappears when the element returns.
 
+![A reviewer composing an anchored comment on a prototype, with the floating action bar in the corner](/img/comments-visitor-compose.png)
+
 ### Identity and privacy
 
 Identity is **lazy and anonymous**: the reviewer's display name is requested on the first comment, then remembered in a signed cookie (`latch_comment`). As long as that cookie is present, the reviewer can edit or delete their own messages.
@@ -53,6 +55,8 @@ The Review page for a version is accessible from the version list. It embeds the
 The Review page is only accessible to signed-in administrators. The prototype is loaded through an admin-only, `no-store` route — the same route used by the per-row Preview action on the version list.
 </Callout>
 
+![The admin Review page: the prototype embedded in a frame with a comment pin positioned on the annotated element](/img/comments-review-page.png)
+
 ### Moderation
 
 From the Review page or the Comments panel, the administrator can **delete any individual message** (message-by-message moderation). Deletion is permanent.
@@ -66,3 +70,5 @@ From the Review page, the administrator can also take part in the conversation, 
 - **Editing or deleting their own messages** — the administrator can edit or delete messages they authored, the same way a reviewer manages their own. Deleting someone else's message is still moderation (see above), not authoring.
 
 The administrator's display name is **fixed by the server** — there is no name field to fill in when posting as an administrator. Messages posted by the administrator carry a small **"Admin" badge** next to the name, on both the prototype's comment surface and the Review page, so reviewers and the administrator alike can tell an administrator reply apart from a reviewer comment at a glance.
+
+![A comment thread where an administrator has replied to a reviewer, the reply carrying an "Admin" badge next to the name](/img/comments-thread-admin-reply.png)

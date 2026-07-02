@@ -17,7 +17,7 @@ The boot refuses to start outside development/test if any of these is missing.
 | --- | --- |
 | `ADMIN_USER` | Admin account login (single account). |
 | `ADMIN_PASS` | Admin password — compared in constant time, **not hashed**. |
-| `DEPLOY_TOKEN` | Secret validated by **every** MCP tool (`deploy_prototype`, `list_projects`). |
+| `DEPLOY_TOKEN` | Secret validated by **every** MCP tool (`deploy_prototype`, `list_projects`, `pull_prototype`). |
 | `LATCH_PUBLIC_BASE_URL` | Public root URL (e.g. `https://latch.example.com`). Source of MCP `allowed_hosts` and of the URL returned by `deploy_prototype`. Trailing slash is normalized. |
 | `SESSION_SECRET` | HMAC key for the admin session cookie. **≥ 64 bytes** (panics below). |
 | `UNLOCK_COOKIE_SECRET` | HMAC key for the client unlock cookie. **≥ 64 bytes**. |
@@ -38,6 +38,18 @@ In development the cookie secrets fall back to deterministic dev keys, so a loca
 | `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` | `3` | Global per-slug refill period, in seconds. |
 
 The rate-limit counters are in-memory and reset on reboot.
+
+## Comments rate-limit
+
+Writes on the visitor comment surface (`/c/<slug>/comments`) have their own token-bucket
+limiters, independent from the unlock ones — a per-IP bucket and a global per-slug bucket.
+
+| Variable | Default | Role |
+| --- | --- | --- |
+| `LATCH_COMMENT_RL_IP_BURST` | `10` | Per-IP burst allowance on comment writes. |
+| `LATCH_COMMENT_RL_IP_PER_SECOND` | `1` | Per-IP refill rate (requests/second). |
+| `LATCH_COMMENT_RL_SLUG_BURST` | `60` | Global per-slug burst allowance. |
+| `LATCH_COMMENT_RL_SLUG_PERIOD_SECS` | `1` | Global per-slug refill period, in seconds. |
 
 ## Storage, runtime & deployment
 
