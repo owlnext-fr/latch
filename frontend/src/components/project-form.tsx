@@ -70,10 +70,15 @@ export function ProjectForm({
 
   const schema = z
     .object({
-      name: z.string().trim().min(1, { message: t('form.err_name') }),
+      // Bornes en miroir du backend (MAX_PROJECT_NAME_LEN = 128, source de vérité).
+      name: z
+        .string()
+        .trim()
+        .min(1, { message: t('form.err_name') })
+        .max(128, { message: t('form.err_name_long') }),
       code_enabled: z.boolean(),
       pin: z.string(),
-      brand_name: z.string(),
+      brand_name: z.string().max(128, { message: t('form.err_brand_long') }),
       comments_enabled: z.boolean(),
     })
     .refine((data) => !data.code_enabled || /^\d{6}$/.test(data.pin), {

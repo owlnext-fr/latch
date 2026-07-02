@@ -12,7 +12,7 @@
 - `UNLOCK_COOKIE_SECRET` — clé HMAC de signature du cookie de déverrouillage client (≥ 64 bytes, `Key::from()` panique en dessous). **OBLIGATOIRE en prod** (le boot refuse de démarrer si absente hors Dev/Test — fail-secure). En dev, un fallback déterministe de 64 chars est utilisé. Générer : `openssl rand -hex 32`.
 - `LATCH_UNLOCK_TTL_DAYS` — durée de vie du cookie d'unlock (jours). Défaut : 30.
 - `LATCH_UNLOCK_RL_IP_BURST` — governor IP : burst (réservation burst). Défaut : 5.
-- `LATCH_UNLOCK_RL_IP_PER_SECOND` — governor IP : taux de remplissage (req/s). Défaut : 1.
+- `LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC` — governor IP : taux de remplissage (req/s). Défaut : 1.
 - `LATCH_UNLOCK_RL_SLUG_BURST` — governor slug-global : burst. Défaut : 20.
 - `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS` — governor slug-global : période de remplissage (secondes). Défaut : 3.
 - `LATCH_LOGIN_RL_BURST` — rate-limit `POST /api/login` (par IP, governor in-memory) : burst (nombre de jetons initiaux). Défaut sécurisé : **5** — load-bearing pour le test `login_is_rate_limited` (cargo nextest). Le webServer e2e Playwright pose `100000` pour désarmer le throttle sans modifier le défaut de prod.

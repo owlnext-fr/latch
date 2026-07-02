@@ -17,6 +17,7 @@ import {
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
 import { Logo } from '@/components/logo'
 import { useDocumentTitle } from '@/hooks/use-document-title'
+import { useDocumentLang } from '@/hooks/use-document-lang'
 import { reloadPage } from './reload'
 
 function slugFromPath(): string {
@@ -25,8 +26,10 @@ function slugFromPath(): string {
 }
 
 export function UnlockPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const slug = slugFromPath()
+
+  useDocumentLang(i18n.language)
   const [brand, setBrand] = useState<string | null>(null)
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)

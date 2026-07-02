@@ -2,10 +2,31 @@
 //! front : le schéma exporté (`openapi.json`) sert à générer le client TypeScript.
 //! Approche code-first manuelle (Loco enveloppe axum → pas d'auto-collection de routeur).
 
-use utoipa::OpenApi;
+use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
+use utoipa::{Modify, OpenApi};
 
 use crate::controllers::{admin, auth, serve, settings};
 use crate::dto;
+
+/// Déclare le cookie de session admin comme `SecurityScheme` apiKey/cookie dans
+/// l'OpenAPI. On se contente de DÉCLARER le scheme (pas de requirement global) :
+/// login/logout et la meta publique ne l'exigent pas, appliquer une garde globale
+/// documenterait une auth à tort sur ces routes. Nom de base `latch_admin` (le
+/// préfixe `__Host-` de prod est un détail de transport, hors contrat).
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_with(Default::default);
+        components.add_security_scheme(
+            "admin_session",
+            SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::with_description(
+                "latch_admin",
+                "Cookie de session admin (same-origin, signé HMAC).",
+            ))),
+        );
+    }
+}
 
 #[derive(OpenApi)]
 #[openapi(
@@ -14,6 +35,7 @@ use crate::dto;
         description = "API JSON de l'admin latch (session cookie same-origin).",
         version = "0.1.0"
     ),
+    modifiers(&SecurityAddon),
     paths(
         auth::login,
         auth::logout,
@@ -127,6 +149,28 @@ mod tests {
                 "schéma manquant dans l'OpenAPI : {schema}"
             );
         }
+    }
+
+    #[test]
+    fn document_declares_admin_session_security_scheme() {
+        // L'OpenAPI doit déclarer le cookie de session admin comme SecurityScheme
+        // apiKey/cookie (améliore la doc Swagger + auto-doc des 401). On ne vérifie
+        // PAS de requirement global : le scheme est seulement disponible en components.
+        let json = ApiDoc::openapi().to_pretty_json().unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let scheme = &doc["components"]["securitySchemes"]["admin_session"];
+        assert_eq!(
+            scheme["type"], "apiKey",
+            "le scheme admin_session doit être de type apiKey"
+        );
+        assert_eq!(
+            scheme["in"], "cookie",
+            "le scheme admin_session doit être porté par un cookie"
+        );
+        assert_eq!(
+            scheme["name"], "latch_admin",
+            "le scheme admin_session doit cibler le cookie latch_admin"
+        );
     }
 
     #[test]

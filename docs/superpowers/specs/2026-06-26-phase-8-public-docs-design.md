@@ -176,7 +176,7 @@ depuis `backend/`), `pnpm build` (frontend, **plus de Trunk/Yew** — React/Vite
 **`deploy/configuration.mdx`** — *Source : ENVIRONMENT, `.env.example` (17 clés).* Référence
 **exhaustive**, par groupe : **obligatoires prod (fail-secure)** [`ADMIN_USER`, `ADMIN_PASS`,
 `DEPLOY_TOKEN`, `LATCH_PUBLIC_BASE_URL`, `SESSION_SECRET`, `UNLOCK_COOKIE_SECRET`] ; **réglages**
-[`LATCH_UNLOCK_TTL_DAYS`, `LATCH_UNLOCK_RL_IP_BURST`, `LATCH_UNLOCK_RL_IP_PER_SECOND`,
+[`LATCH_UNLOCK_TTL_DAYS`, `LATCH_UNLOCK_RL_IP_BURST`, `LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC`,
 `LATCH_UNLOCK_RL_SLUG_BURST`, `LATCH_UNLOCK_RL_SLUG_PERIOD_SECS`, `LATCH_BODY_LIMIT`,
 `LATCH_STORAGE_ROOT`, `LATCH_SPA_DIST`, `DATABASE_URL`, `PORT`, `LATCH_IMAGE_TAG`]. Chaque clé :
 rôle, défaut, « obligatoire prod » oui/non, comment générer (`openssl rand -hex 32`).

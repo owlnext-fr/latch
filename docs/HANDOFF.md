@@ -4,6 +4,37 @@
 > chronologique inverse (le plus récent en haut). À mettre à jour en fin de session
 > significative — l'idée est de se resituer en 30 secondes.
 
+## 2026-07-02 — Issue #13 : nettoyages techniques (parapluie, 4 lots)
+
+### Dernière chose faite
+Traité les **8 items** du parapluie #13 sur branche `feat/13-nettoyages-tech`, en 4 lots
+commités (gates vertes à chaque lot : backend 211 tests + clippy, frontend 233 tests +
+lint + typecheck). **Lot A** (front) : code-splitting routes, hook `useDocumentLang`,
+broutilles UI unlock. **Lot B** (back) : `SecurityScheme` OpenAPI + `Storage::delete`
+idempotent (nettoyage orphelin `delete_version`). **Lot C** : validation longueur
+`name`/`brand_name` (app-level + miroir zod) + test rate-limit slug-global. **Lot D** :
+rename `LATCH_UNLOCK_RL_IP_PER_SECOND` → `…_REPLENISH_PER_SEC` (archives incluses).
+`dist/` rebuild fait. Deux décisions humaines tranchées en cours de route : validation DB
+**skippée** (SQLite n'enforce pas VARCHAR — cf. QUIRKS), rename **total** (archives).
+
+### Trucs en suspens
+- **PR pas encore ouverte** : branche `feat/13-nettoyages-tech` non poussée. Reste : QA
+  humaine sur `:5150`, PR `Closes #13`, gate CI/Sonar, merge.
+- Nouvelle issue **#23** créée (audit systématique des schémas zod↔validator + invariant
+  contrat) — Ready. La validation `name`/`brand_name` de #13 en est un cas particulier.
+- Issue **#21** (revue UX distribution) promue depuis l'icebox — Ready.
+
+### Prochaine chose à creuser
+Ouvrir la PR de #13 (après QA `:5150`). Puis board : #10/#11/#8 restent en Ready.
+
+### Notes pour future Claude
+- Le miroir zod front (`project-form.tsx`) reflète `MAX_PROJECT_NAME_LEN=128` du back, mais
+  le back reste **source de vérité** (un appel API direct ne passe pas par zod).
+- `Storage::delete` est **idempotent** (fichier absent = Ok) : le nettoyage best-effort de
+  `delete_version` ne 500 jamais sur une suppression DB réussie.
+- `public_docs/out/` (build fumadocs) contient encore l'ancien nom de var → se régénère au
+  prochain `next build`, non-tracké, rien à committer.
+
 ## 2026-07-02 — Issue #4 : revalidation doc (commentaires + MCP `pull_prototype`)
 
 ### Dernière chose faite

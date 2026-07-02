@@ -9,6 +9,9 @@
 > _Migration 2026-07-01 → board : les items actionnables ont été portés en issues
 > **#9** (Phase 9 polish), **#10** (commentaires follow-ups), **#11** (dette CI),
 > **#12** (durcissements sécurité), **#13** (nettoyages). Retirés d'ici pour tuer le doublon._
+>
+> _Triage 2026-07-02 → board : « Revue UX d'ensemble pour distribution » promue en issue
+> **#21** (a11y clavier, loading states, mobile ; milestone non-commercialisable). Retirée d'ici._
 
 ## Idées ouvertes — pas encore mûres / hors périmètre build
 
@@ -40,12 +43,6 @@ au build ou à l'exécution. Non nécessaire aujourd'hui : même binaire, même 
 acceptable en v1 (le proxy Caddy normalise le Host avant de transmettre). IPv6 sans crochets
 (`::1` au lieu de `[::1]`) serait mal découpé par `rsplit_once(':')` — mais les navigateurs
 émettent toujours `[::1]` dans Origin/Host. Les deux cas sont documentés dans QUIRKS.
-
-### Revue UX d'ensemble pour distribution
-Reste du chantier « polish produit » (le gros est résolu par la migration React : UI en
-EN/FR, helper text, dropzone, toasts sonner). Restant : accessibilité clavier, états de
-chargement sur l'activation, cohérence sur mobiles. À promouvoir en issue si une passe de
-distribution est planifiée.
 
 ## Trace historique — choix tranchés / résolus (ne pas redécouvrir)
 

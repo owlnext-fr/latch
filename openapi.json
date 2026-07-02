@@ -1819,6 +1819,14 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "admin_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "latch_admin",
+        "description": "Cookie de session admin (same-origin, signé HMAC)."
+      }
     }
   },
   "tags": [

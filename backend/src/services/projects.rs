@@ -11,6 +11,36 @@ use crate::models::_entities::{projects, versions};
 use crate::services::errors::CoreError;
 use crate::services::{pin, security, slug};
 
+/// Longueur maximale (en **caractères**, cohérent avec le comptage `chars()` des
+/// notes de version, contrat §3) de `name` et `brand_name`. Bornes appliquées par
+/// le cœur (source de vérité) ET par l'adaptateur update.
+pub const MAX_PROJECT_NAME_LEN: usize = 128;
+
+/// Valide le `name` d'un projet : présence (non-vide après trim) + borne haute.
+/// Partagé entre `create` (service) et `update` (contrôleur admin) pour éviter
+/// tout bypass de la borne via `PUT`.
+pub fn validate_project_name(name: &str) -> Result<(), CoreError> {
+    if name.trim().is_empty() {
+        return Err(CoreError::Validation("name is required".to_string()));
+    }
+    if name.chars().count() > MAX_PROJECT_NAME_LEN {
+        return Err(CoreError::Validation(format!(
+            "name too long (max {MAX_PROJECT_NAME_LEN} chars)"
+        )));
+    }
+    Ok(())
+}
+
+/// Valide le `brand_name` (optionnel) : borne haute uniquement (peut être vide).
+pub fn validate_brand_name(brand_name: &str) -> Result<(), CoreError> {
+    if brand_name.chars().count() > MAX_PROJECT_NAME_LEN {
+        return Err(CoreError::Validation(format!(
+            "brand_name too long (max {MAX_PROJECT_NAME_LEN} chars)"
+        )));
+    }
+    Ok(())
+}
+
 /// Entrée de création d'un projet.
 #[derive(Debug, Clone)]
 pub struct CreateProject {
@@ -33,8 +63,9 @@ impl ProjectsService {
     }
 
     pub async fn create(&self, input: CreateProject) -> Result<projects::Model, CoreError> {
-        if input.name.trim().is_empty() {
-            return Err(CoreError::Validation("name is required".to_string()));
+        validate_project_name(&input.name)?;
+        if let Some(brand) = &input.brand_name {
+            validate_brand_name(brand)?;
         }
 
         let pin_value = if input.code_enabled {
@@ -220,6 +251,55 @@ mod tests {
                 name: "   ".to_string(),
                 brand_name: None,
                 code_enabled: true,
+                pin: None,
+                comments_enabled: false,
+            })
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CoreError::Validation(_)));
+    }
+
+    #[tokio::test]
+    async fn create_rejects_name_over_max_len() {
+        let s = svc(test_db().await);
+        let err = s
+            .create(CreateProject {
+                name: "x".repeat(MAX_PROJECT_NAME_LEN + 1),
+                brand_name: None,
+                code_enabled: false,
+                pin: None,
+                comments_enabled: false,
+            })
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CoreError::Validation(_)));
+    }
+
+    #[tokio::test]
+    async fn create_accepts_name_at_max_len() {
+        // Borne inclusive : exactement MAX caractères doit passer.
+        let s = svc(test_db().await);
+        let p = s
+            .create(CreateProject {
+                name: "x".repeat(MAX_PROJECT_NAME_LEN),
+                brand_name: None,
+                code_enabled: false,
+                pin: None,
+                comments_enabled: false,
+            })
+            .await
+            .unwrap();
+        assert_eq!(p.name.chars().count(), MAX_PROJECT_NAME_LEN);
+    }
+
+    #[tokio::test]
+    async fn create_rejects_brand_name_over_max_len() {
+        let s = svc(test_db().await);
+        let err = s
+            .create(CreateProject {
+                name: "P".to_string(),
+                brand_name: Some("b".repeat(MAX_PROJECT_NAME_LEN + 1)),
+                code_enabled: false,
                 pin: None,
                 comments_enabled: false,
             })

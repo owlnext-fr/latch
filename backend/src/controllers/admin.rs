@@ -160,12 +160,13 @@ async fn update(
     let mut active: projects::ActiveModel = model.into();
 
     if let Some(name) = body.name {
-        if name.trim().is_empty() {
-            return Err(loco_rs::Error::BadRequest("name is required".to_string()));
-        }
+        crate::services::projects::validate_project_name(&name).map_err(into_response)?;
         active.name = Set(name);
     }
     if let Some(brand) = body.brand_name {
+        if let Some(b) = &brand {
+            crate::services::projects::validate_brand_name(b).map_err(into_response)?;
+        }
         active.brand_name = Set(brand);
     }
     if let Some(ce) = body.comments_enabled {
@@ -339,7 +340,7 @@ async fn activate_version(
 /// DELETE /api/projects/{id}/versions/{n} — supprime une version NON active.
 // Charge la version par (project_id, n) → 404 si absente.
 // Refuse la suppression si elle est la version active du projet → 400.
-// Nettoyage du fichier HTML sur le storage : optionnel (cf. BACKLOG).
+// Nettoie le fichier HTML orphelin sur le storage (best-effort, après le DELETE DB).
 #[utoipa::path(
     delete, path = "/api/projects/{id}/versions/{n}", tag = "versions",
     params(("id" = i32, Path, description = "Identifiant du projet"),
@@ -371,6 +372,18 @@ async fn delete_version(
         .exec(&ctx.db)
         .await
         .map_err(|e| into_response(e.into()))?;
+
+    // Nettoyage best-effort du fichier HTML orphelin (idempotent). La ligne DB est
+    // déjà supprimée → aucun pointeur ne peut plus le servir (l'invariant qui compte) ;
+    // un échec de suppression ne doit donc PAS renvoyer 500 sur une suppression réussie.
+    let storage = crate::web::storage_from_ctx(&ctx);
+    if let Err(e) = storage.delete(&version.html_path).await {
+        tracing::warn!(
+            error = %e,
+            html_path = %version.html_path,
+            "échec du nettoyage du fichier HTML orphelin après delete_version"
+        );
+    }
 
     format::json(crate::dto::OkResponse::ok())
 }

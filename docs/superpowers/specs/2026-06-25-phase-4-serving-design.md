@@ -171,7 +171,7 @@ existant reste inchangé.
 | `UNLOCK_COOKIE_SECRET` | obligatoire en prod (panique si absent) | clé HMAC empreinte **et** jar signé |
 | `LATCH_UNLOCK_TTL_DAYS` | `30` | durée de vie du cookie unlock |
 | `LATCH_UNLOCK_RL_IP_BURST` | `5` | burst layer IP+slug |
-| `LATCH_UNLOCK_RL_IP_PER_SECOND` | `1` | refill layer IP+slug |
+| `LATCH_UNLOCK_RL_IP_REPLENISH_PER_SEC` | `1` | refill layer IP+slug |
 | `LATCH_UNLOCK_RL_SLUG_BURST` | `20` | burst layer slug global |
 | `LATCH_UNLOCK_RL_SLUG_PER_SECOND` | `0.33` (≈1/3 s) | refill layer slug global |
 
