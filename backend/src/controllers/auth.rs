@@ -14,6 +14,7 @@ use tower_governor::{
 use crate::controllers::serve::{env_u32, env_u64};
 use crate::dto::{LoginReq, OkResponse};
 use crate::services::security::secure_compare;
+use crate::web::extract::ValidatedJson;
 use crate::web::AdminSession;
 
 /// Clé de session portant le flag d'authentification admin.
@@ -56,7 +57,10 @@ where
               (status = 401, description = "Identifiants invalides"))
 )]
 #[debug_handler]
-async fn login(session: AdminSession, Json(body): Json<LoginReq>) -> Result<Response> {
+async fn login(
+    session: AdminSession,
+    ValidatedJson(body): ValidatedJson<LoginReq>,
+) -> Result<Response> {
     let expected_user = std::env::var("ADMIN_USER").unwrap_or_default();
     let expected_pass = std::env::var("ADMIN_PASS").unwrap_or_default();
 

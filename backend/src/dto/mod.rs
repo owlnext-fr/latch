@@ -5,6 +5,7 @@
 use serde::de;
 use serde::{Deserialize, Deserializer, Serialize};
 use utoipa::ToSchema;
+use validator::Validate;
 
 use crate::models::_entities::{comment_pins, comments, projects, versions};
 use crate::services::comments::is_admin_owner;
@@ -68,15 +69,19 @@ pub struct ReleaseNotes {
 }
 
 /// Corps de `POST /c/{slug}/unlock`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UnlockReq {
+    #[validate(custom(function = "crate::services::validation::validate_pin"))]
     pub pin: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
+#[validate(schema(function = "validate_create_project_pin"))]
 pub struct CreateProjectReq {
+    #[validate(custom(function = "crate::services::validation::validate_name"))]
     pub name: String,
     #[serde(default)]
+    #[validate(custom(function = "validate_brand_name_field"))]
     pub brand_name: Option<String>,
     #[serde(default = "default_true")]
     pub code_enabled: bool,
@@ -84,6 +89,45 @@ pub struct CreateProjectReq {
     pub pin: Option<String>,
     #[serde(default)]
     pub comments_enabled: Option<bool>,
+}
+
+// `validator` 0.20 auto-unwrappe les champs `Option<T>` : un validateur `custom` sur un
+// champ `Option<String>` ne reçoit QUE la valeur intérieure (jamais appelé sur `None`,
+// qui passe automatiquement). Les fns `validate_optional_*`/`validate_opt_opt_brand` de
+// `services::validation` (Task 1) prennent volontairement l'`Option` complet (source de
+// vérité indépendante du framework de validation). Ces adaptateurs re-enveloppent la
+// valeur dans `Some(...)` pour brancher les deux conventions sans dupliquer la logique.
+fn validate_brand_name_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_optional_brand(&Some(v.to_owned()))
+}
+
+fn validate_update_name_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_optional_name(&Some(v.to_owned()))
+}
+
+// `Option<Option<String>>` : `validator` déplie récursivement les DEUX niveaux et
+// n'appelle le validateur `custom` que si les deux sont `Some` (sinon il passe —
+// correct ici : absent = inchangé, `Some(None)` = effacer, ni l'un ni l'autre
+// n'a besoin d'être validé en longueur).
+fn validate_opt_opt_brand_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_opt_opt_brand(&Some(Some(v.to_owned())))
+}
+
+fn validate_release_notes_field(v: &str) -> Result<(), validator::ValidationError> {
+    crate::services::validation::validate_optional_release_notes(&Some(v.to_owned()))
+}
+
+/// Cross-field : si `code_enabled`, un PIN 6 chiffres est requis. Vit ici (a besoin
+/// du type DTO) et délègue le format à `validation::validate_pin`.
+fn validate_create_project_pin(req: &CreateProjectReq) -> Result<(), validator::ValidationError> {
+    if req.code_enabled {
+        match &req.pin {
+            Some(p) if crate::services::validation::validate_pin(p).is_ok() => Ok(()),
+            _ => Err(validator::ValidationError::new("pin_required_6_digits")),
+        }
+    } else {
+        Ok(())
+    }
 }
 
 fn default_true() -> bool {
@@ -131,36 +175,43 @@ where
     deserializer.deserialize_option(OptionalOptionalString)
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UpdateProjectReq {
     #[serde(default)]
+    #[validate(custom(function = "validate_update_name_field"))]
     pub name: Option<String>,
     /// `Option<Option<String>>` : absent ⇒ inchangé ; `null` ⇒ effacer ; valeur ⇒ définir.
     /// Vu par OpenAPI comme une string nullable (`value_type` force le schéma).
     #[serde(default, deserialize_with = "deserialize_optional_optional_string")]
     #[schema(value_type = Option<String>, nullable)]
+    #[validate(custom(function = "validate_opt_opt_brand_field"))]
     pub brand_name: Option<Option<String>>,
     #[serde(default)]
     pub comments_enabled: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct SetCodeReq {
+    #[validate(custom(function = "crate::services::validation::validate_pin"))]
     pub pin: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct DeployReq {
+    #[validate(custom(function = "crate::services::validation::validate_html"))]
     pub html: String,
     #[serde(default)]
     pub activate: bool,
     #[serde(default)]
+    #[validate(custom(function = "validate_release_notes_field"))]
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct LoginReq {
+    #[validate(length(min = 1))]
     pub user: String,
+    #[validate(length(min = 1))]
     pub pass: String,
 }
 
@@ -262,37 +313,46 @@ pub fn to_public_meta(m: &projects::Model) -> PublicMeta {
 // ---- Commentaires ancrés (surface /c) -----------------------------------
 
 /// Corps de `POST /c/{slug}/comments` — crée un pin + 1ᵉʳ message.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct CreatePinReq {
     /// Descripteur d'ancrage JSON opaque (le serveur ne l'interprète jamais).
+    #[validate(custom(function = "crate::services::validation::validate_anchor"))]
     pub anchor: String,
+    #[validate(custom(function = "crate::services::validation::validate_author_name"))]
     pub author_name: String,
+    #[validate(custom(function = "crate::services::validation::validate_body"))]
     pub body: String,
 }
 
 /// Corps de `POST /c/{slug}/comments/pins/{pin}/replies`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct ReplyReq {
+    #[validate(custom(function = "crate::services::validation::validate_author_name"))]
     pub author_name: String,
+    #[validate(custom(function = "crate::services::validation::validate_body"))]
     pub body: String,
 }
 
 /// Corps de `PUT /c/{slug}/comments/messages/{id}`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct EditMessageReq {
+    #[validate(custom(function = "crate::services::validation::validate_body"))]
     pub body: String,
 }
 
 /// Corps de `POST /api/projects/{id}/versions/{n}/comments` (fil propre de l'admin).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct AdminCreatePinReq {
+    #[validate(custom(function = "crate::services::validation::validate_anchor"))]
     pub anchor: String,
+    #[validate(custom(function = "crate::services::validation::validate_body"))]
     pub body: String,
 }
 
 /// Corps de `POST /api/projects/{id}/comments/pins/{pin}/replies` (réponse admin).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct AdminReplyReq {
+    #[validate(custom(function = "crate::services::validation::validate_body"))]
     pub body: String,
 }
 
@@ -423,6 +483,106 @@ pub fn to_admin_comment_pin(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use validator::Validate;
+
+    #[test]
+    fn create_project_req_validates() {
+        assert!(CreateProjectReq {
+            name: "ok".into(),
+            brand_name: None,
+            code_enabled: false,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_ok());
+        assert!(CreateProjectReq {
+            name: "".into(),
+            brand_name: None,
+            code_enabled: false,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_err());
+        assert!(CreateProjectReq {
+            name: "x".repeat(129),
+            brand_name: None,
+            code_enabled: false,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_err());
+        // cross-field : code activé sans PIN valide → err
+        assert!(CreateProjectReq {
+            name: "ok".into(),
+            brand_name: None,
+            code_enabled: true,
+            pin: None,
+            comments_enabled: None
+        }
+        .validate()
+        .is_err());
+        assert!(CreateProjectReq {
+            name: "ok".into(),
+            brand_name: None,
+            code_enabled: true,
+            pin: Some("424242".into()),
+            comments_enabled: None
+        }
+        .validate()
+        .is_ok());
+    }
+
+    #[test]
+    fn create_pin_req_validates_body_author_anchor() {
+        let ok = CreatePinReq {
+            anchor: "{}".into(),
+            author_name: "Léa".into(),
+            body: "hi".into(),
+        };
+        assert!(ok.validate().is_ok());
+        assert!(CreatePinReq {
+            anchor: "{}".into(),
+            author_name: "x".repeat(81),
+            body: "hi".into()
+        }
+        .validate()
+        .is_err());
+        assert!(CreatePinReq {
+            anchor: "{}".into(),
+            author_name: "Léa".into(),
+            body: "x".repeat(2001)
+        }
+        .validate()
+        .is_err());
+        assert!(CreatePinReq {
+            anchor: "".into(),
+            author_name: "Léa".into(),
+            body: "hi".into()
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[test]
+    fn deploy_req_validates_html_nonempty() {
+        assert!(DeployReq {
+            html: "".into(),
+            activate: false,
+            notes: None
+        }
+        .validate()
+        .is_err());
+        assert!(DeployReq {
+            html: "<h1>x</h1>".into(),
+            activate: false,
+            notes: None
+        }
+        .validate()
+        .is_ok());
+    }
 
     fn sample_pin(owner: &str) -> crate::models::_entities::comment_pins::Model {
         let now = chrono::Utc::now();
