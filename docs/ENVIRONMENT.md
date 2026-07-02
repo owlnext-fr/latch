@@ -25,6 +25,8 @@
 - `PORT` — port d'écoute backend (défaut `5150`).
 - `LATCH_BINDING` — interface sur laquelle le serveur bind (`server.binding`). **Défaut `localhost`** (dev local). Les **e2e Playwright** exportent `127.0.0.1` pour forcer un bind IPv4 explicite, cohérent avec le poll `127.0.0.1/_health` (sinon `localhost` peut résoudre vers `::1`/IPv6 sur les runners CI → timeout webServer flaky, cf. QUIRKS). Configuré dans `backend/config/development.yaml` via Tera.
 - `LATCH_BODY_LIMIT` — taille max du body des requêtes (le deploy envoie le HTML mono-fichier en JSON). Valeurs `byte_unit` (`5mb`, `10mb`, `32mb`) ou `disable`. **Défaut `5mb`** (l'ancien défaut Loco `limit_payload` était 2 Mo → 413 sur un gros proto). Configuré dans `backend/config/*.yaml` via `server.middlewares.limit_payload.body_limit`.
+- `LATCH_MAX_HTML_BYTES` — taille max du HTML déployé (octets), validée par `services::validation` (web deploy ET MCP `deploy_prototype`). Défaut : `5242880` (5 Mo).
+- `LATCH_MAX_ANCHOR_BYTES` — taille max du descripteur d'ancrage d'un commentaire (octets), validée par `services::validation`. Défaut : `8192` (8 Ko).
 
 ## SonarCloud
 - **Secret GitHub** : `SONAR_TOKEN` — token d'accès SonarCloud (projet `owlnext-fr_latch`, org `owlnext-fr`). À créer dans les settings GitHub du repo (`Settings > Secrets and variables > Actions`). Générer depuis `sonarcloud.io > My Account > Security`.

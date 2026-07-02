@@ -61,6 +61,8 @@ limiters, independent from the unlock ones — a per-IP bucket and a global per-
 | `PORT` | `5150` | Listen port. |
 | `LATCH_BODY_LIMIT` | `5mb` | Max request body — a deploy sends the single-file HTML as JSON. Accepts `5mb`, `10mb`, `32mb`, or `disable`. |
 | `LATCH_IMAGE_TAG` | `latest` | GHCR image tag to deploy (Compose). Pin a version in production. |
+| `LATCH_MAX_HTML_BYTES` | `5242880` | Max deployed HTML size (bytes). |
+| `LATCH_MAX_ANCHOR_BYTES` | `8192` | Max comment anchor descriptor size (bytes). |
 
 <Callout type="warn">
 A prototype larger than `LATCH_BODY_LIMIT` is rejected with **HTTP 413**. Raise the limit if your
