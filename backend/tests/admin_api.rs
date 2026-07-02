@@ -458,6 +458,7 @@ async fn delete_version_refuses_active_and_removes_inactive() {
     std::env::set_var("ADMIN_PASS", "s3cret");
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("LATCH_STORAGE_ROOT", tmp.path());
+    let root = tmp.path().to_path_buf();
     let config = RequestConfigBuilder::new().save_cookies(true).build();
     request_with_config::<App, _, _>(config, |request, _ctx| async move {
         request
@@ -483,6 +484,13 @@ async fn delete_version_refuses_active_and_removes_inactive() {
             .json(&serde_json::json!({"html": "b", "activate": false}))
             .await;
 
+        // Le fichier HTML de v2 existe bien sur le storage avant suppression.
+        let v2_html = root.join(format!("{id}/2.html"));
+        assert!(
+            v2_html.exists(),
+            "le HTML de v2 doit exister avant suppression"
+        );
+
         // Refus de supprimer la version active (v1).
         let refused = request
             .delete(&format!("/api/projects/{id}/versions/1"))
@@ -496,6 +504,12 @@ async fn delete_version_refuses_active_and_removes_inactive() {
             .add_header("origin", "http://127.0.0.1")
             .await;
         assert_eq!(deleted.status_code(), 200);
+
+        // Le fichier HTML orphelin de v2 a été nettoyé sur le storage.
+        assert!(
+            !v2_html.exists(),
+            "le HTML de v2 doit être supprimé du storage après delete_version"
+        );
     })
     .await;
     drop(tmp);

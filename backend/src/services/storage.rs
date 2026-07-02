@@ -18,6 +18,10 @@ pub trait Storage: Send + Sync {
 
     /// Lit le contenu UTF-8 à `rel_path`. `CoreError::NotFound` si absent.
     async fn read(&self, rel_path: &str) -> Result<String, CoreError>;
+
+    /// Supprime le fichier à `rel_path`. **Idempotent** : un fichier déjà absent
+    /// n'est PAS une erreur — le nettoyage d'un orphelin doit pouvoir se rejouer.
+    async fn delete(&self, rel_path: &str) -> Result<(), CoreError>;
 }
 
 /// Implémentation sur système de fichiers, ancrée à `root` (le volume).
@@ -59,6 +63,16 @@ impl Storage for FsStorage {
             Err(e) => Err(CoreError::Io(e)),
         }
     }
+
+    async fn delete(&self, rel_path: &str) -> Result<(), CoreError> {
+        let dest = self.root.join(rel_path);
+        match fs::remove_file(&dest).await {
+            Ok(()) => Ok(()),
+            // Idempotence : absent = déjà dans l'état voulu.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(CoreError::Io(e)),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -92,6 +106,25 @@ mod tests {
         let storage = FsStorage::new(dir.path().to_path_buf());
         let err = storage.read("nope.html").await.unwrap_err();
         assert!(matches!(err, CoreError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn delete_removes_existing_file() {
+        let dir = tempdir().unwrap();
+        let storage = FsStorage::new(dir.path().to_path_buf());
+        storage.write("5/2.html", b"bye").await.unwrap();
+        assert!(dir.path().join("5/2.html").exists());
+
+        storage.delete("5/2.html").await.unwrap();
+        assert!(!dir.path().join("5/2.html").exists());
+    }
+
+    #[tokio::test]
+    async fn delete_absent_is_idempotent() {
+        let dir = tempdir().unwrap();
+        let storage = FsStorage::new(dir.path().to_path_buf());
+        // Supprimer un fichier jamais écrit ne doit pas être une erreur.
+        storage.delete("never/existed.html").await.unwrap();
     }
 
     #[tokio::test]
