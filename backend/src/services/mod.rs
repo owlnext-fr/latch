@@ -7,6 +7,7 @@ pub mod security;
 pub mod slug;
 pub mod storage;
 pub mod unlock_cookie;
+pub mod validation;
 
 pub use errors::CoreError;
 
