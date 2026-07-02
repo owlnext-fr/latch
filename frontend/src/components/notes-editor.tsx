@@ -145,6 +145,7 @@ export function NotesEditor({
       Markdown,
     ],
     content: value,
+    // borne back = 10000 (MAX_RELEASE_NOTES_LEN) ; éditeur non-natif (tiptap), pas de maxLength
     onUpdate: ({ editor }) => {
       onChange(editor.storage.markdown.getMarkdown())
     },

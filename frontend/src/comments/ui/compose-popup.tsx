@@ -59,6 +59,7 @@ export function ComposePopup({
               value={name}
               placeholder={t('comment.compose.name_placeholder')}
               onChange={(e) => { setName(e.target.value); setError(null) }}
+              maxLength={80} /* indicatif ; borne réelle côté back */
             />
           </>
         )}
@@ -68,6 +69,7 @@ export function ComposePopup({
           value={body}
           placeholder={t('comment.compose.body_placeholder')}
           onChange={(e) => { setBody(e.target.value); setError(null) }}
+          maxLength={MAX_BODY} /* indicatif ; borne réelle côté back */
         />
         {error && <p className="text-destructive text-xs">{error}</p>}
         <div className="flex justify-end gap-2">
