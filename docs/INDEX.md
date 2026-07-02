@@ -4,6 +4,17 @@
 > d'une phase sont verts, on coche ici avec une ligne par livrable (+ entrée HANDOFF).
 > Format : `- [x] <livrable> — <phase> — <date>`.
 
+## Nettoyages techniques #13 (feat/13-nettoyages-tech, 2026-07-02)
+
+- [x] Code-splitting des 4 routes TanStack (`lazyRouteComponent` + `defaultPendingComponent`) — #13 — 2026-07-02
+- [x] Hook `useDocumentLang` : `<html lang>` resynchronisé sur l'i18n (unlock.html) — #13 — 2026-07-02
+- [x] Broutilles UI unlock : token `--otp-slot-border`, `InputOTPSeparator` + 3 clés i18n mortes purgés — #13 — 2026-07-02
+- [x] OpenAPI : `SecurityScheme` apiKey/cookie `admin_session` (déclaration seule) — #13 — 2026-07-02
+- [x] `Storage::delete` (idempotent) + nettoyage du fichier HTML orphelin sur `delete_version` — #13 — 2026-07-02
+- [x] Validation longueur `name`/`brand_name` (max 128, app-level source de vérité + miroir zod) — #13 — 2026-07-02
+- [x] Test isolant le plafond rate-limit slug-global (§9.5, IP variable) — #13 — 2026-07-02
+- [x] Rename `LATCH_UNLOCK_RL_IP_PER_SECOND` → `…_REPLENISH_PER_SEC` (token bucket = refill) — #13 — 2026-07-02
+
 ## Backend (cœur + adaptateurs)
 - [x] Scaffold app Loco (`backend/`, crate `latch`, bin `latch-cli`) — SQLite `bundled`,
   sans users/JWT, sans worker (`--bg none`) — Phase 0 — 2026-06-24

@@ -3,6 +3,17 @@
 > Ce qui a mordu (ou mordra) si on l'oublie. Une entrée = un piège + son contournement.
 > Seedé avec les points identifiés au cadrage, avant tout code.
 
+## SQLite n'enforce PAS `VARCHAR(n)` — la borne de longueur vit dans l'app (2026-07-02)
+Découvert en câblant la validation de longueur `name`/`brand_name` (#13). Par **affinité
+de type**, SQLite stocke la longueur déclarée d'une colonne `.string_len(128)` mais ne
+**tronque ni ne rejette JAMAIS** une valeur trop longue → une contrainte `VARCHAR(128)` en
+migration est purement **cosmétique** (zéro enforcement). La seule vraie garde DB serait un
+`CHECK(length(col) <= n)`, mais SQLite ne sait pas `ALTER TABLE ADD CONSTRAINT` : il faut
+une migration **table-rebuild** (create table neuve + copy + drop + rename), risquée sur
+données prod. **Conséquence retenue** : la validation applicative (Rust, cœur) est la
+**source de vérité** des bornes ; on ne met pas de contrainte DB cosmétique qui donnerait
+une fausse confiance. Vaut pour toute future borne de longueur tant qu'on est sur SQLite.
+
 ## Capture d'un Sheet Radix : `fullPage:true` casse l'overlay `fixed` (2026-07-02)
 Les side-panels admin (`ProjectForm`, `VersionCommentsPanel`) sont des `Sheet` Radix rendus
 en overlay `position: fixed`. Un `page.screenshot({ fullPage: true })` redimensionne le
